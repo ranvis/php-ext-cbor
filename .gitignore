@@ -6,6 +6,7 @@ acinclude.m4
 aclocal.m4
 autom4te.cache
 build
+config.cache
 config.guess
 config.h
 config.h.in
@@ -14,6 +15,7 @@ config.nice
 config.status
 config.sub
 configure
+configure.ac
 configure.in
 include
 install-sh
