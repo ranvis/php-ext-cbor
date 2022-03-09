@@ -34,6 +34,7 @@ typedef struct {
 	php_cbor_error cb_error;
 	size_t length;
 	size_t offset;
+	size_t limit;  /* 0:unknown */
 	cbor_data data;
 	zval root;
 	zend_ptr_stack stack;  /* ptr stack is suitable to retain popped item */
@@ -159,7 +160,7 @@ php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_a
 	}
 	ZVAL_UNDEF(&ctx.root);
 	ctx.data = ptr;
-	ctx.length = length;
+	ctx.limit = ctx.length = length;
 	ctx.args = *args;
 	error = dec_zval(&ctx);
 	zend_ptr_stack_apply(&ctx.stack, &free_stack_element);
@@ -500,6 +501,9 @@ static void cb_array_start(void *vp_ctx, uint64_t count)
 	if (count > 0xffffffff) {
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_SIZE);
 	}
+	if (ctx->limit && ctx->offset + count > ctx->limit) {
+		RETURN_CB_ERROR(PHP_CBOR_ERROR_TRUNCATED_DATA);
+	}
 	array_init_size(&value, (uint32_t)count);
 	if (count) {
 		stack_push_counted(ctx, SI_TYPE_ARRAY, &value, (uint32_t)count);
@@ -524,6 +528,9 @@ static void cb_map_start(void *vp_ctx, uint64_t count)
 	zval value;
 	if (count > 0xffffffff) {
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_SIZE);
+	}
+	if (ctx->limit && ctx->offset + count > ctx->limit) {
+		RETURN_CB_ERROR(PHP_CBOR_ERROR_TRUNCATED_DATA);
 	}
 	if (ctx->args.flags & PHP_CBOR_MAP_AS_ARRAY) {
 		array_init_size(&value, (uint32_t)count);

@@ -29,6 +29,8 @@ run(function () {
     eq('0x80', cdecHex('6180', CBOR_TEXT | CBOR_UNSAFE_TEXT));
     cdecThrows(CBOR_ERROR_UTF8, '6180', CBOR_TEXT);
     eq('0x64f09f9880', cenc('😀', CBOR_TEXT));
+
+    cdecThrows(CBOR_ERROR_TRUNCATED_DATA, '7a1fffffff00000000');
 });
 
 ?>
