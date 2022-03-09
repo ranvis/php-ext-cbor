@@ -114,14 +114,14 @@ static stack_item *stack_new_item(si_type_t si_type, uint32_t count)
 static void stack_push_counted(dec_context *ctx, si_type_t si_type, zval *value, uint32_t count)
 {
 	stack_item *item = stack_new_item(si_type, count);
-	item->v.value = *value;
+	ZVAL_COPY_VALUE(&item->v.value, value);
 	stack_push_item(ctx, item);
 }
 
 static void stack_push_map(dec_context *ctx, si_type_t si_type, zval *value, uint32_t count)
 {
 	stack_item *item = stack_new_item(si_type, count);
-	item->v.map.dest = *value;
+	ZVAL_COPY_VALUE(&item->v.map.dest, value);
 	ZVAL_UNDEF(&item->v.map.key);
 	stack_push_item(ctx, item);
 }
@@ -169,7 +169,7 @@ php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_a
 		ctx.args.error_arg = ctx.offset;
 	}
 	if (!error) {
-		*value = ctx.root;
+		ZVAL_COPY_VALUE(value, &ctx.root);
 	} else {
 		args->error_arg = ctx.args.error_arg;
 	}
@@ -237,10 +237,10 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 			if (Z_LVAL_P(value) < 0) {
 				RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_KEY_VALUE);
 			}
-			item->v.map.key = *value;
+			ZVAL_COPY_VALUE(&item->v.map.key, value);
 			break;
 		case IS_STRING:
-			item->v.map.key = *value;
+			ZVAL_COPY_VALUE(&item->v.map.key, value);
 			break;
 		default:
 			RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_KEY_TYPE);
@@ -303,7 +303,7 @@ static bool append_item(dec_context *ctx, zval *value)
 {
 	stack_item *item = STACK_ITEM_TOP(&ctx->stack);
 	if (item == NULL) {
-		ctx->root = *value;
+		ZVAL_COPY_VALUE(&ctx->root, value);
 		return true;
 	}
 	switch (item->si_type) {
