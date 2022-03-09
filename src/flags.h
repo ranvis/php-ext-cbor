@@ -30,7 +30,7 @@
 
 /**
  * Encode: Store unsigned integer keys in PHP array as unsigned integer for map key.
- * Decode: Accept unsigned integer keys in map as numeric string of PHP object key.
+ * Decode: Accept unsigned integer keys in map as numeric string of PHP object key, or PHP array key.
  */
 #define PHP_CBOR_INT_KEY          (1 << 3)
 

@@ -228,7 +228,6 @@ static bool append_item_to_array(dec_context *ctx, zval *value, stack_item *item
 
 static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 {
-	char num_str[ZEND_LTOA_BUF_LEN];
 	if (Z_ISUNDEF(item->v.map.key)) {
 		switch (Z_TYPE_P(value)) {
 		case IS_LONG:
@@ -238,8 +237,7 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 			if (Z_LVAL_P(value) < 0) {
 				RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_KEY_VALUE);
 			}
-			ZEND_LTOA(Z_LVAL_P(value), num_str, sizeof num_str);
-			ZVAL_STRINGL(&item->v.map.key, num_str, strlen(num_str));
+			item->v.map.key = *value;
 			break;
 		case IS_STRING:
 			item->v.map.key = *value;
@@ -250,12 +248,22 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 		return true;
 	}
 	if (Z_TYPE(item->v.map.dest) == IS_OBJECT) {
+		if (Z_TYPE(item->v.map.key) == IS_LONG) {
+			char num_str[ZEND_LTOA_BUF_LEN];
+			ZEND_LTOA(Z_LVAL(item->v.map.key), num_str, sizeof num_str);
+			ZVAL_STRINGL(&item->v.map.key, num_str, strlen(num_str));
+		}
 		zend_std_write_property(Z_OBJ(item->v.map.dest), Z_STR(item->v.map.key), value, NULL);
 	} else {
-		add_assoc_zval_ex(&item->v.map.dest, Z_STRVAL(item->v.map.key), Z_STRLEN(item->v.map.key), value);
+		if (Z_TYPE(item->v.map.key) == IS_LONG) {
+			assert(Z_LVAL(item->v.map.key) >= 0);
+			add_index_zval(&item->v.map.dest, (zend_ulong)Z_LVAL(item->v.map.key), value);
+		} else {
+			add_assoc_zval_ex(&item->v.map.dest, Z_STRVAL(item->v.map.key), Z_STRLEN(item->v.map.key), value);
+		}
 		Z_TRY_ADDREF_P(value);
 	}
-	zval_ptr_dtor_str(&item->v.map.key);
+	zval_ptr_dtor(&item->v.map.key);
 	ZVAL_UNDEF(&item->v.map.key);
 	if (item->count && --item->count == 0) {
 		bool result;

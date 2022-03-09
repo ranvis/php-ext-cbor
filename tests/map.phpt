@@ -35,8 +35,7 @@ run(function () {
     eq((object)['1' => 1], cdec('a10101', CBOR_INT_KEY));
     cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a10101', 0);
 
-    eq(['K' => 'V'], cdec('a1414b4156', CBOR_MAP_AS_ARRAY | CBOR_BYTE | CBOR_KEY_BYTE));
-    eq([1 => 1], cdec('a1413101', CBOR_MAP_AS_ARRAY | CBOR_KEY_BYTE));
+    eq([1 => 1, 2 => 2], cdec('a24131010202', CBOR_MAP_AS_ARRAY | CBOR_KEY_BYTE | CBOR_INT_KEY));
 });
 
 ?>
