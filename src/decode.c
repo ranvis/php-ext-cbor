@@ -54,7 +54,7 @@ typedef struct {
 		zval value;
 		smart_str str;
 		struct stack_item_value_map_t {
-			zval obj;
+			zval dest;
 			zval key;
 		} map;
 	} v;
@@ -76,7 +76,7 @@ static void stack_item_free(stack_item *item)
 	if (item->si_type == SI_TYPE_BYTE || item->si_type == SI_TYPE_TEXT) {
 		smart_str_free(&item->v.str);
 	} else if (item->si_type == SI_TYPE_MAP) {
-		zval_ptr_dtor(&item->v.map.obj);
+		zval_ptr_dtor(&item->v.map.dest);
 		zval_ptr_dtor(&item->v.map.key);
 	} else if (item->si_type == SI_TYPE_TAG) {
 		/* nothing */
@@ -118,10 +118,10 @@ static void stack_push_counted(dec_context *ctx, si_type_t si_type, zval *value,
 	stack_push_item(ctx, item);
 }
 
-static void stack_push_map(dec_context *ctx, si_type_t si_type, zval *obj, uint32_t count)
+static void stack_push_map(dec_context *ctx, si_type_t si_type, zval *value, uint32_t count)
 {
 	stack_item *item = stack_new_item(si_type, count);
-	item->v.map.obj = *obj;
+	item->v.map.dest = *value;
 	ZVAL_UNDEF(&item->v.map.key);
 	stack_push_item(ctx, item);
 }
@@ -249,16 +249,21 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 		}
 		return true;
 	}
-	zend_std_write_property(Z_OBJ(item->v.map.obj), Z_STR(item->v.map.key), value, NULL);
+	if (Z_TYPE(item->v.map.dest) == IS_OBJECT) {
+		zend_std_write_property(Z_OBJ(item->v.map.dest), Z_STR(item->v.map.key), value, NULL);
+	} else {
+		add_assoc_zval_ex(&item->v.map.dest, Z_STRVAL(item->v.map.key), Z_STRLEN(item->v.map.key), value);
+		Z_TRY_ADDREF_P(value);
+	}
 	zval_ptr_dtor_str(&item->v.map.key);
 	ZVAL_UNDEF(&item->v.map.key);
 	if (item->count && --item->count == 0) {
 		bool result;
 		assert(STACK_ITEM_TOP(&ctx->stack) == item);
 		STACK_ITEM_POP(&ctx->stack);
-		result = append_item(ctx, &item->v.map.obj);
+		result = append_item(ctx, &item->v.map.dest);
 		if (result) {
-			Z_TRY_ADDREF(item->v.map.obj);
+			Z_TRY_ADDREF(item->v.map.dest);
 		}
 		stack_item_free(item);
 		return result;
@@ -512,7 +517,11 @@ static void cb_map_start(void *vp_ctx, uint64_t count)
 	if (count > 0xffffffff) {
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_SIZE);
 	}
-	ZVAL_OBJ(&value, zend_objects_new(zend_standard_class_def));
+	if (ctx->args.flags & PHP_CBOR_MAP_AS_ARRAY) {
+		array_init_size(&value, (uint32_t)count);
+	} else {
+		ZVAL_OBJ(&value, zend_objects_new(zend_standard_class_def));
+	}
 	if (count) {
 		stack_push_map(ctx, SI_TYPE_MAP, &value, (uint32_t)count);
 	} else {
@@ -526,7 +535,11 @@ static void cb_indef_map_start(void *vp_ctx)
 {
 	dec_context *ctx = (dec_context *)vp_ctx;
 	zval value;
-	ZVAL_OBJ(&value, zend_objects_new(zend_standard_class_def));
+	if (ctx->args.flags & PHP_CBOR_MAP_AS_ARRAY) {
+		array_init(&value);
+	} else {
+		ZVAL_OBJ(&value, zend_objects_new(zend_standard_class_def));
+	}
 	stack_push_map(ctx, SI_TYPE_MAP, &value, 0);
 }
 

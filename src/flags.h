@@ -47,7 +47,9 @@
  */
 #define PHP_CBOR_KEY_TEXT         (1 << 5)
 
-/** TODO: */
+/**
+ * Decode: Translate map to PHP array.
+ */
 #define PHP_CBOR_MAP_AS_ARRAY     (1 << 6)
 
 /**
