@@ -149,10 +149,6 @@ php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_a
 	if ((args->flags & PHP_CBOR_FLOAT16 && args->flags & PHP_CBOR_FLOAT32)) {
 		return PHP_CBOR_ERROR_INVALID_FLAGS;
 	}
-	if (args->max_depth <= 0 || args->max_depth > 10000) {
-		return PHP_CBOR_ERROR_INVALID_OPTIONS;
-	}
-	
 	zend_ptr_stack_init(&ctx.stack);
 	ctx.offset = 0;
 	if (!(args->flags & PHP_CBOR_SELF_DESCRIBE) && length >= 3
@@ -499,7 +495,7 @@ static void cb_array_start(void *vp_ctx, uint64_t count)
 {
 	dec_context *ctx = (dec_context *)vp_ctx;
 	zval value;
-	if (count > 0xffffffff) {
+	if (count > ctx->args.max_size) {
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_SIZE);
 	}
 	if (ctx->limit && ctx->offset + count > ctx->limit) {
@@ -527,7 +523,7 @@ static void cb_map_start(void *vp_ctx, uint64_t count)
 {
 	dec_context *ctx = (dec_context *)vp_ctx;
 	zval value;
-	if (count > 0xffffffff) {
+	if (count > ctx->args.max_size) {
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_SIZE);
 	}
 	if (ctx->limit && ctx->offset + count > ctx->limit) {

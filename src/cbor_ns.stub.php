@@ -65,7 +65,9 @@ final class Float32 extends FloatX
 
 final class Tag
 {
-    public const SELF_DESCRIBE = 55799;
+    /* tag constants start /
+    public const CBOR_TAG_SELF_DESCRIBE = ...;
+    / tag constants end */
 
     public int $tag;
     public mixed $data;

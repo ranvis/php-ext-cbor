@@ -15,8 +15,6 @@ run(function () {
     eq($expected, cdec('9f01820203820405ff'));
     eq($expected, cdec('83018202039f0405ff'));
     eq($expected, cdec('83019f0203ff820405'));
-
-    cdecThrows(CBOR_ERROR_TRUNCATED_DATA, '9a1fffffff00000000');
 });
 
 ?>

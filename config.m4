@@ -45,5 +45,5 @@ if test "$PHP_CBOR" != "no"; then
   PHP_SUBST(CBOR_SHARED_LIBADD)
 
   dnl libcbor uses C99 restrict keyword
-  PHP_NEW_EXTENSION(cbor, src/cbor.c src/compatibility.c src/decode.c src/encode.c src/functions.c src/types.c src/utf8.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 -std=c99)
+  PHP_NEW_EXTENSION(cbor, src/cbor.c src/compatibility.c src/decode.c src/encode.c src/functions.c src/options.c src/types.c src/utf8.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 -std=c99)
 fi

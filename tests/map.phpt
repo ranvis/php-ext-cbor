@@ -36,8 +36,6 @@ run(function () {
     cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a10101', 0);
 
     eq([1 => 1, 2 => 2], cdec('a24131010202', CBOR_MAP_AS_ARRAY | CBOR_KEY_BYTE | CBOR_INT_KEY));
-
-    cdecThrows(CBOR_ERROR_TRUNCATED_DATA, 'ba1fffffff00000000');
 });
 
 ?>

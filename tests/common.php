@@ -35,7 +35,7 @@ function run($func): void
     echo "Done.\n";
 }
 
-function eq($exp, $act): void
+function eq($exp, $act, int $depth = 0): void
 {
     TestStats::inc('assertCompare');
     $exported = !is_scalar($exp) || !is_scalar($act);
@@ -50,7 +50,7 @@ function eq($exp, $act): void
         $exp = var_export($exp, true);
         $act = var_export($act, true);
     }
-    $bt = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
+    $bt = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, $depth + 1)[$depth];
     echo "Expected: " . $exp . "\n";
     echo "Actual  : " . $act . "\n";
     echo "File    : " . $bt['file'] . "\n";
@@ -103,7 +103,7 @@ function xThrows(int $code, callable $fn): void
     } catch (Cbor\Exception $e) {
         $actual = $e->getCode();
     }
-    eq($code, $actual);
+    eq($code, $actual, 2);
 }
 
 function cencThrows(int $code, mixed $value, ...$args): void

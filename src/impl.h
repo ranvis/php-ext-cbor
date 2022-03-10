@@ -33,6 +33,7 @@ typedef struct {
 typedef struct {
 	int flags;
 	int max_depth;
+	uint32_t max_size;
 	size_t error_arg;
 } php_cbor_decode_args;
 
@@ -56,6 +57,9 @@ extern void php_cbor_minit_encode();
 extern void php_cbor_minit_decode();
 
 extern zend_object *php_cbor_get_undef();
+
+extern php_cbor_error php_cbor_set_encode_options(php_cbor_encode_args *args, HashTable *options);
+extern php_cbor_error php_cbor_set_decode_options(php_cbor_decode_args *args, HashTable *options);
 
 extern php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_encode_args *args);
 extern php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_args *args);

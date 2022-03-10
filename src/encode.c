@@ -87,9 +87,6 @@ php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_e
 			|| (ctx.args.flags & PHP_CBOR_FLOAT16 && ctx.args.flags & PHP_CBOR_FLOAT32)) {
 		return PHP_CBOR_ERROR_INVALID_FLAGS;
 	}
-	if (ctx.args.max_depth <= 0 || ctx.args.max_depth > 10000) {
-		return PHP_CBOR_ERROR_INVALID_OPTIONS;
-	}
 	if (ctx.args.flags & PHP_CBOR_SELF_DESCRIBE) {
 		BX_INIT(&ctx);
 		BX_ALLOC(3);

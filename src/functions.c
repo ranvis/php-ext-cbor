@@ -7,53 +7,56 @@
 #include "php_cbor.h"
 #include <Zend/zend_smart_string.h>
 
-#define PHP_CBOR_DEFAULT_DEPTH 64;
-
 static void throw_error(php_cbor_error error, bool has_arg, size_t arg);
 
-/* {{{ proto string cbor_encode(mixed $value, int $flags = CBOR_BYTE, int $depth = 64)
+/* {{{ proto string cbor_encode(mixed $value, int $flags = CBOR_BYTE, ?array $options = [...])
    Return a CBOR encoded string of a value. */
 PHP_FUNCTION(cbor_encode)
 {
 	zval *value;
 	zend_long flags = PHP_CBOR_BYTE | PHP_CBOR_KEY_BYTE;
-	zend_long depth = PHP_CBOR_DEFAULT_DEPTH;
-	zend_string *str;
+	HashTable *options = NULL;
+	zend_string *str = NULL;
 	php_cbor_error error;
 	php_cbor_encode_args args;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z|ll", &value, &flags, &depth) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z|lh", &value, &flags, &options) == FAILURE) {
 		RETURN_THROWS();
 	}
 	args.flags = (int)flags;
-	args.max_depth = (int)depth;
-	error = php_cbor_encode(value, &str, &args);
+	error = php_cbor_set_encode_options(&args, options);
+	if (!error) {
+		error = php_cbor_encode(value, &str, &args);
+	}
 	if (error) {
-		throw_error(error, 0, 0);
+		throw_error(error, false, 0);
 		RETURN_THROWS();
 	}
+	assert(str);
 	RETURN_STR(str);
 }
 /* }}} */
 
 
-/* {{{ proto mixed cbor_decode(string $data, int $flags = CBOR_BYTE, int $depth = 64)
+/* {{{ proto mixed cbor_decode(string $data, int $flags = CBOR_BYTE, ?array $options = [...])
    Decode a CBOR encoded string. */
 PHP_FUNCTION(cbor_decode)
 {
 	zend_string *data;
 	zend_long flags = PHP_CBOR_BYTE | PHP_CBOR_KEY_BYTE;
-	zend_long depth = PHP_CBOR_DEFAULT_DEPTH;
+	HashTable *options = NULL;
 	zval value;
 	php_cbor_error error;
 	php_cbor_decode_args args;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|ll", &data, &flags, &depth) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|lh", &data, &flags, &options) == FAILURE) {
 		RETURN_THROWS();
 	}
 	args.flags = (int)flags;
-	args.max_depth = (int)depth;
-	error = php_cbor_decode(data, &value, &args);
+	error = php_cbor_set_decode_options(&args, options);
+	if (!error) {
+		error = php_cbor_decode(data, &value, &args);
+	}
 	if (error) {
-		throw_error(error, 1, args.error_arg);
+		throw_error(error, true, args.error_arg);
 		RETURN_THROWS();
 	}
 	RETVAL_COPY_VALUE(&value);
