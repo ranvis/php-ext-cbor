@@ -78,7 +78,7 @@ static void throw_error(php_cbor_error error, bool has_arg, size_t arg)
 		can_have_arg = false;
 		break;
 	case PHP_CBOR_ERROR_DEPTH:
-		message = "Depth limit reached.";
+		message = "Depth limit exceeded.";
 		break;
 	case PHP_CBOR_ERROR_RECURSION:
 		message = "Recursion is detected.";

@@ -29,7 +29,7 @@ php_cbor_error php_cbor_set_encode_options(php_cbor_encode_args *args, HashTable
 	if (options == NULL) {
 		return 0;
 	}
-	LONG_OPTION(max_depth, (uint32_t), 1, 10000);
+	LONG_OPTION(max_depth, (uint32_t), 0, 10000);
 	return 0;
 }
 
@@ -42,7 +42,7 @@ php_cbor_error php_cbor_set_decode_options(php_cbor_decode_args *args, HashTable
 	if (options == NULL) {
 		return 0;
 	}
-	LONG_OPTION(max_depth, (uint32_t), 1, 10000);
+	LONG_OPTION(max_depth, (uint32_t), 0, 10000);
 	LONG_OPTION(max_size, (uint32_t), 0, 0xffffffff);
 	return 0;
 }

@@ -102,11 +102,15 @@ php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_e
 	return error;
 }
 
+#define ENC_RESULT(r)  do { \
+		error = (r); \
+		goto ENCODED; \
+	} while (0);
 static php_cbor_error enc_zval(enc_context *ctx, zval *value)
 {
 	php_cbor_error error = 0;
 	BX_INIT(ctx);
-	if (++ctx->cur_depth >= ctx->args.max_depth) {
+	if (ctx->cur_depth++ > ctx->args.max_depth) {
 		return PHP_CBOR_ERROR_DEPTH;
 	}
 RETRY:
@@ -124,7 +128,7 @@ RETRY:
 		BX_PUT(cbor_encode_bool(true, BX_ARGS));
 		break;
 	case IS_LONG:
-		return enc_long(ctx, Z_LVAL_P(value));
+		ENC_RESULT(enc_long(ctx, Z_LVAL_P(value)));
 	case IS_DOUBLE:
 		if (UNEXPECTED(ctx->args.flags & PHP_CBOR_FLOAT16)) {
 			BX_ALLOC(3);
@@ -142,9 +146,9 @@ RETRY:
 			error = PHP_CBOR_ERROR_INVALID_FLAGS;
 			break;
 		}
-		return enc_string(ctx, Z_STR_P(value), CTX_TEXT_FLAG(ctx));
+		ENC_RESULT(enc_string(ctx, Z_STR_P(value), CTX_TEXT_FLAG(ctx)));
 	case IS_ARRAY:
-		return enc_hash(ctx, value, HASH_ARRAY);
+		ENC_RESULT(enc_hash(ctx, value, HASH_ARRAY));
 	case IS_OBJECT: {
 		zend_class_entry *ce = Z_OBJCE_P(value);
 		/* Cbor types are 'final' */
@@ -152,17 +156,17 @@ RETRY:
 			BX_ALLOC(1);
 			BX_PUT(cbor_encode_undef(BX_ARGS));
 		} else if (ce == CBOR_CE(byte)) {
-			return enc_typed_byte(ctx, value);
+			ENC_RESULT(enc_typed_byte(ctx, value));
 		} else if (ce == CBOR_CE(text)) {
-			return enc_typed_text(ctx, value);
+			ENC_RESULT(enc_typed_text(ctx, value));
 		} else if (ce == CBOR_CE(float16)) {
-			return enc_typed_floatx(ctx, value, 16);
+			ENC_RESULT(enc_typed_floatx(ctx, value, 16));
 		} else if (ce == CBOR_CE(float32)) {
-			return enc_typed_floatx(ctx, value, 32);
+			ENC_RESULT(enc_typed_floatx(ctx, value, 32));
 		} else if (ce == CBOR_CE(tag)) {
-			return enc_tag(ctx, value);
+			ENC_RESULT(enc_tag(ctx, value));
 		} else if (ce == zend_standard_class_def) {
-			return enc_hash(ctx, value, HASH_STD_CLASS);
+			ENC_RESULT(enc_hash(ctx, value, HASH_STD_CLASS));
 		} else {
 			/* TODO: */
 			BX_ALLOC(1);
@@ -179,10 +183,12 @@ RETRY:
 	}
 	if (error) {
 		BX_CANCEL();
-		return error;
+	} else {
+		BX_END_CHECK();
 	}
-	BX_END_CHECK();
-	return 0;
+ENCODED:
+	ctx->cur_depth--;
+	return error;
 }
 
 static php_cbor_error enc_long(enc_context *ctx, zend_long value)

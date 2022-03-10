@@ -100,7 +100,7 @@ static void free_stack_element(void *vp_item)
 static void stack_push_item(dec_context *ctx, stack_item *item)
 {
 	int cur_depth = STACK_NUM_ELEMENTS(&ctx->stack);
-	if (cur_depth > ctx->args.max_depth) {
+	if (cur_depth >= ctx->args.max_depth) {
 		stack_item_free(item);
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_DEPTH);
 	}
