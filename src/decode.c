@@ -150,8 +150,9 @@ php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_a
 		return PHP_CBOR_ERROR_INVALID_FLAGS;
 	}
 	if (args->max_depth <= 0 || args->max_depth > 10000) {
-		return PHP_CBOR_ERROR_INVALID_FLAGS;
+		return PHP_CBOR_ERROR_INVALID_OPTIONS;
 	}
+	
 	zend_ptr_stack_init(&ctx.stack);
 	ctx.offset = 0;
 	if (!(args->flags & PHP_CBOR_SELF_DESCRIBE) && length >= 3

@@ -3,4 +3,4 @@
  * @license BSD-2-Clause
  */
 
-bool is_utf8(const uint8_t *str, size_t len);
+extern bool is_utf8(const uint8_t *str, size_t len);
