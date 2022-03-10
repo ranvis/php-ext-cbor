@@ -9,6 +9,8 @@ require_once __DIR__ . '/common.php';
 
 run(function () {
     eq('0xa0', cenc((object)[], 0));
+    eq('0xa3000102020103', cenc([0 => 1, 2 => 2, 1 => 3], CBOR_KEY_BYTE | CBOR_INT_KEY));
+    eq('0xa3200100020103', cenc([-1 => 1, 0 => 2, 1 => 3], CBOR_KEY_BYTE | CBOR_INT_KEY));
 
     eq('0xa1414b4156', cenc((object)['K' => 'V'], CBOR_BYTE | CBOR_KEY_BYTE));
     eq('0xa1614b4156', cenc((object)['K' => 'V'], CBOR_BYTE | CBOR_KEY_TEXT));
@@ -36,6 +38,12 @@ run(function () {
     cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a10101', 0);
 
     eq([1 => 1, 2 => 2], cdec('a24131010202', CBOR_MAP_AS_ARRAY | CBOR_KEY_BYTE | CBOR_INT_KEY));
+
+    cdecThrows(CBOR_ERROR_TRUNCATED_DATA, 'a101', CBOR_INT_KEY);
+    cdecThrows(CBOR_ERROR_SYNTAX, 'a1ff', 0);
+    cdecThrows(CBOR_ERROR_SYNTAX, 'a101ff', CBOR_INT_KEY);
+    eq((object)[], cdec('bfff', 0));
+    cdecThrows(CBOR_ERROR_SYNTAX, 'bf01ff', CBOR_INT_KEY);
 });
 
 ?>

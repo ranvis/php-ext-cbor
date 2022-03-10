@@ -9,6 +9,8 @@ require_once __DIR__ . '/common.php';
 
 run(function () {
     eq(new Cbor\Tag(38, ['en', 'Hello']), cdec('d8268262656E6548656C6C6F', CBOR_TEXT));
+
+    cdecThrows(CBOR_ERROR_SYNTAX, 'd801ff', 0);
 });
 
 ?>

@@ -7,18 +7,22 @@
 #include "php_cbor.h"
 #include "utf8.h"
 
-#define RETURN_CB_ERROR_B(error)  do { \
+#define _CB_SET_ERROR(error)  do { \
 		assert(error); \
-		ctx->cb_error = (error); \
+		if (!ctx->cb_error) { \
+			ctx->cb_error = (error); \
+		} \
+	} while (false)
+#define RETURN_CB_ERROR_B(error)  do { \
+		_CB_SET_ERROR(error); \
 		return false; \
 	} while (false)
 #define RETURN_CB_ERROR(error)  do { \
-		assert(error); \
-		ctx->cb_error = (error); \
+		_CB_SET_ERROR(error); \
 		return; \
 	} while (false)
 #define THROW_CB_ERROR(error)  do { \
-		ctx->cb_error = (error); \
+		_CB_SET_ERROR(error); \
 		goto FINALLY; \
 	} while (false)
 #define ASSERT_ERROR_SET()  assert(ctx->cb_error)
@@ -646,7 +650,8 @@ static void cb_indef_break(void *vp_ctx)
 			zval_ptr_dtor(&value);
 		}
 	} else {  /* SI_TYPE_ARRAY, SI_TYPE_MAP, SI_TYPE_TAG */
-		if (UNEXPECTED(item->count != 0)) {  /* definite-length */
+		if (UNEXPECTED(item->count != 0)  /* definite-length */
+				|| (item->si_type == SI_TYPE_MAP && UNEXPECTED(!Z_ISUNDEF(item->v.map.key)))) {  /* value is expected */
 			THROW_CB_ERROR(PHP_CBOR_ERROR_SYNTAX);
 		}
 		if (append_item(ctx, &item->v.value)) {
