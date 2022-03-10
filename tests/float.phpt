@@ -26,6 +26,10 @@ run(function () {
     eq('0xfaff800000', cenc(-INF, CBOR_FLOAT32));
     eq('0xf97e00', cenc(NAN, CBOR_FLOAT16));
     eq('0xfb0000000000000000', cenc(0.0));
+    eq('0xfb8000000000000000', cenc(-0.0));
+
+    eq(1.5, (float)new Cbor\Float32(1.5));
+    eq(1.5, (float)new Cbor\Float16(1.5));
 });
 
 ?>

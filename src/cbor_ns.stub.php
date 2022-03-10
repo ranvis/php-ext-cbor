@@ -57,10 +57,12 @@ abstract class FloatX
 
 final class Float16 extends FloatX
 {
+    //public function __toFloat(): float {}
 }
 
 final class Float32 extends FloatX
 {
+    //public function __toFloat(): float {}
 }
 
 final class Tag

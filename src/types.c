@@ -11,6 +11,7 @@
 
 static zend_object_handlers undef_handlers;
 static zend_object_handlers xstring_handlers;
+static zend_object_handlers floatx_handlers;
 
 zend_object *undef_clone_handler(zend_object *object);
 int undef_cast_object_handler(zend_object *readobj, zval *retval, int type);
@@ -18,16 +19,25 @@ int undef_cast_object_handler(zend_object *readobj, zval *retval, int type);
 zend_object *xstring_create_object_handler(zend_class_entry *class_type);
 int xstring_cast_object_handler(zend_object *readobj, zval *retval, int type);
 
+zend_object *floatx_create_object_handler(zend_class_entry *class_type);
+int floatx_cast_object_handler(zend_object *readobj, zval *retval, int type);
+
 void php_cbor_minit_types()
 {
 	memcpy(&undef_handlers, &std_object_handlers, sizeof(zend_object_handlers));
 	undef_handlers.clone_obj = &undef_clone_handler;
 	undef_handlers.cast_object = &undef_cast_object_handler;
-	// Setting CBOR_CE(xstring)->create_object does not help.
+
+	/* Setting CBOR_CE(xstring)->create_object does not help. */
 	CBOR_CE(byte)->create_object = &xstring_create_object_handler;
 	CBOR_CE(text)->create_object = &xstring_create_object_handler;
 	memcpy(&xstring_handlers, &std_object_handlers, sizeof(zend_object_handlers));
 	xstring_handlers.cast_object = &xstring_cast_object_handler;
+
+	CBOR_CE(float16)->create_object = &floatx_create_object_handler;
+	CBOR_CE(float32)->create_object = &floatx_create_object_handler;
+	memcpy(&floatx_handlers, &std_object_handlers, sizeof(zend_object_handlers));
+	floatx_handlers.cast_object = &floatx_cast_object_handler;
 }
 
 /* PHP has IS_UNDEF type, but it is semantically different from CBOR's "undefined" value. */
@@ -108,7 +118,27 @@ PHP_METHOD(Cbor_XString, __construct)
 }
 
 #undef THIS_PROP
+
+zend_object *floatx_create_object_handler(zend_class_entry *class_type)
+{
+	zend_object *obj = zend_objects_new(class_type);
+	object_properties_init(obj, class_type);
+	obj->handlers = &floatx_handlers;
+	return obj;
+}
+
 #define THIS_PROP(prop_literal)  DEF_THIS_PROP(floatx, prop_literal)
+
+int floatx_cast_object_handler(zend_object *readobj, zval *retval, int type)
+{
+	zval *value, zv;
+	if (type != IS_DOUBLE) {
+		return FAILURE;
+	}
+	value = zend_read_property(readobj->ce, readobj, LIT_PROP("value"), false, &zv);
+	ZVAL_DOUBLE(retval, Z_DVAL_P(value));
+	return SUCCESS;
+}
 
 PHP_METHOD(Cbor_FloatX, __construct)
 {
