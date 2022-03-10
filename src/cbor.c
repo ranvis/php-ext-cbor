@@ -43,14 +43,6 @@ PHP_INI_END()
 /* }}} */
 
 
-/* {{{ php_cbor_init_globals
- */
-static void php_cbor_init_globals(zend_cbor_globals *cbor_globals)
-{
-	cbor_globals->undef_ins = NULL;
-}
-/* }}} */
-
 static void *php_cbor_malloc(size_t size)
 {
 	return emalloc(size);
@@ -70,7 +62,6 @@ static void php_cbor_free(void *ptr)
  */
 PHP_MINIT_FUNCTION(cbor)
 {
-	ZEND_INIT_MODULE_GLOBALS(cbor, php_cbor_init_globals, NULL);
 	/* If you have INI entries, uncomment these lines
 	REGISTER_INI_ENTRIES();
 	*/
@@ -149,7 +140,22 @@ PHP_MSHUTDOWN_FUNCTION(cbor)
 }
 /* }}} */
 
+/* {{{ PHP_GINIT_FUNCTION
+ */
+static PHP_GINIT_FUNCTION(cbor)
+{
+	cbor_globals->undef_ins = NULL;
+}
+/* }}} */
+
 #if 0
+/* {{{ PHP_GSHUTDOWN_FUNCTION
+ */
+static PHP_GSHUTDOWN_FUNCTION(cbor)
+{
+}
+/* }}} */
+
 /* {{{ PHP_RINIT_FUNCTION
  */
 PHP_RINIT_FUNCTION(cbor)
@@ -160,8 +166,8 @@ PHP_RINIT_FUNCTION(cbor)
 	return SUCCESS;
 }
 /* }}} */
-
 #endif
+
 /* {{{ PHP_RSHUTDOWN_FUNCTION
  */
 PHP_RSHUTDOWN_FUNCTION(cbor)
@@ -202,7 +208,11 @@ zend_module_entry cbor_module_entry = {
 	PHP_RSHUTDOWN(cbor),
 	PHP_MINFO(cbor),
 	PHP_CBOR_VERSION,
-	STANDARD_MODULE_PROPERTIES
+	PHP_MODULE_GLOBALS(cbor),
+	PHP_GINIT(cbor),
+	NULL, /* PHP_GSHUTDOWN(cbor), */
+	NULL,
+	STANDARD_MODULE_PROPERTIES_EX
 };
 /* }}} */
 
