@@ -7,6 +7,8 @@
 #include "private.h"
 #include "utf8.h"
 
+#define SIZE_INIT_LIMIT  4096
+
 #define _CB_SET_ERROR(error)  do { \
 		assert(error); \
 		if (!ctx->cb_error) { \
@@ -505,7 +507,7 @@ static void cb_array_start(void *vp_ctx, uint64_t count)
 	if (ctx->limit && ctx->offset + count > ctx->limit) {
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_TRUNCATED_DATA);
 	}
-	array_init_size(&value, (uint32_t)count);
+	array_init_size(&value, ((count > SIZE_INIT_LIMIT) ? SIZE_INIT_LIMIT : (uint32_t)count));
 	if (count) {
 		stack_push_counted(ctx, SI_TYPE_ARRAY, &value, (uint32_t)count);
 	} else {
@@ -534,7 +536,7 @@ static void cb_map_start(void *vp_ctx, uint64_t count)
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_TRUNCATED_DATA);
 	}
 	if (ctx->args.flags & PHP_CBOR_MAP_AS_ARRAY) {
-		array_init_size(&value, (uint32_t)count);
+		array_init_size(&value, ((count > SIZE_INIT_LIMIT) ? SIZE_INIT_LIMIT : (uint32_t)count));
 	} else {
 		ZVAL_OBJ(&value, zend_objects_new(zend_standard_class_def));
 	}
