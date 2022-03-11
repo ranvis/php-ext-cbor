@@ -89,12 +89,6 @@ function cdecHex($value, ...$args): mixed
     return '0x' . bin2hex($decoded);
 }
 
-function cdecExport($value, ...$args): string
-{
-    $decoded = cborDecode(hex2bin($value), ...$args);
-    return var_export($decoded, true);
-}
-
 function xThrows(int $code, callable $fn): void
 {
     $actual = 0;

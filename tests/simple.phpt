@@ -13,14 +13,10 @@ run(function () {
     eq('0xf6', cenc(null));
     eq('0xf7', cenc(Cbor\Undefined::get()));
 
-    eq('false', cdecExport('f4'));
-    eq('true', cdecExport('f5'));
-    eq('NULL', cdecExport('f6'));
-    eq(<<<'END'
-        Cbor\Undefined::__set_state(array(
-        ))
-        END
-    , cdecExport('f7'));
+    eq(false, cdec('f4'));
+    eq(true, cdec('f5'));
+    eq(null, cdec('f6'));
+    eq(Cbor\Undefined::get(), cdec('f7'));
 
     // break
     cdecThrows(CBOR_ERROR_SYNTAX, 'ff');
