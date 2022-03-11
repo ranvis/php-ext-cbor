@@ -97,13 +97,13 @@ function cdecExport($value, ...$args): string
 
 function xThrows(int $code, callable $fn): void
 {
-    $actual = false;
+    $actual = 0;
     try {
         $fn();
     } catch (Cbor\Exception $e) {
         $actual = $e->getCode();
     }
-    eq($code, $actual, 2);
+    eq(getErrorName($code), getErrorName($actual), 2);
 }
 
 function cencThrows(int $code, mixed $value, ...$args): void
@@ -116,4 +116,32 @@ function cdecThrows(int $code, string $value, ...$args): void
 {
     TestStats::inc('assertThrows');
     xThrows($code, fn () => cborDecode(hex2bin($value), ...$args));
+}
+
+function getErrorName(int $code): string
+{
+    $errors = [
+        /* error names start */
+          1 => 'CBOR_ERROR_INVALID_FLAGS',
+               'CBOR_ERROR_INVALID_OPTIONS',
+               'CBOR_ERROR_DEPTH',
+               'CBOR_ERROR_RECURSION',
+               'CBOR_ERROR_SYNTAX',
+               'CBOR_ERROR_UTF8',
+         17 => 'CBOR_ERROR_UNSUPPORTED_TYPE',
+               'CBOR_ERROR_UNSUPPORTED_VALUE',
+               'CBOR_ERROR_UNSUPPORTED_SIZE',
+         25 => 'CBOR_ERROR_UNSUPPORTED_KEY_TYPE',
+               'CBOR_ERROR_UNSUPPORTED_KEY_VALUE',
+               'CBOR_ERROR_UNSUPPORTED_KEY_SIZE',
+         33 => 'CBOR_ERROR_TRUNCATED_DATA',
+               'CBOR_ERROR_MALFORMED_DATA',
+               'CBOR_ERROR_EXTRANEOUS_DATA',
+         41 => 'CBOR_ERROR_TAG_SYNTAX',
+               'CBOR_ERROR_TAG_TYPE',
+               'CBOR_ERROR_TAG_VALUE',
+        255 => 'CBOR_ERROR_INTERNAL',
+        /* error names end */
+    ];
+    return $errors[$code] ?? "#$code";
 }

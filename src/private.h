@@ -23,6 +23,9 @@ typedef enum {
 	/*   D   */ PHP_CBOR_ERROR_TRUNCATED_DATA = 33,
 	/*   D   */ PHP_CBOR_ERROR_MALFORMED_DATA,
 	/*   D   */ PHP_CBOR_ERROR_EXTRANEOUS_DATA,
+	/*   D   */ PHP_CBOR_ERROR_TAG_SYNTAX = 41,
+	/*   D   */ PHP_CBOR_ERROR_TAG_TYPE,
+	/*   D   */ PHP_CBOR_ERROR_TAG_VALUE,
 	/* E D   */ PHP_CBOR_ERROR_INTERNAL = 255,
 } php_cbor_error;
 
@@ -36,6 +39,7 @@ typedef struct {
 	int max_depth;
 	uint32_t max_size;
 	size_t error_arg;
+	bool string_ref;
 } php_cbor_decode_args;
 
 #define CBOR_CE(name)  php_cbor_##name##_ce
@@ -64,3 +68,5 @@ extern php_cbor_error php_cbor_set_decode_options(php_cbor_decode_args *args, Ha
 
 extern php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_encode_args *args);
 extern php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_args *args);
+
+extern zend_string *php_cbor_get_xstring_value(zval *value);

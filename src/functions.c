@@ -67,8 +67,7 @@ static void throw_error(php_cbor_error error, bool has_arg, size_t arg)
 {
 	const char *message = "Unknown error code.";
 	bool can_have_arg = true;
-	switch (error)
-	{
+	switch (error) {
 	case PHP_CBOR_ERROR_INVALID_FLAGS:
 		message = "Invalid flags are specified.";
 		can_have_arg = false;
@@ -116,6 +115,15 @@ static void throw_error(php_cbor_error error, bool has_arg, size_t arg)
 		break;
 	case PHP_CBOR_ERROR_EXTRANEOUS_DATA:
 		message = "Extraneous data.";
+		break;
+	case PHP_CBOR_ERROR_TAG_SYNTAX:
+		message = "The tag cannot be used here.";
+		break;
+	case PHP_CBOR_ERROR_TAG_TYPE:
+		message = "Invalid data type for the tag content.";
+		break;
+	case PHP_CBOR_ERROR_TAG_VALUE:
+		message = "Invalid data value for the tag content.";
 		break;
 	case PHP_CBOR_ERROR_INTERNAL:
 		message = "Internal error.";
