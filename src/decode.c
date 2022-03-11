@@ -99,7 +99,7 @@ void php_cbor_minit_decode()
 	set_callbacks();
 }
 
-static void stack_item_free(stack_item *item)
+static void stack_free_item(stack_item *item)
 {
 	if (item == NULL) {
 		return;
@@ -124,14 +124,14 @@ static void stack_item_free(stack_item *item)
 static void free_stack_element(void *vp_item)
 {
 	stack_item *item = (stack_item *)vp_item;
-	stack_item_free(item);
+	stack_free_item(item);
 }
 
 static void stack_push_item(dec_context *ctx, stack_item *item)
 {
 	int cur_depth = STACK_NUM_ELEMENTS(&ctx->stack);
 	if (cur_depth >= ctx->args.max_depth) {
-		stack_item_free(item);
+		stack_free_item(item);
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_DEPTH);
 	}
 	zend_ptr_stack_push(&ctx->stack, item);
@@ -264,7 +264,7 @@ static bool append_item_to_array(dec_context *ctx, zval *value, stack_item *item
 		if (result) {
 			Z_TRY_ADDREF(item->v.value);
 		}
-		stack_item_free(item);
+		stack_free_item(item);
 		return result;
 	}
 	return true;
@@ -317,7 +317,7 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 		if (result) {
 			Z_TRY_ADDREF(item->v.map.dest);
 		}
-		stack_item_free(item);
+		stack_free_item(item);
 		return result;
 	}
 	return true;
@@ -334,7 +334,7 @@ static bool append_item_to_tag(dec_context *ctx, zval *value, stack_item *item)
 	STACK_ITEM_POP(&ctx->stack);
 	assert(Z_TYPE(item->v.tag_id) == IS_LONG);
 	zval_ptr_dtor(value);
-	stack_item_free(item);
+	stack_free_item(item);
 	if (!append_item(ctx, &container)) {
 		ASSERT_ERROR_SET();
 		zval_ptr_dtor(&container);
@@ -351,7 +351,7 @@ static bool append_item_to_tag_handled(dec_context *ctx, zval *value, stack_item
 	if (item->tag_handler_exit)  {
 		value = (*item->tag_handler_exit)(ctx, value, item, &storage);
 	}
-	stack_item_free(item);
+	stack_free_item(item);
 	if (ctx->cb_error || !append_item(ctx, value)) {
 		ASSERT_ERROR_SET();
 		zval_ptr_dtor(value);
@@ -727,7 +727,7 @@ static void cb_indef_break(void *vp_ctx)
 		}
 	}
 FINALLY:
-	stack_item_free(item);
+	stack_free_item(item);
 }
 
 static void tag_handler_str_ref_ns_data(dec_context *ctx, stack_item *item, data_type_t type, zval *value)
@@ -836,7 +836,7 @@ static bool do_tag_enter(dec_context *ctx, zend_long tag)
 		stack_item *item = stack_new_item(ctx, SI_TYPE_TAG_HANDLED, 1);
 		if (!(*handler)(ctx, item)) {
 			ASSERT_ERROR_SET();
-			stack_item_free(item);
+			stack_free_item(item);
 			return true;
 		}
 		stack_push_item(ctx, item);

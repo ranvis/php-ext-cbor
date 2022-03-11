@@ -31,7 +31,7 @@ bool zend_array_is_list(zend_array *array)
 {
 	zend_long expected_idx = 0;
 	zend_long num_idx;
-	zend_string* str_idx;
+	zend_string *str_idx;
 	/* Empty arrays are lists */
 	if (zend_hash_num_elements(array) == 0) {
 		return 1;
@@ -48,7 +48,8 @@ bool zend_array_is_list(zend_array *array)
 		if (str_idx != NULL || num_idx != expected_idx++) {
 			return 0;
 		}
-	} ZEND_HASH_FOREACH_END();
+	}
+	ZEND_HASH_FOREACH_END();
 
 	return 1;
 }

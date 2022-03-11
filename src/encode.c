@@ -173,7 +173,8 @@ RETRY:
 			BX_PUT(cbor_encode_undef(BX_ARGS));
 			error = PHP_CBOR_ERROR_UNSUPPORTED_TYPE;
 		}
-	}	break;
+		break;
+	}
 	case IS_REFERENCE:
 		/* TODO: */
 		ZVAL_DEREF(value);
