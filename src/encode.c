@@ -4,7 +4,7 @@
  */
 
 #include "cbor.h"
-#include "php_cbor.h"
+#include "private.h"
 #include "compatibility.h"
 #include "tags.h"
 #include "utf8.h"

@@ -29,12 +29,8 @@ ZEND_END_MODULE_GLOBALS(cbor)
 
 ZEND_EXTERN_MODULE_GLOBALS(cbor)
 
-#include "flags.h"
-#include "impl.h"
-
 #if defined(ZTS) && defined(COMPILE_DL_CBOR)
 ZEND_TSRMLS_CACHE_EXTERN()
 #endif
 
 #endif	/* PHP_CBOR_H */
-

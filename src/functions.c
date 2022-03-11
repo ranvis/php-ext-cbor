@@ -4,7 +4,7 @@
  */
 
 #include "cbor.h"
-#include "php_cbor.h"
+#include "private.h"
 #include <Zend/zend_smart_string.h>
 
 static void throw_error(php_cbor_error error, bool has_arg, size_t arg);

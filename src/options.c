@@ -4,7 +4,7 @@
  */
 
 #include "cbor.h"
-#include "php_cbor.h"
+#include "private.h"
 
 #define LONG_OPTION(name, cast, min, max)  do { \
 		value = zend_hash_str_find_deref(options, ZEND_STRL(#name)); \

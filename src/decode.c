@@ -4,7 +4,7 @@
  */
 
 #include "cbor.h"
-#include "php_cbor.h"
+#include "private.h"
 #include "utf8.h"
 
 #define _CB_SET_ERROR(error)  do { \

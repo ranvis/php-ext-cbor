@@ -5,8 +5,6 @@
 
 #define PHP_CBOR_SELF_DESCRIBE_DATA  "\xd9\xd9\xf7"
 
-/* EXPERIMENTAL: Flag values are subject to change. */
-
 /**
  * Encode: Add self-describe tag (magic) to the beginning of the stream.
  * Decode: Retain self-describe tag at the beginning of the stream.

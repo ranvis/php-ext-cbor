@@ -3,7 +3,8 @@
  * @license BSD-2-Clause
  */
 
-/* EXPERIMENTAL: Error names and values are subject to change. */
+#include "php_cbor.h"
+#include "flags.h"
 
 /* error codes */
 typedef enum {

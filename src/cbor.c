@@ -4,7 +4,7 @@
  */
 
 #include "cbor.h"
-#include "php_cbor.h"
+#include "private.h"
 #include "cbor_arginfo.h"
 #include "cbor_ns_arginfo.h"
 #include "compatibility.h"
@@ -67,7 +67,7 @@ PHP_MINIT_FUNCTION(cbor)
 	*/
 
 	REGISTER_STRING_CONSTANT("CBOR_SELF_DESCRIBE_DATA", PHP_CBOR_SELF_DESCRIBE_DATA, CONST_CS | CONST_PERSISTENT);
-	#define REG_CONST_LONG(name)  REGISTER_LONG_CONSTANT(#name, PHP_##name, CONST_CS | CONST_PERSISTENT)
+#define REG_CONST_LONG(name)  REGISTER_LONG_CONSTANT(#name, PHP_##name, CONST_CS | CONST_PERSISTENT)
 	/* flags start */
 	REG_CONST_LONG(CBOR_SELF_DESCRIBE);
 	REG_CONST_LONG(CBOR_BYTE);
@@ -100,7 +100,7 @@ PHP_MINIT_FUNCTION(cbor)
 	REG_CONST_LONG(CBOR_ERROR_INTERNAL);
 	/* errors end */
 
-	#define REG_CLASS(name, name_cc)  CBOR_CE(name) = register_class_Cbor_##name_cc
+#define REG_CLASS(name, name_cc)  CBOR_CE(name) = register_class_Cbor_##name_cc
 	REG_CLASS(exception, Exception)(zend_ce_exception);
 	REG_CLASS(encodable, Encodable)();
 	REG_CLASS(undefined, Undefined)();
@@ -112,7 +112,7 @@ PHP_MINIT_FUNCTION(cbor)
 	REG_CLASS(float32, Float32)(CBOR_CE(floatx));
 	REG_CLASS(tag, Tag)();
 
-	#define REG_CLASS_CONST_LONG(cls, prefix, name)  zend_declare_class_constant_long(CBOR_CE(cls), ZEND_STRL(#name), prefix##name);
+#define REG_CLASS_CONST_LONG(cls, prefix, name)  zend_declare_class_constant_long(CBOR_CE(cls), ZEND_STRL(#name), prefix##name);
 	/* tag constants start */
 	REG_CLASS_CONST_LONG(tag, PHP_CBOR_TAG_, SELF_DESCRIBE);
 	/* tag constants end */
@@ -121,9 +121,9 @@ PHP_MINIT_FUNCTION(cbor)
 	php_cbor_minit_encode();
 	php_cbor_minit_decode();
 
-	#if CBOR_CUSTOM_ALLOC
+#if CBOR_CUSTOM_ALLOC
 	cbor_set_allocs(php_cbor_malloc, php_cbor_realloc, php_cbor_free);
-	#endif
+#endif
 
 	return SUCCESS;
 }
@@ -222,12 +222,3 @@ ZEND_TSRMLS_CACHE_DEFINE()
 #endif
 ZEND_GET_MODULE(cbor)
 #endif
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */

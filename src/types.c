@@ -4,7 +4,7 @@
  */
 
 #include "cbor.h"
-#include "php_cbor.h"
+#include "private.h"
 
 #define LIT_PROP(prop_literal)  prop_literal, sizeof prop_literal - 1
 #define DEF_THIS_PROP(name, prop_literal)  CBOR_CE(name), Z_OBJ_P(self), LIT_PROP(prop_literal)
