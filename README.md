@@ -49,6 +49,14 @@ function cbor_decode(
 ): mixed;
 ```
 
+- max_depth (default:64, 0..10000)
+  Maximum number of nesting level to process.
+  To handle arrays/maps/tags, at least 1 depth is required.
+  `self-describe` tag that is prepended/skipped is handled specially and not counted as depth.
+
+- max_size: (default:10000, 0..0xffffffff)
+  Maximum number of elements to process for array and map when decoding.
+
 
 ### Types of CBOR and PHP
 
