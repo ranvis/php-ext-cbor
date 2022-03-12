@@ -19,10 +19,15 @@ run(function () {
     eq('1234567', cdec('4731323334353637'));
     eq('1234567', cdec('5f443132333443353637ff'));
     eq('1234567', cdec('7f606064313233346060633536376060ff', CBOR_TEXT));
+    eq('', cdec('7fff', CBOR_TEXT));
 
+    // indefinite contains wrong string type
     cdecThrows(CBOR_ERROR_SYNTAX, '5f643132333443353637ff', CBOR_BYTE);
     cdecThrows(CBOR_ERROR_SYNTAX, '5f443132333463353637ff', CBOR_BYTE);
     cdecThrows(CBOR_ERROR_SYNTAX, '5f6431323334ff', CBOR_BYTE);
+    // indefinite contains tagged string
+    cdecThrows(CBOR_ERROR_SYNTAX, '5fd901004431323334ff', CBOR_BYTE);
+    // indefinite contains non-string
     cdecThrows(CBOR_ERROR_SYNTAX, '5f01ff', CBOR_BYTE);
 
     eq('0x80', cdecHex('4180'));
