@@ -129,7 +129,7 @@ static void free_stack_element(void *vp_item)
 
 static void stack_push_item(dec_context *ctx, stack_item *item)
 {
-	int cur_depth = STACK_NUM_ELEMENTS(&ctx->stack);
+	uint32_t cur_depth = STACK_NUM_ELEMENTS(&ctx->stack);
 	if (cur_depth >= ctx->args.max_depth) {
 		stack_free_item(item);
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_DEPTH);
@@ -524,13 +524,7 @@ static void do_xstring(dec_context *ctx, cbor_data val, uint64_t length, bool is
 		}
 		/* not inside indefinite-length string */
 	}
-	if (!length) {
-		ZVAL_EMPTY_STRING(&value);
-	} else if (length == 1) {
-		ZVAL_CHAR(&value, *val);
-	} else {
-		ZVAL_STRINGL(&value, (const char *)val, length);
-	}
+	ZVAL_STRINGL_FAST(&value, (const char *)val, length);
 	if (!append_string_item(ctx, &value, is_text, false)) {
 		zval_ptr_dtor(&value);
 	}
@@ -730,12 +724,28 @@ FINALLY:
 	stack_free_item(item);
 }
 
+bool php_cbor_is_len_string_ref(size_t str_len, uint32_t next_index)
+{
+	size_t threshold;
+	if (next_index <= 23) {
+		threshold = 3;
+	} else if (next_index <= 0xff) {
+		threshold = 4;
+	} else if (next_index <= 0xffff) {
+		threshold = 5;
+	} else if (next_index <= 0xffffffff) {
+		threshold = 7;
+	} else {
+		threshold = 11;
+	}
+	return str_len >= threshold;
+}
+
 static void tag_handler_str_ref_ns_data(dec_context *ctx, stack_item *item, data_type_t type, zval *value)
 {
 	if (type == DATA_TYPE_STRING) {
 		HashTable *str_table = &item->str_ref_ns->v.th.str_table;
-		uint32_t next_index = zend_hash_num_elements(str_table);
-		size_t threshold, str_len;
+		size_t str_len;
 		if (Z_TYPE_P(value) == IS_STRING) {
 			str_len = Z_STRLEN_P(value);
 		} else if (EXPECTED(Z_TYPE_P(value) == IS_OBJECT)) {
@@ -743,19 +753,10 @@ static void tag_handler_str_ref_ns_data(dec_context *ctx, stack_item *item, data
 		} else {
 			RETURN_CB_ERROR(PHP_CBOR_ERROR_INTERNAL);
 		}
-		if (next_index <= 23) {
-			threshold = 3;
-		} else if (next_index <= 0xff) {
-			threshold = 4;
-		} else if (next_index <= 0xffff) {
-			threshold = 5;
-		} else if (next_index <= 0xffffffff) {
-			threshold = 7;
-		} else {
-			threshold = 11;
-		}
-		if (str_len >= threshold) {
-			zend_hash_next_index_insert(str_table, value);
+		if (php_cbor_is_len_string_ref(str_len, zend_hash_num_elements(str_table))) {
+			if (zend_hash_next_index_insert(str_table, value) == NULL) {
+				RETURN_CB_ERROR(PHP_CBOR_ERROR_INTERNAL);
+			}
 		}
 	}
 }

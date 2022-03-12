@@ -27,16 +27,19 @@ typedef enum {
 	/*   D   */ PHP_CBOR_ERROR_TAG_TYPE,
 	/*   D   */ PHP_CBOR_ERROR_TAG_VALUE,
 	/* E D   */ PHP_CBOR_ERROR_INTERNAL = 255,
+
+	PHP_CBOR_STATUS_STRING_REF_WRITTEN,
 } php_cbor_error;
 
 typedef struct {
 	int flags;
-	int max_depth;
+	uint32_t max_depth;
+	uint8_t string_ref;
 } php_cbor_encode_args;
 
 typedef struct {
 	int flags;
-	int max_depth;
+	uint32_t max_depth;
 	uint32_t max_size;
 	size_t error_arg;
 	bool string_ref;
@@ -70,3 +73,5 @@ extern php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php
 extern php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_args *args);
 
 extern zend_string *php_cbor_get_xstring_value(zval *value);
+
+bool php_cbor_is_len_string_ref(size_t str_len, uint32_t next_index);

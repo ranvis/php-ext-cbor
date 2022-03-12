@@ -83,21 +83,25 @@ function cdec($value, ...$args): mixed
 function cdecHex($value, ...$args): mixed
 {
     $decoded = cborDecode(hex2bin($value), ...$args);
-    if (!is_string($decoded)) {
-        return var_export($decoded, true);
+    return toDump($decoded);
+}
+
+function toDump($value): string
+{
+    if (!is_string($value)) {
+        return var_export($value, true);
     }
-    return '0x' . bin2hex($decoded);
+    return '0x' . bin2hex($value);
 }
 
 function xThrows(int $code, callable $fn): void
 {
-    $actual = 0;
     try {
-        $fn();
+        $actual = toDump($fn());
     } catch (Cbor\Exception $e) {
-        $actual = $e->getCode();
+        $actual = getErrorName($e->getCode());
     }
-    eq(getErrorName($code), getErrorName($actual), 2);
+    eq(getErrorName($code), $actual, 2);
 }
 
 function cencThrows(int $code, mixed $value, ...$args): void
