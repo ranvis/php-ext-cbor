@@ -167,16 +167,16 @@ static void stack_push_map(dec_context *ctx, si_type_t si_type, zval *value, uin
 	stack_push_item(ctx, item);
 }
 
-static bool do_tag_enter(dec_context *ctx, zend_long tag);
+static bool do_tag_enter(dec_context *ctx, zend_long tag_id);
 
-static void stack_push_tag(dec_context *ctx, zend_long tag)
+static void stack_push_tag(dec_context *ctx, zend_long tag_id)
 {
 	stack_item *item;
-	if (do_tag_enter(ctx, tag)) {
+	if (do_tag_enter(ctx, tag_id)) {
 		return;
 	}
 	item = stack_new_item(ctx, SI_TYPE_TAG, 1);
-	ZVAL_LONG(&item->v.tag_id, tag);
+	ZVAL_LONG(&item->v.tag_id, tag_id);
 	stack_push_item(ctx, item);
 }
 
@@ -824,13 +824,13 @@ static bool tag_handler_str_ref_enter(dec_context *ctx, stack_item *item)
 	return true;
 }
 
-static bool do_tag_enter(dec_context *ctx, zend_long tag)
+static bool do_tag_enter(dec_context *ctx, zend_long tag_id)
 {
 	/* must return true if pushed to stack or an error occurred */
 	tag_handler_enter_t handler = NULL;
-	if (tag == PHP_CBOR_TAG_STRING_REF_NS && ctx->args.string_ref) {
+	if (tag_id == PHP_CBOR_TAG_STRING_REF_NS && ctx->args.string_ref) {
 		handler = &tag_handler_str_ref_ns_enter;
-	} else if (tag == PHP_CBOR_TAG_STRING_REF && ctx->args.string_ref) {
+	} else if (tag_id == PHP_CBOR_TAG_STRING_REF && ctx->args.string_ref) {
 		handler = &tag_handler_str_ref_enter;
 	}
 	if (handler) {

@@ -75,7 +75,7 @@ static php_cbor_error enc_typed_byte(enc_context *ctx, zval *ins);
 static php_cbor_error enc_typed_text(enc_context *ctx, zval *ins);
 static php_cbor_error enc_typed_floatx(enc_context *ctx, zval *ins, int bits);
 static php_cbor_error enc_tag(enc_context *ctx, zval *ins);
-static php_cbor_error enc_tag_bare(enc_context *ctx, zend_long tag);
+static php_cbor_error enc_tag_bare(enc_context *ctx, zend_long tag_id);
 
 static void init_string_ref_ns(enc_context *ctx);
 static void free_string_ref_ns(enc_context *ctx);
@@ -392,13 +392,13 @@ static php_cbor_error enc_typed_floatx(enc_context *ctx, zval *ins, int bits)
 	return 0;
 }
 
-static php_cbor_error enc_tag_bare(enc_context *ctx, zend_long tag)
+static php_cbor_error enc_tag_bare(enc_context *ctx, zend_long tag_id)
 {
 	BX_INIT(ctx);
 	BX_ALLOC(8);
 	/* XXX: tag above ZEND_LONG_MAX cannot be created. As of writing there is one valid tag like this. */
-	assert(tag >= 0);
-	BX_PUT(cbor_encode_tag(tag, BX_ARGS));
+	assert(tag_id >= 0);
+	BX_PUT(cbor_encode_tag(tag_id, BX_ARGS));
 	BX_END_CHECK();
 	return 0;
 }
@@ -406,13 +406,13 @@ static php_cbor_error enc_tag_bare(enc_context *ctx, zend_long tag)
 static php_cbor_error enc_tag(enc_context *ctx, zval *ins)
 {
 	php_cbor_error error;
-	zval rv_tag, rv_data;
-	zval *tag, *data;
+	zval rv_tag, rv_content;
+	zval *tag, *content;
 	zend_long tag_id;
 	string_ref_ns_t *orig_string_ref_ns = NULL;
 	bool new_string_ref_ns = false;
 	tag = zend_read_property(CBOR_CE(tag), Z_OBJ_P(ins), PROP_L("tag"), false, &rv_tag);
-	data = zend_read_property(CBOR_CE(tag), Z_OBJ_P(ins), PROP_L("data"), false, &rv_data);
+	content = zend_read_property(CBOR_CE(tag), Z_OBJ_P(ins), PROP_L("content"), false, &rv_content);
 	tag_id = Z_LVAL_P(tag);
 	if (tag_id < 0) {
 		return PHP_CBOR_ERROR_SYNTAX;
@@ -424,18 +424,18 @@ static php_cbor_error enc_tag(enc_context *ctx, zval *ins)
 		init_string_ref_ns(ctx);
 	} else if (tag_id == PHP_CBOR_TAG_STRING_REF && ctx->args.string_ref) {
 		zend_long tag_content;
-		if (Z_TYPE_P(data) != IS_LONG) {
+		if (Z_TYPE_P(content) != IS_LONG) {
 			return PHP_CBOR_ERROR_TAG_TYPE;
 		}
 		if (!ctx->string_ref_ns) {
 			return PHP_CBOR_ERROR_TAG_SYNTAX;
 		}
-		tag_content = Z_LVAL_P(data);
+		tag_content = Z_LVAL_P(content);
 		if (tag_content < 0 || tag_content >= ctx->string_ref_ns->next_index) {
 			return PHP_CBOR_ERROR_TAG_VALUE;
 		}
 	}
-	error = enc_zval(ctx, data);
+	error = enc_zval(ctx, content);
 	if (new_string_ref_ns) {
 		free_string_ref_ns(ctx);
 		ctx->string_ref_ns = orig_string_ref_ns;

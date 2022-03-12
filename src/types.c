@@ -167,13 +167,13 @@ PHP_METHOD(Cbor_Tag, __construct)
 {
 	zval *self;
 	zend_long value;
-	zval *data;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lz", &value, &data) == FAILURE) {
+	zval *content;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lz", &value, &content) == FAILURE) {
 		RETURN_THROWS();
 	}
 	self = getThis();
 	zend_update_property_long(THIS_PROP("tag"), value);
-	zend_update_property(THIS_PROP("data"), data);
+	zend_update_property(THIS_PROP("content"), content);
 }
 
 #undef THIS_PROP

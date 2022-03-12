@@ -74,7 +74,7 @@ final class Tag
     / tag constants end */
 
     public int $tag;
-    public mixed $data;
+    public mixed $content;
 
-    public function __construct(int $tag, mixed $data) {}
+    public function __construct(int $tag, mixed $content) {}
 }
