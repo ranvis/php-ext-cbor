@@ -103,7 +103,7 @@ php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_e
 	}
 	ctx.string_ref_ns = NULL;
 	if (ctx.args.string_ref == 1) {
-		enc_tag_bare(&ctx, PHP_CBOR_TAG_STRING_REF_NAMESPACE);
+		enc_tag_bare(&ctx, PHP_CBOR_TAG_STRING_REF_NS);
 		init_string_ref_ns(&ctx);
 	}
 	error = enc_zval(&ctx, value);
@@ -418,7 +418,7 @@ static php_cbor_error enc_tag(enc_context *ctx, zval *ins)
 		return PHP_CBOR_ERROR_SYNTAX;
 	}
 	enc_tag_bare(ctx, tag_id);
-	if (tag_id == PHP_CBOR_TAG_STRING_REF_NAMESPACE && ctx->args.string_ref) {
+	if (tag_id == PHP_CBOR_TAG_STRING_REF_NS && ctx->args.string_ref) {
 		new_string_ref_ns = true;
 		orig_string_ref_ns = ctx->string_ref_ns;
 		init_string_ref_ns(ctx);

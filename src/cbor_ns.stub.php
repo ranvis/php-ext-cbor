@@ -69,7 +69,7 @@ final class Tag
 {
     /* tag constants start /
     public const CBOR_TAG_SELF_DESCRIBE = 55799;
-    public const CBOR_TAG_STRING_REF_NAMESPACE = 256;
+    public const CBOR_TAG_STRING_REF_NS = 256;
     public const CBOR_TAG_STRING_REF = 25;
     / tag constants end */
 

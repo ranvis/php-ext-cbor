@@ -19,16 +19,16 @@ run(function () {
 
     eq('0xd901008543616161d819008343626262d81900d819008243636363d81902d81900', cenc($value, options: ['string_ref' => true]));
     eq('0x8543616161436161618343626262436161614361616182436363634363636343616161', cenc($value, options: ['string_ref' => 'explicit']));
-    eq('0xd901008543616161d819008343626262d81900d819008243636363d81902d81900', cenc(new Cbor\Tag(Cbor\Tag::STRING_REF_NAMESPACE, $value), options: ['string_ref' => 'explicit']));
-    $value[2] = new Cbor\Tag(Cbor\Tag::STRING_REF_NAMESPACE, $value[2]);
-    $value[3] = new Cbor\Tag(Cbor\Tag::STRING_REF_NAMESPACE, $value[3]);
+    eq('0xd901008543616161d819008343626262d81900d819008243636363d81902d81900', cenc(new Cbor\Tag(Cbor\Tag::STRING_REF_NS, $value), options: ['string_ref' => 'explicit']));
+    $value[2] = new Cbor\Tag(Cbor\Tag::STRING_REF_NS, $value[2]);
+    $value[3] = new Cbor\Tag(Cbor\Tag::STRING_REF_NS, $value[3]);
     eq('0x' . $data, cenc($value, CBOR_TEXT, ['string_ref' => true]));
 
     // indefinite-string
     $value = ['000', '@@@', '111', '000', '111', ['000', '111']];
     $data = 'd901009f433030305f43404040ff43313131d81900d819019fd81900d81901ffff';
     eq($value, cdec($data, CBOR_BYTE));
-	// no stringref-namespace
+	// no namespace
     cdecThrows(CBOR_ERROR_TAG_SYNTAX, '9f433030305f43404040ff43313131d81900d819019fd81900d81901ffff');
 	// not unsigned int, unassigned number
     cdecThrows(CBOR_ERROR_TAG_TYPE, 'd901009f43303030d819f6ff');
@@ -37,14 +37,14 @@ run(function () {
     // no-flag
     $data = 'd901008243303030d81900';
     eq(['000', '000'], cdec($data));
-    $value = new Cbor\Tag(Cbor\Tag::STRING_REF_NAMESPACE, [
+    $value = new Cbor\Tag(Cbor\Tag::STRING_REF_NS, [
         '000', new Cbor\Tag(Cbor\Tag::STRING_REF, 0),
     ]);
     eq($value, cdec($data, options: ['string_ref' => false]));
     // double-tag
     eq('0xd90100' . $data, cenc($value, options: ['string_ref' => true]));
     // ref value check
-    $value = new Cbor\Tag(Cbor\Tag::STRING_REF_NAMESPACE, [
+    $value = new Cbor\Tag(Cbor\Tag::STRING_REF_NS, [
         '000', new Cbor\Tag(Cbor\Tag::STRING_REF, 1),
     ]);
     $data = 'd901008243303030d81901';

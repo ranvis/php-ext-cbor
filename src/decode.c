@@ -818,7 +818,7 @@ static bool tag_handler_str_ref_enter(dec_context *ctx, stack_item *item)
 {
 	item->tag_handler_exit = &tag_handler_str_ref_exit;
 	if (!item->str_ref_ns) {
-		/* stringref-namespace is expected */
+		/* outer stringref-namespace is expected */
 		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_TAG_SYNTAX);
 	}
 	return true;
@@ -828,7 +828,7 @@ static bool do_tag_enter(dec_context *ctx, zend_long tag)
 {
 	/* must return true if pushed to stack or an error occurred */
 	tag_handler_enter_t handler = NULL;
-	if (tag == PHP_CBOR_TAG_STRING_REF_NAMESPACE && ctx->args.string_ref) {
+	if (tag == PHP_CBOR_TAG_STRING_REF_NS && ctx->args.string_ref) {
 		handler = &tag_handler_str_ref_ns_enter;
 	} else if (tag == PHP_CBOR_TAG_STRING_REF && ctx->args.string_ref) {
 		handler = &tag_handler_str_ref_enter;

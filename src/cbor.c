@@ -118,7 +118,7 @@ PHP_MINIT_FUNCTION(cbor)
 #define REG_CLASS_CONST_LONG(cls, prefix, name)  zend_declare_class_constant_long(CBOR_CE(cls), ZEND_STRL(#name), prefix##name);
 	/* tag constants start */
 	REG_CLASS_CONST_LONG(tag, PHP_CBOR_TAG_, SELF_DESCRIBE);
-	REG_CLASS_CONST_LONG(tag, PHP_CBOR_TAG_, STRING_REF_NAMESPACE);
+	REG_CLASS_CONST_LONG(tag, PHP_CBOR_TAG_, STRING_REF_NS);
 	REG_CLASS_CONST_LONG(tag, PHP_CBOR_TAG_, STRING_REF);
 	/* tag constants end */
 
