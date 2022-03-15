@@ -34,7 +34,7 @@
 static struct cbor_callbacks callbacks;
 
 typedef struct stack_item_t stack_item;
-typedef struct str_ref_ns_item_t str_ref_ns_item;
+typedef struct srns_item_t srns_item_t;
 
 typedef struct {
 	php_cbor_decode_args args;
@@ -46,7 +46,7 @@ typedef struct {
 	zval root;
 	stack_item *stack_top;
 	uint32_t stack_depth;
-	str_ref_ns_item *str_ns;
+	srns_item_t *srns;
 } dec_context;
 
 typedef enum {
@@ -87,14 +87,14 @@ struct stack_item_t {
 	} v;
 };
 
-struct str_ref_ns_item_t {
-	str_ref_ns_item *prev_ns;
+struct srns_item_t {  /* srns: string ref namespace */
+	srns_item_t *prev_srns;
 	HashTable str_table;
 };
 
 static php_cbor_error dec_zval(dec_context *ctx);
 static void set_callbacks();
-static void free_str_ref_ns_item(str_ref_ns_item *ns_item);
+static void free_srns_item(srns_item_t *srns);
 
 void php_cbor_minit_decode()
 {
@@ -201,10 +201,10 @@ static void free_ctx_content(dec_context *ctx)
 		stack_item *item = stack_pop_item(ctx);
 		stack_free_item(item);
 	}
-	for (str_ref_ns_item *ns_item = ctx->str_ns; ns_item != NULL; ) {
-		str_ref_ns_item *ns_tmp = ns_item->prev_ns;
-		free_str_ref_ns_item(ns_item);
-		ns_item = ns_tmp;
+	for (srns_item_t *srns = ctx->srns; srns != NULL; ) {
+		srns_item_t *srns_tmp = srns->prev_srns;
+		free_srns_item(srns);
+		srns = srns_tmp;
 	}
 }
 
@@ -227,7 +227,7 @@ php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_a
 	ZVAL_UNDEF(&ctx.root);
 	ctx.data = ptr;
 	ctx.limit = ctx.length = length;
-	ctx.str_ns = NULL;
+	ctx.srns = NULL;
 	ctx.args = *args;
 	error = dec_zval(&ctx);
 	free_ctx_content(&ctx);
@@ -767,8 +767,8 @@ bool php_cbor_is_len_string_ref(size_t str_len, uint32_t next_index)
 static void tag_handler_str_ref_ns_data(dec_context *ctx, stack_item *item, data_type_t type, zval *value)
 {
 	if (type == DATA_TYPE_STRING) {
-		HashTable *str_table = &ctx->str_ns->str_table;
-		// ctx->str_ns is not NULL because this handler is called
+		HashTable *str_table = &ctx->srns->str_table;
+		// ctx->srns is not NULL because this handler is called
 		size_t str_len;
 		if (Z_TYPE_P(value) == IS_STRING) {
 			str_len = Z_STRLEN_P(value);
@@ -798,16 +798,16 @@ static void tag_handler_str_ref_ns_child(dec_context *ctx, stack_item *item, sta
 
 static zval *tag_handler_str_ref_ns_exit(dec_context *ctx, zval *value, stack_item *item, zval *storage)
 {
-	str_ref_ns_item *ns_item = ctx->str_ns;
-	ctx->str_ns = ns_item->prev_ns;
-	free_str_ref_ns_item(ns_item);
+	srns_item_t *srns = ctx->srns;
+	ctx->srns = srns->prev_srns;
+	free_srns_item(srns);
 	return value;
 }
 
-static void free_str_ref_ns_item(str_ref_ns_item *ns_item)
+static void free_srns_item(srns_item_t *srns)
 {
-	zend_hash_destroy(&ns_item->str_table);
-	efree(ns_item);
+	zend_hash_destroy(&srns->str_table);
+	efree(srns);
 }
 
 static void tag_handler_str_ref_ns_free(stack_item *item)
@@ -816,14 +816,14 @@ static void tag_handler_str_ref_ns_free(stack_item *item)
 
 static bool tag_handler_str_ref_ns_enter(dec_context *ctx, stack_item *item)
 {
-	str_ref_ns_item *ns_item = emalloc(sizeof *ns_item);
+	srns_item_t *srns = emalloc(sizeof *srns);
 	item->tag_handler_data = &tag_handler_str_ref_ns_data;
 	item->tag_handler_child = &tag_handler_str_ref_ns_child;
 	item->tag_handler_exit = &tag_handler_str_ref_ns_exit;
 	item->tag_handler_free = &tag_handler_str_ref_ns_free;
-	zend_hash_init(&ns_item->str_table, 16, NULL, NULL, false);
-	ns_item->prev_ns = ctx->str_ns;
-	ctx->str_ns = ns_item;
+	zend_hash_init(&srns->str_table, 16, NULL, NULL, false);
+	srns->prev_srns = ctx->srns;
+	ctx->srns = srns;
 	return true;
 }
 
@@ -838,7 +838,7 @@ static zval *tag_handler_str_ref_exit(dec_context *ctx, zval *value, stack_item 
 	if (index < 0) {
 		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_VALUE);
 	}
-	if ((str = zend_hash_index_find(&ctx->str_ns->str_table, index)) == NULL) {
+	if ((str = zend_hash_index_find(&ctx->srns->str_table, index)) == NULL) {
 		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_VALUE);
 	}
 	zval_ptr_dtor(value);
@@ -849,7 +849,7 @@ static zval *tag_handler_str_ref_exit(dec_context *ctx, zval *value, stack_item 
 static bool tag_handler_str_ref_enter(dec_context *ctx, stack_item *item)
 {
 	item->tag_handler_exit = &tag_handler_str_ref_exit;
-	if (!ctx->str_ns) {
+	if (!ctx->srns) {
 		/* outer stringref-namespace is expected */
 		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_TAG_SYNTAX);
 	}

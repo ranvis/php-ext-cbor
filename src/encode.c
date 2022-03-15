@@ -51,13 +51,13 @@
 typedef struct {
 	uint32_t next_index;
 	HashTable *str_table[2];
-} string_ref_ns_t;
+} srns_item_t;
 
 typedef struct {
 	php_cbor_encode_args args;
 	uint32_t cur_depth;
 	smart_str *buf;
-	string_ref_ns_t *string_ref_ns;
+	srns_item_t *srns;
 } enc_context;
 
 typedef enum {
@@ -77,8 +77,8 @@ static php_cbor_error enc_typed_floatx(enc_context *ctx, zval *ins, int bits);
 static php_cbor_error enc_tag(enc_context *ctx, zval *ins);
 static php_cbor_error enc_tag_bare(enc_context *ctx, zend_long tag_id);
 
-static void init_string_ref_ns(enc_context *ctx);
-static void free_string_ref_ns(enc_context *ctx);
+static void init_srns_stack(enc_context *ctx);
+static void free_srns_stack(enc_context *ctx);
 static php_cbor_error enc_string_ref(enc_context *ctx, const char *value, size_t length, zend_string *v_str, bool to_text);
 
 void php_cbor_minit_encode()
@@ -101,13 +101,13 @@ php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_e
 	if (ctx.args.flags & PHP_CBOR_SELF_DESCRIBE) {
 		enc_tag_bare(&ctx, PHP_CBOR_TAG_SELF_DESCRIBE);
 	}
-	ctx.string_ref_ns = NULL;
+	ctx.srns = NULL;
 	if (ctx.args.string_ref == 1) {
 		enc_tag_bare(&ctx, PHP_CBOR_TAG_STRING_REF_NS);
-		init_string_ref_ns(&ctx);
+		init_srns_stack(&ctx);
 	}
 	error = enc_zval(&ctx, value);
-	free_string_ref_ns(&ctx);
+	free_srns_stack(&ctx);
 	if (!error) {
 		*data = smart_str_extract(&buf);
 	} else {
@@ -409,8 +409,8 @@ static php_cbor_error enc_tag(enc_context *ctx, zval *ins)
 	zval rv_tag, rv_content;
 	zval *tag, *content;
 	zend_long tag_id;
-	string_ref_ns_t *orig_string_ref_ns = NULL;
-	bool new_string_ref_ns = false;
+	srns_item_t *orig_srns = NULL;
+	bool new_srns = false;
 	tag = zend_read_property(CBOR_CE(tag), Z_OBJ_P(ins), PROP_L("tag"), false, &rv_tag);
 	content = zend_read_property(CBOR_CE(tag), Z_OBJ_P(ins), PROP_L("content"), false, &rv_content);
 	tag_id = Z_LVAL_P(tag);
@@ -419,58 +419,58 @@ static php_cbor_error enc_tag(enc_context *ctx, zval *ins)
 	}
 	enc_tag_bare(ctx, tag_id);
 	if (tag_id == PHP_CBOR_TAG_STRING_REF_NS && ctx->args.string_ref) {
-		new_string_ref_ns = true;
-		orig_string_ref_ns = ctx->string_ref_ns;
-		init_string_ref_ns(ctx);
+		new_srns = true;
+		orig_srns = ctx->srns;
+		init_srns_stack(ctx);
 	} else if (tag_id == PHP_CBOR_TAG_STRING_REF && ctx->args.string_ref) {
 		zend_long tag_content;
 		if (Z_TYPE_P(content) != IS_LONG) {
 			return PHP_CBOR_ERROR_TAG_TYPE;
 		}
-		if (!ctx->string_ref_ns) {
+		if (!ctx->srns) {
 			return PHP_CBOR_ERROR_TAG_SYNTAX;
 		}
 		tag_content = Z_LVAL_P(content);
-		if (tag_content < 0 || tag_content >= ctx->string_ref_ns->next_index) {
+		if (tag_content < 0 || tag_content >= ctx->srns->next_index) {
 			return PHP_CBOR_ERROR_TAG_VALUE;
 		}
 	}
 	error = enc_zval(ctx, content);
-	if (new_string_ref_ns) {
-		free_string_ref_ns(ctx);
-		ctx->string_ref_ns = orig_string_ref_ns;
+	if (new_srns) {
+		free_srns_stack(ctx);
+		ctx->srns = orig_srns;
 	}
 	return error;
 }
 
-static void init_string_ref_ns(enc_context *ctx)
+static void init_srns_stack(enc_context *ctx)
 {
-	string_ref_ns_t *ns = (string_ref_ns_t *)emalloc(sizeof *ns);
-	ctx->string_ref_ns = ns;
-	ns->next_index = 0;
-	ns->str_table[0] = zend_new_array(16);
-	ns->str_table[1] = zend_new_array(16);
+	srns_item_t *srns = (srns_item_t *)emalloc(sizeof *srns);
+	ctx->srns = srns;
+	srns->next_index = 0;
+	srns->str_table[0] = zend_new_array(16);
+	srns->str_table[1] = zend_new_array(16);
 }
 
-static void free_string_ref_ns(enc_context *ctx)
+static void free_srns_stack(enc_context *ctx)
 {
-	string_ref_ns_t *ns = ctx->string_ref_ns;
-	if (ns) {
-		zend_array_release(ns->str_table[0]);
-		zend_array_release(ns->str_table[1]);
-		efree(ns);
+	srns_item_t *srns = ctx->srns;
+	if (srns) {
+		zend_array_release(srns->str_table[0]);
+		zend_array_release(srns->str_table[1]);
+		efree(srns);
 	}
 }
 
 static php_cbor_error enc_string_ref(enc_context *ctx, const char *value, size_t length, zend_string *v_str, bool to_text)
 {
 	php_cbor_error error;
-	string_ref_ns_t *ns = ctx->string_ref_ns;
+	srns_item_t *srns = ctx->srns;
 	HashTable *str_table;
 	int table_index;
 	zval new_index, *str_index;
 	bool created = false;
-	if (!ns) {
+	if (!srns) {
 		return 0;
 	}
 	table_index = to_text ? 1 : 0;
@@ -478,7 +478,7 @@ static php_cbor_error enc_string_ref(enc_context *ctx, const char *value, size_t
 		v_str = zend_string_init_fast(value, length);
 		created = true;
 	}
-	str_table = ns->str_table[table_index];
+	str_table = srns->str_table[table_index];
 	str_index = zend_hash_find(str_table, v_str);
 	if (str_index) {
 		enc_tag_bare(ctx, PHP_CBOR_TAG_STRING_REF);
@@ -486,16 +486,16 @@ static php_cbor_error enc_string_ref(enc_context *ctx, const char *value, size_t
 		error = PHP_CBOR_STATUS_STRING_REF_WRITTEN;
 		goto NOT_ADDED;
 	}
-	if (!php_cbor_is_len_string_ref(length, ns->next_index)) {
+	if (!php_cbor_is_len_string_ref(length, srns->next_index)) {
 		error = 0;
 		goto NOT_ADDED;
 	}
-	if (ns->next_index == ZEND_LONG_MAX) {  /* until max - 1 for simplicity */
+	if (srns->next_index == ZEND_LONG_MAX) {  /* until max - 1 for simplicity */
 		error = PHP_CBOR_ERROR_INTERNAL;
 		goto NOT_ADDED;
 	}
-	ZVAL_LONG(&new_index, ns->next_index);
-	ns->next_index++;
+	ZVAL_LONG(&new_index, srns->next_index);
+	srns->next_index++;
 	if (!zend_hash_add_new(str_table, v_str, &new_index)) {
 		error = PHP_CBOR_ERROR_INTERNAL;
 		goto NOT_ADDED;
