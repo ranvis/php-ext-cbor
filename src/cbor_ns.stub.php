@@ -80,3 +80,10 @@ final class Tag
 
     public function __construct(int $tag, mixed $content) {}
 }
+
+final class Shareable
+{
+    public mixed $value;
+
+    public function __construct(mixed $value) {}
+}

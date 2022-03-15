@@ -29,7 +29,8 @@ zend_class_entry
 	*CBOR_CE(floatx),
 	*CBOR_CE(float16),
 	*CBOR_CE(float32),
-	*CBOR_CE(tag)
+	*CBOR_CE(tag),
+	*CBOR_CE(shareable)
 ;
 
 /* {{{ PHP_INI
@@ -114,6 +115,7 @@ PHP_MINIT_FUNCTION(cbor)
 	REG_CLASS(float16, Float16)(CBOR_CE(floatx));
 	REG_CLASS(float32, Float32)(CBOR_CE(floatx));
 	REG_CLASS(tag, Tag)();
+	REG_CLASS(shareable, Shareable)();
 
 #define REG_CLASS_CONST_LONG(cls, prefix, name)  zend_declare_class_constant_long(CBOR_CE(cls), ZEND_STRL(#name), prefix##name);
 	/* tag constants start */

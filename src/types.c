@@ -177,3 +177,17 @@ PHP_METHOD(Cbor_Tag, __construct)
 }
 
 #undef THIS_PROP
+#define THIS_PROP(prop_literal)  DEF_THIS_PROP(shareable, prop_literal)
+
+PHP_METHOD(Cbor_Shareable, __construct)
+{
+	zval *self;
+	zval *value;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &value) == FAILURE) {
+		RETURN_THROWS();
+	}
+	self = getThis();
+	zend_update_property(THIS_PROP("value"), value);
+}
+
+#undef THIS_PROP

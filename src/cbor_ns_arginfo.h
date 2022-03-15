@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: b9e77f905bf317829c3ea3653cd12a4ccbc57ee4 */
+ * Stub hash: 12cb83d5e6975b9a49fde75467aa7d54c560b10c */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Encodable_cborEncode, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
@@ -27,6 +27,10 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Cbor_Tag___construct, 0, 0, 2)
 	ZEND_ARG_TYPE_INFO(0, content, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Cbor_Shareable___construct, 0, 0, 1)
+	ZEND_ARG_TYPE_INFO(0, value, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
+
 
 ZEND_METHOD(Cbor_Undefined, __construct);
 ZEND_METHOD(Cbor_Undefined, __set_state);
@@ -34,6 +38,7 @@ ZEND_METHOD(Cbor_Undefined, get);
 ZEND_METHOD(Cbor_XString, __construct);
 ZEND_METHOD(Cbor_FloatX, __construct);
 ZEND_METHOD(Cbor_Tag, __construct);
+ZEND_METHOD(Cbor_Shareable, __construct);
 
 
 static const zend_function_entry class_Cbor_Exception_methods[] = {
@@ -89,6 +94,12 @@ static const zend_function_entry class_Cbor_Float32_methods[] = {
 
 static const zend_function_entry class_Cbor_Tag_methods[] = {
 	ZEND_ME(Cbor_Tag, __construct, arginfo_class_Cbor_Tag___construct, ZEND_ACC_PUBLIC)
+	ZEND_FE_END
+};
+
+
+static const zend_function_entry class_Cbor_Shareable_methods[] = {
+	ZEND_ME(Cbor_Shareable, __construct, arginfo_class_Cbor_Shareable___construct, ZEND_ACC_PUBLIC)
 	ZEND_FE_END
 };
 
@@ -220,6 +231,23 @@ static zend_class_entry *register_class_Cbor_Tag(void)
 	zend_string *property_content_name = zend_string_init("content", sizeof("content") - 1, 1);
 	zend_declare_typed_property(class_entry, property_content_name, &property_content_default_value, ZEND_ACC_PUBLIC, NULL, (zend_type) ZEND_TYPE_INIT_MASK(MAY_BE_ANY));
 	zend_string_release(property_content_name);
+
+	return class_entry;
+}
+
+static zend_class_entry *register_class_Cbor_Shareable(void)
+{
+	zend_class_entry ce, *class_entry;
+
+	INIT_NS_CLASS_ENTRY(ce, "Cbor", "Shareable", class_Cbor_Shareable_methods);
+	class_entry = zend_register_internal_class_ex(&ce, NULL);
+	class_entry->ce_flags |= ZEND_ACC_FINAL;
+
+	zval property_value_default_value;
+	ZVAL_UNDEF(&property_value_default_value);
+	zend_string *property_value_name = zend_string_init("value", sizeof("value") - 1, 1);
+	zend_declare_typed_property(class_entry, property_value_name, &property_value_default_value, ZEND_ACC_PUBLIC, NULL, (zend_type) ZEND_TYPE_INIT_MASK(MAY_BE_ANY));
+	zend_string_release(property_value_name);
 
 	return class_entry;
 }

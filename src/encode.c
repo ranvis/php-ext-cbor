@@ -102,7 +102,7 @@ php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_e
 		enc_tag_bare(&ctx, PHP_CBOR_TAG_SELF_DESCRIBE);
 	}
 	ctx.srns = NULL;
-	if (ctx.args.string_ref == 1) {
+	if (ctx.args.string_ref == OPT_TRUE) {
 		enc_tag_bare(&ctx, PHP_CBOR_TAG_STRING_REF_NS);
 		init_srns_stack(&ctx);
 	}

@@ -32,6 +32,7 @@ typedef enum {
 } php_cbor_error;
 
 enum {
+	OPT_TRUE = 1,
 	/* string ref */
 	OPT_EXPLICIT = 2,
 	/* shared ref */
@@ -67,7 +68,8 @@ extern zend_class_entry
 	*CBOR_CE(floatx),
 	*CBOR_CE(float16),
 	*CBOR_CE(float32),
-	*CBOR_CE(tag)
+	*CBOR_CE(tag),
+	*CBOR_CE(shareable)
 ;
 
 extern void php_cbor_minit_types();
