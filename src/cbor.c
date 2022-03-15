@@ -14,7 +14,7 @@
 #error "libcbor version must be 0.9 or later."
 #endif
 
-#define PHP_CBOR_VERSION "0.2.2a1"
+#define PHP_CBOR_VERSION "0.2.2a2"
 
 ZEND_DECLARE_MODULE_GLOBALS(cbor)
 
