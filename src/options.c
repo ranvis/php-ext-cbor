@@ -74,10 +74,13 @@ static php_cbor_error uint32_option(uint32_t *opt_value, const char *name, size_
 		return PHP_CBOR_ERROR_INVALID_OPTIONS;
 	}
 	long_value = Z_LVAL_P(value);
-	if (long_value < min || long_value > max) {
+	if (long_value < 0) {
 		return PHP_CBOR_ERROR_INVALID_OPTIONS;
 	}
 	*opt_value = (uint32_t)long_value;
+	if (*opt_value < min || *opt_value > max) {
+		return PHP_CBOR_ERROR_INVALID_OPTIONS;
+	}
 	return 0;
 }
 

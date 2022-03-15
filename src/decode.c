@@ -516,7 +516,7 @@ static void cb_uint64(void *vp_ctx, uint64_t val)
 	if (TEST_OVERFLOW_XINT64(val)) {
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
 	}
-	ZVAL_LONG(&value, val);
+	ZVAL_LONG(&value, (zend_long)val);
 	append_item(ctx, &value);
 }
 
@@ -602,8 +602,13 @@ static void do_xstring(dec_context *ctx, cbor_data val, uint64_t length, bool is
 {
 	zval value;
 	stack_item *item = ctx->stack_top;
+#if UINT64_MAX > SIZE_MAX
+	if (length > SIZE_MAX) {
+		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_SIZE);
+	}
+#endif
 	if (is_text && !(ctx->args.flags & PHP_CBOR_UNSAFE_TEXT)
-			&& !is_utf8((uint8_t *)val, length)) {
+			&& !is_utf8((uint8_t *)val, (size_t)length)) {
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_UTF8);
 	}
 	if (item != NULL) {
@@ -612,7 +617,7 @@ static void do_xstring(dec_context *ctx, cbor_data val, uint64_t length, bool is
 		si_type_t inv_si_type = is_text ? SI_TYPE_BYTE : SI_TYPE_TEXT;
 		if (item->si_type == str_si_type) {
 			if (length) {
-				smart_str_appendl(&item->v.str, (const char *)val, length);
+				smart_str_appendl(&item->v.str, (const char *)val, (size_t)length);
 			}
 			return;
 		}
@@ -621,7 +626,7 @@ static void do_xstring(dec_context *ctx, cbor_data val, uint64_t length, bool is
 		}
 		/* not inside indefinite-length string */
 	}
-	ZVAL_STRINGL_FAST(&value, (const char *)val, length);
+	ZVAL_STRINGL_FAST(&value, (const char *)val, (size_t)length);
 	append_string_item(ctx, &value, is_text, false);
 	zval_ptr_dtor(&value);
 }
