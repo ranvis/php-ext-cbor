@@ -61,6 +61,24 @@ function eq($exp, $act, int $depth = 0): void
         $act = var_export($act, true);
     }
     $bt = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, $depth + 1)[$depth];
+    static $phptMap = [];
+    $phpt = $bt['file'] . 't';
+    if (isset($phptMap[$phpt])) {
+        if (is_int($phptMap[$phpt])) {
+            $bt['line'] += $phptMap[$phpt];
+            $bt['file'] = $phpt;
+        }
+    } else if (file_exists($phpt)) {
+        $script = file_get_contents($phpt) ?: '';
+        $pos = strpos($script, "\n--FILE--\n");  // LF only
+        if ($pos !== false) {
+            $phptMap[$phpt] = substr_count($script, "\n", 0, $pos) + 2;
+            $bt['line'] += $phptMap[$phpt];
+            $bt['file'] = $phpt;
+        } else {
+            $phptMap[$phpt] = false;
+        }
+    }
     echo "Expected: " . $exp . "\n";
     echo "Actual  : " . $act . "\n";
     echo "File    : " . $bt['file'] . "\n";

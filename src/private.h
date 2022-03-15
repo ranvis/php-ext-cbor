@@ -28,7 +28,7 @@ typedef enum {
 	/*   D   */ PHP_CBOR_ERROR_TAG_VALUE,
 	/* E D   */ PHP_CBOR_ERROR_INTERNAL = 255,
 
-	PHP_CBOR_STATUS_STRING_REF_WRITTEN,
+	PHP_CBOR_STATUS_VALUE_FOLLOWS,
 } php_cbor_error;
 
 enum {
