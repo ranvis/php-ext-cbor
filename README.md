@@ -160,8 +160,8 @@ Option:
   - Decode: default: `true`; values: `bool`
 
 Constants:
--	`CBOR_TAG_STRING_REF_NS`
-- `CBOR_TAG_STRING_REF`
+- `Cbor\Tag::STRING_REF_NS`
+- `Cbor\Tag::STRING_REF`
 
 The tag {stringref} is like a compression, that "references" the string previously appeared inside {stringref-namespace} tag. Note that it differs from PHP's reference to `string`, i.e. not the concept of `$stringRef = &$string`.
 On encode, it can save payload size by replacing the string already seen with the tag + index (or at the worst case increase by 3-bytes overall when single-namespaced). On decode it can save memory of decoded value because PHP can reference count the same `string` until one of them is going to be modified (copy-on-write). At the cost of bookkeeping all the strings on both encoding and decoding.
@@ -184,8 +184,8 @@ Option:
   - Decode: default: `true`; values: `bool` | `'shareable'` | `'unsafe_ref'`
 
 Constants:
--	`CBOR_TAG_SHAREABLE`
-- `CBOR_TAG_SHARED_REF`
+- `Cbor\Tag::SHAREABLE`
+- `Cbor\Tag::SHARED_REF`
 
 The tag {sharedref} can refer the previously-defined data.
 
@@ -195,7 +195,7 @@ The option is enabled by default on decoding.
 
 On encoding, potentially shared PHP objects (i.e. there are variables holding the object somewhere) are tagged {shareable}, and once reused, {sharedref} tag is emitted.
 
-If `'shareable'` is specified, non-object CBOR values tagged as {shareable} is wrapped into `Cbor\Shareable` object on decoding and the instance is reused on {sharedref} tag. On encoding, `Cbor\Shareable` value is tagged {shareable}.
+If `'shareable'` is specified, non-object CBOR values tagged as {shareable} is wrapped into `Cbor\Shareable` object on decoding and the instance is reused on {sharedref} tag. On encoding, `Cbor\Shareable` value is tagged {shareable} regardless of the option value.
 
 If `'unsafe_ref'` is specified, {shareable} tagged data that decoded to non-object becomes PHP `&` reference.
 At first glance it may seem natural to use PHP reference for shared scalars and arrays. But this will cause unexpected side effects when the decoded structure contains references that you don't expect. You change a single scalar value, and somewhere else is changed too!
