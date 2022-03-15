@@ -70,13 +70,13 @@ The value must be within the range PHP can handle.
 CBOR `float` has three sizes. 64 bits value is translated to PHP `float`.
 
 32 bits value and 16 bits value are translated to PHP `Cbor\Float32` and `Cbor\Float16` respectively.
-But if flags `CBOR_FLOAT32` and/or `CBOR_FLOAT16` is passed, they are treated as PHP `float`.
+But if the flags `CBOR_FLOAT32` and/or `CBOR_FLOAT16` is passed, they are treated as PHP `float`.
 
 #### Strings
 
 CBOR has two type of strings: `byte string` (binary data) and `text string` (UTF-8 encoded string).
 PHP `string` type does not have this distinction.
-If you specify `CBOR_BYTE` flag (default) and/or `CBOR_TEXT` flag on decoding, those strings are decoded to PHP `string`. If flag is not specified, it is decoded to `Cbor\Byte` and `Cbor\Text` object respectively.
+If you specify `CBOR_BYTE` flag (default) and/or `CBOR_TEXT` flag on decoding, those strings are decoded to PHP `string`. If the flag is not specified, it is decoded to `Cbor\Byte` and `Cbor\Text` object respectively.
 On encoding PHP `string`, you must specify either of the flag so that the extension knows to which you want your string to be encoded.
 
 `CBOR_KEY_BYTE` and `CBOR_KEY_TEXT` are for strings of CBOR `map` keys.
@@ -87,7 +87,7 @@ If `text` string is not a valid UTF-8 sequence, an error is thrown unless you pa
 
 CBOR `array` is translated to PHP `array`.
 
-If PHP `array` has holes or `string` keys (i.e. array is not not "list",) it is encoded to CBOR `map`.
+If PHP `array` has holes or `string` keys (i.e. array is not not "list"), it is encoded to CBOR `map`.
 
 Number of elements in an array must be under 2**32.
 
@@ -106,7 +106,7 @@ Number of properties in an object must be under 2**32.
 CBOR `tag` is translated to PHP `Cbor\Tag(int $tag, mixed $content)` object.
 
 Tag is a marker to mark data (including another tag) as some type using unsigned number.
-You can consult (CBOR tag registry)[https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml] for valid tags.
+You can consult [CBOR tag registry](https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml) for valid tags.
 
 Also see "Supported Tags" below.
 
@@ -129,7 +129,7 @@ var_dump($undefined === clone $undefined); // true
 
 Flag:
 - `CBOR_SELF_DESCRIBE`
-  - default: false; values: `bool`
+  - default: `false`; values: `bool`
 
 Constant:
 - `CBOR_TAG_SELF_DESCRIBE`
@@ -138,7 +138,7 @@ Data:
 - `CBOR_TAG_SELF_DESCRIBE_DATA`
 
 Self-Described CBOR is CBOR data that has this tag for the data.
-This 3-byte binary string can be used to distinguish CBOR from other data including Unicode text encodings (so-called magic.) This is useful if decoder need to identify the format by data itself.
+This 3-byte binary string can be used to distinguish CBOR from other data including Unicode text encodings (so-called magic). This is useful if decoder need to identify the format by data itself.
 ```
 $isCbor = str_starts_with($data, CBOR_TAG_SELF_DESCRIBE_DATA);
 ```
@@ -159,8 +159,8 @@ Constants:
 -	`CBOR_TAG_STRING_REF_NS`
 - `CBOR_TAG_STRING_REF`
 
-25(stringref) is like a compression, that "references" the string previously appeared inside parent stringref-namespace tag. Note that it differs from PHP's reference to `string`, i.e. not `$stringRef = &$string`.
-On encode, it can save payload size by replacing the string already seen with the tag + index (or at the worst case increase by 3-bytes overall when single-namespaced.) On decode it can save memory on decode becasue PHP can reference count the same `string`. At the cost of keeping hash table of the strings for both encoding and decoding.
+25(stringref) is like a compression, that "references" the string previously appeared inside parent stringref-namespace tag. Note that it differs from PHP's reference to `string`, i.e. not the concept of `$stringRef = &$string`.
+On encode, it can save payload size by replacing the string already seen with the tag + index (or at the worst case increase by 3-bytes overall when single-namespaced). On decode it can save memory on decode becasue PHP can reference count the same `string`. At the cost of keeping hash table of the strings for both encoding and decoding.
 
 For decoding, stringref support is enabled by default, while encoding it should be specified explicitly.
 If `true` is specified on encoding, data is always wrapped with stringref-namespace tag. It resets the string index (like compression dictionary) for the content inside the tag. `'explicit'` makes stringref active but the root namespace is not implicitly created, meaning stringref is not used on its own.

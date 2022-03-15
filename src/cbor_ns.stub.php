@@ -7,7 +7,7 @@
 
 namespace Cbor;
 
-// as of writing, generator doesn't support partially namespaced script; i.e. mix global functions and namespace X { ... }
+// as of writing, code generator doesn't support partially namespaced script; i.e. mix global functions and namespace X { ... }
 
 class Exception extends \Exception
 {
