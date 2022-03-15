@@ -12,9 +12,9 @@ ARG_WITH("cbor", "for CBOR support", "no");
 	if (!CHECK_LIB("cbor.lib", "cbor", PHP_CBOR)) {
 		ERROR("Unable to locate cbor library");
 	}
-	header_add_include("cbor.h", "CFLAGS_CBOR", "libcbor/src");
-	header_add_include("cbor/cbor_export.h", "CFLAGS_CBOR", PHP_CBOR + "/..");
-	header_add_include("cbor/configuration.h", "CFLAGS_CBOR", PHP_CBOR + "/../..");
+	header_add_include("cbor.h", "CFLAGS_CBOR", PHP_CBOR + "/include");
+	header_add_include("cbor/cbor_export.h", "CFLAGS_CBOR", PHP_CBOR + "/include");
+	header_add_include("cbor/configuration.h", "CFLAGS_CBOR", PHP_CBOR + "/include");
 	EXTENSION("cbor", src, PHP_CBOR_SHARED, "/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 /W4 /wd4100");
 
 	function header_add_include(hn, fn, p, ue, adp, afo) {
