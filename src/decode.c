@@ -302,14 +302,12 @@ static bool append_item_to_array(dec_context *ctx, zval *value, stack_item *item
 	if (add_next_index_zval(&item->v.value, value) != SUCCESS) {
 		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_INTERNAL);
 	}
+	Z_TRY_ADDREF_P(value);
 	if (item->count && --item->count == 0) {
 		bool result;
 		assert(ctx->stack_top == item);
 		stack_pop_item(ctx);
 		result = append_item(ctx, &item->v.value);
-		if (result) {
-			Z_TRY_ADDREF(item->v.value);
-		}
 		stack_free_item(item);
 		return result;
 	}
@@ -331,6 +329,7 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 			break;
 		case IS_STRING:
 			ZVAL_COPY_VALUE(&item->v.map.key, value);
+			Z_TRY_ADDREF_P(value);
 			break;
 		default:
 			RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_KEY_TYPE);
@@ -355,6 +354,7 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 			if (dest == NULL) {
 				RETURN_CB_ERROR_B(PHP_CBOR_ERROR_INTERNAL);
 			}
+			Z_TRY_ADDREF_P(value);
 			ZVAL_COPY_VALUE(dest, value);
 		}
 	} else {
@@ -373,9 +373,6 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 		assert(ctx->stack_top == item);
 		stack_pop_item(ctx);
 		result = append_item(ctx, &item->v.map.dest);
-		if (result) {
-			Z_TRY_ADDREF(item->v.map.dest);
-		}
 		stack_free_item(item);
 		return result;
 	}
@@ -385,6 +382,7 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 static bool append_item_to_tag(dec_context *ctx, zval *value, stack_item *item)
 {
 	zval container;
+	bool result;
 	if (object_init_ex(&container, CBOR_CE(tag)) != SUCCESS) {
 		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_INTERNAL);
 	}
@@ -392,14 +390,10 @@ static bool append_item_to_tag(dec_context *ctx, zval *value, stack_item *item)
 	assert(ctx->stack_top == item);
 	stack_pop_item(ctx);
 	assert(Z_TYPE(item->v.tag_id) == IS_LONG);
-	zval_ptr_dtor(value);
 	stack_free_item(item);
-	if (!append_item(ctx, &container)) {
-		ASSERT_ERROR_SET();
-		zval_ptr_dtor(&container);
-		return false;
-	}
-	return true;
+	result = append_item(ctx, &container);
+	zval_ptr_dtor(&container);
+	return result;
 }
 
 static bool append_item_to_tag_handled(dec_context *ctx, zval *value, stack_item *item)
@@ -413,9 +407,8 @@ static bool append_item_to_tag_handled(dec_context *ctx, zval *value, stack_item
 	stack_free_item(item);
 	if (ctx->cb_error || !append_item(ctx, value)) {
 		ASSERT_ERROR_SET();
-		/* while caller must free passed value when failed, exit handler may have changed adding value */
+		/* while caller must free passed value, exit handler may have changed adding value */
 		if (orig_value != value) {
-			Z_ADDREF_P(orig_value);
 			zval_ptr_dtor(value);
 		}
 		return false;
@@ -428,6 +421,7 @@ static bool append_item(dec_context *ctx, zval *value)
 	stack_item *item = ctx->stack_top;
 	if (item == NULL) {
 		ZVAL_COPY_VALUE(&ctx->root, value);
+		Z_TRY_ADDREF_P(value);
 		return true;
 	}
 	switch (item->si_type) {
@@ -535,7 +529,6 @@ static bool create_value_object(zval *container, zval *value, zend_class_entry *
 		return false;
 	}
 	zend_call_known_instance_method_with_1_params(ce->constructor, Z_OBJ_P(container), NULL, value);
-	zval_ptr_dtor(value);
 	return true;
 }
 
@@ -545,6 +538,8 @@ static bool append_string_item(dec_context *ctx, zval *value, bool is_text, bool
 	int type_flag = is_text ? PHP_CBOR_TEXT : PHP_CBOR_BYTE;
 	zend_class_entry *string_ce = is_text ? CBOR_CE(text) : CBOR_CE(byte);
 	stack_item *item = ctx->stack_top;
+	bool result;
+	ZVAL_NULL(&container);
 	if (item && item->si_type == SI_TYPE_MAP && Z_ISUNDEF(item->v.map.key)) {  /* is map key */
 		bool is_valid_type = is_text ? (ctx->args.flags & PHP_CBOR_KEY_TEXT) : (ctx->args.flags & PHP_CBOR_KEY_BYTE);
 		if (!is_valid_type) {
@@ -561,7 +556,11 @@ static bool append_string_item(dec_context *ctx, zval *value, bool is_text, bool
 	if (!is_indef && item && item->tag_handler_data) {
 		(*item->tag_handler_data)(ctx, item, DATA_TYPE_STRING, value);
 	}
-	return append_item(ctx, value);
+	result = append_item(ctx, value);
+	if (!Z_ISNULL(container)) {
+		zval_ptr_dtor(&container);
+	}
+	return result;
 }
 
 static void do_xstring(dec_context *ctx, cbor_data val, uint64_t length, bool is_text)
@@ -588,9 +587,8 @@ static void do_xstring(dec_context *ctx, cbor_data val, uint64_t length, bool is
 		/* not inside indefinite-length string */
 	}
 	ZVAL_STRINGL_FAST(&value, (const char *)val, length);
-	if (!append_string_item(ctx, &value, is_text, false)) {
-		zval_ptr_dtor(&value);
-	}
+	append_string_item(ctx, &value, is_text, false);
+	zval_ptr_dtor(&value);
 }
 
 static void cb_text_string(void *vp_ctx, cbor_data val, uint64_t length)
@@ -631,9 +629,8 @@ static void cb_array_start(void *vp_ctx, uint64_t count)
 	if (count) {
 		stack_push_counted(ctx, SI_TYPE_ARRAY, &value, (uint32_t)count);
 	} else {
-		if (!append_item(ctx, &value)) {
-			zval_ptr_dtor(&value);
-		}
+		append_item(ctx, &value);
+		zval_ptr_dtor(&value);
 	}
 }
 
@@ -663,9 +660,8 @@ static void cb_map_start(void *vp_ctx, uint64_t count)
 	if (count) {
 		stack_push_map(ctx, SI_TYPE_MAP, &value, (uint32_t)count);
 	} else {
-		if (!append_item(ctx, &value)) {
-			zval_ptr_dtor(&value);
-		}
+		append_item(ctx, &value);
+		zval_ptr_dtor(&value);
 	}
 }
 
@@ -703,9 +699,8 @@ static void do_floatx(dec_context *ctx, float val, int bits)
 	if (!create_value_object(&container, &value, float_ce)) {
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_INTERNAL);
 	}
-	if (!append_item(ctx, &container)) {
-		zval_ptr_dtor(&container);
-	}
+	append_item(ctx, &container);
+	zval_ptr_dtor(&container);
 }
 
 static void cb_float2(void *vp_ctx, float val)
@@ -767,21 +762,15 @@ static void cb_indef_break(void *vp_ctx)
 		bool is_text = item->si_type == SI_TYPE_TEXT;
 		zval value;
 		ZVAL_STR(&value, smart_str_extract(&item->v.str));
-		if (!append_string_item(ctx, &value, is_text, true)) {
-			ASSERT_ERROR_SET();
-			zval_ptr_dtor(&value);
-		}
+		append_string_item(ctx, &value, is_text, true);
+		zval_ptr_dtor(&value);
 	} else {  /* SI_TYPE_ARRAY, SI_TYPE_MAP, SI_TYPE_TAG, SI_TYPE_TAG_HANDLED */
 		if (UNEXPECTED(item->count != 0)  /* definite-length */
 				|| (item->si_type == SI_TYPE_MAP && UNEXPECTED(!Z_ISUNDEF(item->v.map.key)))) {  /* value is expected */
 			THROW_CB_ERROR(PHP_CBOR_ERROR_SYNTAX);
 		}
 		assert(item->si_type == SI_TYPE_ARRAY || item->si_type == SI_TYPE_MAP);
-		if (append_item(ctx, &item->v.value)) {
-			Z_TRY_ADDREF(item->v.value);
-		} else {
-			ASSERT_ERROR_SET();
-		}
+		append_item(ctx, &item->v.value);
 	}
 FINALLY:
 	stack_free_item(item);
@@ -881,7 +870,7 @@ static zval *tag_handler_str_ref_exit(dec_context *ctx, zval *value, stack_item 
 	if ((str = zend_hash_index_find(&ctx->srns->str_table, index)) == NULL) {
 		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_VALUE);
 	}
-	assert(Z_TYPE_P(value) == IS_LONG);	/* zval_ptr_dtor(value); */
+	assert(Z_TYPE_P(value) == IS_LONG);
 	Z_ADDREF_P(str);
 	return str;
 }
@@ -904,6 +893,7 @@ static zval *tag_handler_shareable_exit(dec_context *ctx, zval *value, stack_ite
 	entity = storage;
 	ZVAL_DEREF(entity);
 	ZVAL_COPY_VALUE(entity, value);  /* move into ref content */
+	Z_TRY_ADDREF_P(value);
 	return storage;
 }
 
@@ -963,7 +953,7 @@ static bool do_tag_enter(dec_context *ctx, zend_long tag_id)
 		if (!(*handler)(ctx, item)) {
 			ASSERT_ERROR_SET();
 			stack_free_item(item);
-			return true;
+			return false;
 		}
 		stack_push_item(ctx, item);
 		return true;

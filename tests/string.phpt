@@ -20,6 +20,7 @@ run(function () {
     eq('1234567', cdec('5f443132333443353637ff'));
     eq('1234567', cdec('7f606064313233346060633536376060ff', CBOR_TEXT));
     eq('', cdec('7fff', CBOR_TEXT));
+    eq(new Cbor\Text('00'), cdec('623030'));
 
     // indefinite contains wrong string type
     cdecThrows(CBOR_ERROR_SYNTAX, '5f643132333443353637ff', CBOR_BYTE);

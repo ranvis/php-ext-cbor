@@ -44,6 +44,7 @@ run(function () {
     cdecThrows(CBOR_ERROR_SYNTAX, 'a101ff', CBOR_INT_KEY);
     eq((object)[], cdec('bfff', 0));
     cdecThrows(CBOR_ERROR_SYNTAX, 'bf01ff', CBOR_INT_KEY);
+    cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a1818000');
 });
 
 ?>
