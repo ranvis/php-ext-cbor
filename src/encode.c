@@ -120,10 +120,8 @@ php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_e
 		ENC_CHECK(enc_tag_bare(&ctx, PHP_CBOR_TAG_STRING_REF_NS));
 		init_srns_stack(&ctx);
 	}
-	if (ctx.args.shared_ref) {
-		ctx.refs = zend_new_array(0);
-		ctx.ref_lock = zend_new_array(0);
-	}
+	ctx.refs = zend_new_array(0);
+	ctx.ref_lock = zend_new_array(0);
 	error = enc_zval(&ctx, value);
 ENCODED:
 	free_srns_stack(&ctx);

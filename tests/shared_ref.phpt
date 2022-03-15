@@ -67,6 +67,10 @@ run(function () {
     // redundant shareable
     eq('0x81a0', cenc([new stdClass()], options: ['shared_ref' => true]));
     eq('0x81d81ca0', cenc([$tmp = new stdClass()], options: ['shared_ref' => true]));
+
+    // Shareable is always shared
+    $sh = new Cbor\Shareable('123');
+    eq('', cenc([$sh, $sh], options: ['shared_ref' => false]));
 });
 
 ?>
