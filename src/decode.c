@@ -347,6 +347,9 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 				ZVAL_DEREF(value);
 			}
 		}
+		if (Z_STRLEN(item->v.map.key) >= 1 && Z_STRVAL(item->v.map.key)[0] == '\0') {
+			RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_KEY_VALUE);
+		}
 		if (EXPECTED(Z_TYPE_P(value) != IS_REFERENCE)) {
 			zend_std_write_property(Z_OBJ(item->v.map.dest), Z_STR(item->v.map.key), value, NULL);
 		} else {
