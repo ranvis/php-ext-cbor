@@ -18,6 +18,9 @@ run(function () {
     eq('0x1864', cenc(100));
     eq('0x1903e8', cenc(1000));
     eq('0x1a000f4240', cenc(1000000));
+    if (PHP_INT_SIZE >= 8) {
+        eq('0x1b000000e8d4a51000', cenc(1000000000000));
+    }
     eq('0x20', cenc(-1));
     eq('0x29', cenc(-10));
     eq('0x3863', cenc(-100));
