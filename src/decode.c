@@ -63,20 +63,20 @@ typedef enum {
 	DATA_TYPE_STRING = 1,
 } data_type_t;
 
-typedef bool (*tag_handler_enter_t)(dec_context *ctx, stack_item *item);
-typedef void (*tag_handler_data_t)(dec_context *ctx, stack_item *item, data_type_t type, zval *value);
-typedef void (*tag_handler_child_t)(dec_context *ctx, stack_item *item, stack_item *parent_item);
-typedef zval *(*tag_handler_exit_t)(dec_context *ctx, zval *value, stack_item *item, zval *storage);
-typedef void (*tag_handler_free_t)(stack_item *item);
+typedef bool (tag_handler_enter_t)(dec_context *ctx, stack_item *item);
+typedef void (tag_handler_data_t)(dec_context *ctx, stack_item *item, data_type_t type, zval *value);
+typedef void (tag_handler_child_t)(dec_context *ctx, stack_item *item, stack_item *parent_item);
+typedef zval *(tag_handler_exit_t)(dec_context *ctx, zval *value, stack_item *item, zval *storage);
+typedef void (tag_handler_free_t)(stack_item *item);
 
 struct stack_item_t {
 	stack_item *next_item;
 	si_type_t si_type;
 	uint32_t count;
-	tag_handler_data_t tag_handler_data;
-	tag_handler_child_t tag_handler_child;
-	tag_handler_exit_t tag_handler_exit;
-	tag_handler_free_t tag_handler_free;
+	tag_handler_data_t *tag_handler_data;
+	tag_handler_child_t *tag_handler_child[2];
+	tag_handler_exit_t *tag_handler_exit;
+	tag_handler_free_t *tag_handler_free;
 	union stack_item_value_t {
 		zval value;
 		smart_str str;
@@ -85,10 +85,14 @@ struct stack_item_t {
 			zval key;
 		} map;
 		zval tag_id;
-		struct stack_item_value_shareable_t {
-			zval value;
-			zval tmp;
-		} shareable;
+		struct stack_item_value_tag_handled_t {
+			zend_ulong tag_id;
+			struct stack_item_value_shareable_t {
+				zval value;
+				zval tmp;
+				zend_long index;
+			} shareable;
+		} tag_h;
 	} v;
 };
 
@@ -142,9 +146,15 @@ static stack_item *stack_pop_item(dec_context *ctx)
 
 static void stack_push_item(dec_context *ctx, stack_item *item)
 {
+	stack_item *parent_item = ctx->stack_top;
 	if (ctx->stack_depth >= ctx->args.max_depth) {
 		stack_free_item(item);
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_DEPTH);
+	}
+	if (parent_item) {
+		for (int i = 0; i < sizeof parent_item->tag_handler_child / sizeof parent_item->tag_handler_child[0] && parent_item->tag_handler_child[i]; i++) {
+			(*parent_item->tag_handler_child[i])(ctx, item, parent_item);
+		}
 	}
 	ctx->stack_depth++;
 	item->next_item = ctx->stack_top;
@@ -154,16 +164,22 @@ static void stack_push_item(dec_context *ctx, stack_item *item)
 static stack_item *stack_new_item(dec_context *ctx, si_type_t si_type, uint32_t count)
 {
 	stack_item *item = (stack_item *)emalloc(sizeof(stack_item));
-	stack_item *parent_item = ctx->stack_top;
 	memset(item, 0, sizeof *item);
 	item->si_type = si_type;
 	item->count = count;
-	if (parent_item) {
-		if (parent_item->tag_handler_child) {
-			(*parent_item->tag_handler_child)(ctx, item, parent_item);
+	return item;
+}
+
+static void stack_register_child_handler(stack_item *item, tag_handler_child_t *handler)
+{
+	int i;
+	for (i = 0; i < sizeof item->tag_handler_child / sizeof item->tag_handler_child[0] && item->tag_handler_child[i]; i++) {
+		if (item->tag_handler_child[i] == handler) {
+			return;
 		}
 	}
-	return item;
+	assert(i < sizeof item->tag_handler_child / sizeof item->tag_handler_child[0]);
+	item->tag_handler_child[i] = handler;
 }
 
 static void stack_push_counted(dec_context *ctx, si_type_t si_type, zval *value, uint32_t count)
@@ -823,8 +839,7 @@ static void tag_handler_str_ref_ns_child(dec_context *ctx, stack_item *item, sta
 		/* chunks of indefinite length string */
 		return;
 	}
-	/* this may have to be list if another inner handler comes, also prevent from pushing multiple _ns handlers */
-	item->tag_handler_child = &tag_handler_str_ref_ns_child;
+	stack_register_child_handler(item, &tag_handler_str_ref_ns_child);
 	item->tag_handler_data = &tag_handler_str_ref_ns_data;
 }
 
@@ -850,7 +865,7 @@ static bool tag_handler_str_ref_ns_enter(dec_context *ctx, stack_item *item)
 {
 	srns_item_t *srns = emalloc(sizeof *srns);
 	item->tag_handler_data = &tag_handler_str_ref_ns_data;
-	item->tag_handler_child = &tag_handler_str_ref_ns_child;
+	stack_register_child_handler(item, &tag_handler_str_ref_ns_child);
 	item->tag_handler_exit = &tag_handler_str_ref_ns_exit;
 	item->tag_handler_free = &tag_handler_str_ref_ns_free;
 	zend_hash_init(&srns->str_table, 16, NULL, NULL, false);
@@ -888,10 +903,45 @@ static bool tag_handler_str_ref_enter(dec_context *ctx, stack_item *item)
 	return true;
 }
 
+static void tag_handler_shareable_child(dec_context *ctx, stack_item *item, stack_item *parent_item)
+{
+	zval *real_ref;
+	assert(parent_item->si_type == SI_TYPE_TAG_HANDLED);
+	if (item->si_type == SI_TYPE_MAP && Z_TYPE(item->v.map.dest) == IS_OBJECT) {
+		assert(Z_REFCOUNT(parent_item->v.tag_h.shareable.value) == 1);
+		real_ref = &item->v.map.dest;
+		ZVAL_COPY_VALUE(&parent_item->v.tag_h.shareable.value, real_ref);
+	} else {
+		if (ctx->args.shared_ref != OPT_UNSAFE_REF) {
+			RETURN_CB_ERROR(PHP_CBOR_ERROR_TAG_VALUE);
+		}
+		ZVAL_UNDEF(&parent_item->v.tag_h.shareable.tmp);
+		real_ref = &parent_item->v.tag_h.shareable.value;
+		ZVAL_NEW_REF(real_ref, &parent_item->v.tag_h.shareable.tmp);
+	}
+	if (zend_hash_index_update(&ctx->refs, parent_item->v.tag_h.shareable.index, real_ref) != NULL) {
+		Z_ADDREF_P(real_ref);
+	}
+}
+
 static zval *tag_handler_shareable_exit(dec_context *ctx, zval *value, stack_item *item, zval *storage)
 {
 	zval *entity;
-	ZVAL_COPY_VALUE(storage, &item->v.shareable.value);
+	ZVAL_COPY_VALUE(storage, &item->v.tag_h.shareable.value);
+	if (Z_TYPE_P(storage) == IS_NULL) {
+		/* child handler is not called */
+		if (Z_TYPE_P(value) != IS_OBJECT) {
+			if (ctx->args.shared_ref != OPT_UNSAFE_REF) {
+				RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_VALUE);
+			}
+		}
+		ZVAL_COPY_VALUE(storage, value);
+		ZVAL_MAKE_REF(storage);
+		if (zend_hash_index_update(&ctx->refs, item->v.tag_h.shareable.index, storage) == NULL) {
+			zval_ptr_dtor(storage);
+			RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_INTERNAL);
+		}
+	}
 	Z_ADDREF_P(storage);  /* returning */
 	entity = storage;
 	ZVAL_DEREF(entity);
@@ -902,11 +952,15 @@ static zval *tag_handler_shareable_exit(dec_context *ctx, zval *value, stack_ite
 
 static bool tag_handler_shareable_enter(dec_context *ctx, stack_item *item)
 {
+	if (ctx->stack_top && ctx->stack_top->si_type == SI_TYPE_TAG_HANDLED && ctx->stack_top->v.tag_h.tag_id == PHP_CBOR_TAG_SHAREABLE) {
+		/* nested shareable */
+		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_TAG_SYNTAX);
+	}
+	stack_register_child_handler(item, &tag_handler_shareable_child);
 	item->tag_handler_exit = &tag_handler_shareable_exit;
-	ZVAL_UNDEF(&item->v.shareable.tmp);
-	ZVAL_NEW_REF(&item->v.shareable.value, &item->v.shareable.tmp);
-	if (zend_hash_next_index_insert(&ctx->refs, &item->v.shareable.value) == NULL) {
-		zval_ptr_dtor(&item->v.shareable.value);
+	ZVAL_NULL(&item->v.tag_h.shareable.value); /* cannot be undef if adding to HashTable */
+	item->v.tag_h.shareable.index = zend_hash_num_elements(&ctx->refs);
+	if (zend_hash_next_index_insert(&ctx->refs, &item->v.tag_h.shareable.value) == NULL) {
 		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_INTERNAL);
 	}
 	return true;
@@ -941,7 +995,7 @@ static bool tag_handler_shared_ref_enter(dec_context *ctx, stack_item *item)
 static bool do_tag_enter(dec_context *ctx, zend_long tag_id)
 {
 	/* must return true if pushed to stack or an error occurred */
-	tag_handler_enter_t handler = NULL;
+	tag_handler_enter_t *handler = NULL;
 	if (tag_id == PHP_CBOR_TAG_STRING_REF_NS && ctx->args.string_ref) {
 		handler = &tag_handler_str_ref_ns_enter;
 	} else if (tag_id == PHP_CBOR_TAG_STRING_REF && ctx->args.string_ref) {
@@ -953,6 +1007,7 @@ static bool do_tag_enter(dec_context *ctx, zend_long tag_id)
 	}
 	if (handler) {
 		stack_item *item = stack_new_item(ctx, SI_TYPE_TAG_HANDLED, 1);
+		item->v.tag_h.tag_id = tag_id;
 		if (!(*handler)(ctx, item)) {
 			ASSERT_ERROR_SET();
 			stack_free_item(item);

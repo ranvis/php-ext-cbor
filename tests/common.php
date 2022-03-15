@@ -30,7 +30,17 @@ final class TestStats
 function run($func): void
 {
     TestStats::reset();
-    $func();
+    try {
+        $func();
+    } catch (Cbor\Exception $e) {
+        printf("Exception thrown: %s(%d):%s %s\n",
+            get_class($e),
+            $e->getCode(),
+            getErrorName($e->getCode()),
+            $e->getMessage(),
+        );
+        throw $e;
+    }
     //TestStats::show();
     echo "Done.\n";
 }

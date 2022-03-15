@@ -7,7 +7,7 @@
 #include "private.h"
 
 #define CHECK_ERROR(e) do { \
-		if (e) { \
+		if ((error = (e)) != 0) { \
 			goto FINALLY; \
 		} \
 	} while (0)
@@ -29,7 +29,7 @@ static php_cbor_error bool_option(bool *opt_value, const char *name, size_t name
 	return 0;
 }
 
-static php_cbor_error bool3_option(uint8_t *opt_value, const char *name, size_t name_len, char *value3, size_t value3_len, HashTable *options)
+static php_cbor_error bool_n_option(uint8_t *opt_value, const char *name, size_t name_len, char *other_values, HashTable *options)
 {
 	zval *value = zend_hash_str_find_deref(options, name, name_len);
 	if (value == NULL) {
@@ -44,10 +44,17 @@ static php_cbor_error bool3_option(uint8_t *opt_value, const char *name, size_t 
 		*opt_value = 0;
 		break;
 	case IS_STRING:
-		if (zend_binary_strcmp(Z_STRVAL_P(value), Z_STRLEN_P(value), value3, value3_len) != 0) {
-			return PHP_CBOR_ERROR_INVALID_OPTIONS;
+		for (uint8_t i = 2; *other_values != '\0'; i++) {
+			size_t other_len = strlen(other_values);
+			if (*other_values == '-') {
+				/* skip */
+			} else if (zend_binary_strcmp(Z_STRVAL_P(value), Z_STRLEN_P(value), other_values, other_len) == 0) {
+				*opt_value = i;
+				return 0;
+			}
+			other_values += other_len + 1;
 		}
-		*opt_value = 2;
+		return PHP_CBOR_ERROR_INVALID_OPTIONS;
 		break;
 	default:
 		return PHP_CBOR_ERROR_INVALID_OPTIONS;
@@ -79,11 +86,13 @@ php_cbor_error php_cbor_set_encode_options(php_cbor_encode_args *args, HashTable
 	php_cbor_error error = 0;
 	args->max_depth = 64;
 	args->string_ref = 0;
+	args->shared_ref = 0;
 	if (options == NULL) {
 		return 0;
 	}
 	CHECK_ERROR(uint32_option(&args->max_depth, ZEND_STRL("max_depth"), 0, 10000, options));
-	CHECK_ERROR(bool3_option(&args->string_ref, ZEND_STRL("string_ref"), ZEND_STRL("explicit"), options));
+	CHECK_ERROR(bool_n_option(&args->string_ref, ZEND_STRL("string_ref"), "explicit\0", options));
+	CHECK_ERROR(bool_n_option(&args->shared_ref, ZEND_STRL("shared_ref"), "-\0unsafe_ref\0", options));
 FINALLY:
 	return error;
 }
@@ -94,14 +103,14 @@ php_cbor_error php_cbor_set_decode_options(php_cbor_decode_args *args, HashTable
 	args->max_depth = 64;
 	args->max_size = 65536;
 	args->string_ref = true;
-	args->shared_ref = true;
+	args->shared_ref = 0;
 	if (options == NULL) {
 		return 0;
 	}
 	CHECK_ERROR(uint32_option(&args->max_depth, ZEND_STRL("max_depth"), 0, 10000, options));
 	CHECK_ERROR(uint32_option(&args->max_size, ZEND_STRL("max_size"), 0, 0xffffffff, options));
 	CHECK_ERROR(bool_option(&args->string_ref, ZEND_STRL("string_ref"), options));
-	CHECK_ERROR(bool_option(&args->shared_ref, ZEND_STRL("shared_ref"), options));
+	CHECK_ERROR(bool_n_option(&args->shared_ref, ZEND_STRL("shared_ref"), "shareable\0unsafe_ref\0", options));
 FINALLY:
 	return error;
 }

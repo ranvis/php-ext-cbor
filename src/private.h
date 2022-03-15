@@ -31,10 +31,19 @@ typedef enum {
 	PHP_CBOR_STATUS_STRING_REF_WRITTEN,
 } php_cbor_error;
 
+enum {
+	/* string ref */
+	OPT_EXPLICIT = 2,
+	/* shared ref */
+	OPT_SHAREABLE = 2,
+	OPT_UNSAFE_REF = 3,
+};
+
 typedef struct {
 	int flags;
 	uint32_t max_depth;
 	uint8_t string_ref;
+	uint8_t shared_ref;
 } php_cbor_encode_args;
 
 typedef struct {
@@ -43,7 +52,7 @@ typedef struct {
 	uint32_t max_size;
 	size_t error_arg;
 	bool string_ref;
-	bool shared_ref;
+	uint8_t shared_ref;
 } php_cbor_decode_args;
 
 #define CBOR_CE(name)  php_cbor_##name##_ce
