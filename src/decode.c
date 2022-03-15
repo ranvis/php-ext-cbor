@@ -975,7 +975,7 @@ static zval *tag_handler_shareable_exit(dec_context *ctx, zval *value, stack_ite
 				RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_INTERNAL);
 			}
 		} else {
-			RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_VALUE);
+			RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_TYPE);
 		}
 		if (zend_hash_index_update(ctx->refs, item->v.tag_h.v.shareable.index, real_v) == NULL) {
 			if (real_v != value) {
