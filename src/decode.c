@@ -31,11 +31,9 @@
 	} while (false)
 #define ASSERT_ERROR_SET()  assert(ctx->cb_error)
 
-#define STACK_ITEM_TOP(s)  (stack_item *)((s)->top ? zend_ptr_stack_top(s) : NULL)
-#define STACK_ITEM_POP(s)  (stack_item *)((s)->top ? zend_ptr_stack_pop(s) : NULL)
-#define STACK_NUM_ELEMENTS(s)  ((s)->top)
-
 static struct cbor_callbacks callbacks;
+
+typedef struct stack_item_t stack_item;
 
 typedef struct {
 	php_cbor_decode_args args;
@@ -45,7 +43,8 @@ typedef struct {
 	size_t limit;  /* 0:unknown */
 	cbor_data data;
 	zval root;
-	zend_ptr_stack stack;  /* ptr stack is suitable to retain popped item */
+	stack_item *stack_top;
+	uint32_t stack_depth;
 } dec_context;
 
 typedef enum {
@@ -61,8 +60,6 @@ typedef enum {
 	DATA_TYPE_STRING = 1,
 } data_type_t;
 
-typedef struct stack_item_t stack_item;
-
 typedef bool (*tag_handler_enter_t)(dec_context *ctx, stack_item *item);
 typedef void (*tag_handler_data_t)(dec_context *ctx, stack_item *item, data_type_t type, zval *value);
 typedef void (*tag_handler_child_t)(dec_context *ctx, stack_item *item, stack_item *parent_item);
@@ -70,6 +67,7 @@ typedef zval *(*tag_handler_exit_t)(dec_context *ctx, zval *value, stack_item *i
 typedef void (*tag_handler_free_t)(stack_item *item);
 
 struct stack_item_t {
+	stack_item *next_item;
 	si_type_t si_type;
 	uint32_t count;
 	tag_handler_data_t tag_handler_data;
@@ -118,29 +116,36 @@ static void stack_free_item(stack_item *item)
 	} else if (item->si_type) {
 		zval_ptr_dtor(&item->v.value);
 	}
+	assert(item->next_item == NULL);
 	efree(item);
 }
 
-static void free_stack_element(void *vp_item)
+static stack_item *stack_pop_item(dec_context *ctx)
 {
-	stack_item *item = (stack_item *)vp_item;
-	stack_free_item(item);
+	stack_item *item = ctx->stack_top;
+	if (item) {
+		ctx->stack_top = item->next_item;
+		item->next_item = NULL;
+		ctx->stack_depth--;
+	}
+	return item;
 }
 
 static void stack_push_item(dec_context *ctx, stack_item *item)
 {
-	uint32_t cur_depth = STACK_NUM_ELEMENTS(&ctx->stack);
-	if (cur_depth >= ctx->args.max_depth) {
+	if (ctx->stack_depth >= ctx->args.max_depth) {
 		stack_free_item(item);
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_DEPTH);
 	}
-	zend_ptr_stack_push(&ctx->stack, item);
+	ctx->stack_depth++;
+	item->next_item = ctx->stack_top;
+	ctx->stack_top = item;
 }
 
 static stack_item *stack_new_item(dec_context *ctx, si_type_t si_type, uint32_t count)
 {
 	stack_item *item = (stack_item *)emalloc(sizeof(stack_item));
-	stack_item *parent_item = STACK_ITEM_TOP(&ctx->stack);
+	stack_item *parent_item = ctx->stack_top;
 	memset(item, 0, sizeof *item);
 	item->si_type = si_type;
 	item->count = count;
@@ -195,7 +200,8 @@ php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_a
 	if ((args->flags & PHP_CBOR_FLOAT16 && args->flags & PHP_CBOR_FLOAT32)) {
 		return PHP_CBOR_ERROR_INVALID_FLAGS;
 	}
-	zend_ptr_stack_init(&ctx.stack);
+	ctx.stack_top = NULL;
+	ctx.stack_depth = 0;
 	ctx.offset = 0;
 	if (!(args->flags & PHP_CBOR_SELF_DESCRIBE) && length >= 3
 			&& !memcmp(ptr, PHP_CBOR_SELF_DESCRIBE_DATA, sizeof PHP_CBOR_SELF_DESCRIBE_DATA - 1)) {
@@ -206,8 +212,10 @@ php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_a
 	ctx.limit = ctx.length = length;
 	ctx.args = *args;
 	error = dec_zval(&ctx);
-	zend_ptr_stack_apply(&ctx.stack, &free_stack_element);
-	zend_ptr_stack_destroy(&ctx.stack);
+	while (ctx.stack_top) {
+		stack_item *item = stack_pop_item(&ctx);
+		stack_free_item(item);
+	}
 	if (!error && ctx.offset != ctx.length) {
 		error = PHP_CBOR_ERROR_EXTRANEOUS_DATA;
 		ctx.args.error_arg = ctx.offset;
@@ -245,7 +253,7 @@ static php_cbor_error dec_zval(dec_context *ctx)
 			ctx->args.error_arg = ctx->offset;
 			return ctx->cb_error;
 		}
-	} while (STACK_NUM_ELEMENTS(&ctx->stack));
+	} while (ctx->stack_depth);
 	return 0;
 }
 
@@ -258,8 +266,8 @@ static bool append_item_to_array(dec_context *ctx, zval *value, stack_item *item
 	}
 	if (item->count && --item->count == 0) {
 		bool result;
-		assert(STACK_ITEM_TOP(&ctx->stack) == item);
-		STACK_ITEM_POP(&ctx->stack);
+		assert(ctx->stack_top == item);
+		stack_pop_item(ctx);
 		result = append_item(ctx, &item->v.value);
 		if (result) {
 			Z_TRY_ADDREF(item->v.value);
@@ -311,8 +319,8 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 	ZVAL_UNDEF(&item->v.map.key);
 	if (item->count && --item->count == 0) {
 		bool result;
-		assert(STACK_ITEM_TOP(&ctx->stack) == item);
-		STACK_ITEM_POP(&ctx->stack);
+		assert(ctx->stack_top == item);
+		stack_pop_item(ctx);
 		result = append_item(ctx, &item->v.map.dest);
 		if (result) {
 			Z_TRY_ADDREF(item->v.map.dest);
@@ -330,8 +338,8 @@ static bool append_item_to_tag(dec_context *ctx, zval *value, stack_item *item)
 		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_INTERNAL);
 	}
 	zend_call_known_instance_method_with_2_params(CBOR_CE(tag)->constructor, Z_OBJ(container), NULL, &item->v.tag_id, value);
-	assert(STACK_ITEM_TOP(&ctx->stack) == item);
-	STACK_ITEM_POP(&ctx->stack);
+	assert(ctx->stack_top == item);
+	stack_pop_item(ctx);
 	assert(Z_TYPE(item->v.tag_id) == IS_LONG);
 	zval_ptr_dtor(value);
 	stack_free_item(item);
@@ -346,8 +354,8 @@ static bool append_item_to_tag(dec_context *ctx, zval *value, stack_item *item)
 static bool append_item_to_tag_handled(dec_context *ctx, zval *value, stack_item *item)
 {
 	zval storage;
-	assert(STACK_ITEM_TOP(&ctx->stack) == item);
-	STACK_ITEM_POP(&ctx->stack);
+	assert(ctx->stack_top == item);
+	stack_pop_item(ctx);
 	if (item->tag_handler_exit)  {
 		value = (*item->tag_handler_exit)(ctx, value, item, &storage);
 	}
@@ -362,7 +370,7 @@ static bool append_item_to_tag_handled(dec_context *ctx, zval *value, stack_item
 
 static bool append_item(dec_context *ctx, zval *value)
 {
-	stack_item *item = STACK_ITEM_TOP(&ctx->stack);
+	stack_item *item = ctx->stack_top;
 	if (item == NULL) {
 		ZVAL_COPY_VALUE(&ctx->root, value);
 		return true;
@@ -481,7 +489,7 @@ static bool append_string_item(dec_context *ctx, zval *value, bool is_text, bool
 	zval container;
 	int type_flag = is_text ? PHP_CBOR_TEXT : PHP_CBOR_BYTE;
 	zend_class_entry *string_ce = is_text ? CBOR_CE(text) : CBOR_CE(byte);
-	stack_item *item = STACK_ITEM_TOP(&ctx->stack);
+	stack_item *item = ctx->stack_top;
 	if (item && item->si_type == SI_TYPE_MAP && Z_ISUNDEF(item->v.map.key)) {  /* is map key */
 		bool is_valid_type = is_text ? (ctx->args.flags & PHP_CBOR_KEY_TEXT) : (ctx->args.flags & PHP_CBOR_KEY_BYTE);
 		if (!is_valid_type) {
@@ -504,7 +512,7 @@ static bool append_string_item(dec_context *ctx, zval *value, bool is_text, bool
 static void do_xstring(dec_context *ctx, cbor_data val, uint64_t length, bool is_text)
 {
 	zval value;
-	stack_item *item = STACK_ITEM_TOP(&ctx->stack);
+	stack_item *item = ctx->stack_top;
 	if (is_text && !(ctx->args.flags & PHP_CBOR_UNSAFE_TEXT)
 			&& !is_utf8((uint8_t *)val, length)) {
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_UTF8);
@@ -693,7 +701,7 @@ static void cb_boolean(void *vp_ctx, bool val)
 static void cb_indef_break(void *vp_ctx)
 {
 	dec_context *ctx = (dec_context *)vp_ctx;
-	stack_item *item = STACK_ITEM_POP(&ctx->stack);
+	stack_item *item = stack_pop_item(ctx);
 	if (UNEXPECTED(item == NULL)) {
 		THROW_CB_ERROR(PHP_CBOR_ERROR_SYNTAX);
 	}
@@ -806,7 +814,6 @@ static zval *tag_handler_str_ref_exit(dec_context *ctx, zval *value, stack_item 
 		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_VALUE);
 	}
 	if ((str = zend_hash_index_find(&item->str_ref_ns->v.th.str_table, index)) == NULL) {
-		
 		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_VALUE);
 	}
 	zval_ptr_dtor(value);
