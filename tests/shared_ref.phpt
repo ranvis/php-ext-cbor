@@ -18,7 +18,7 @@ run(function () {
     $value[0][0] = true;
     $value[1][0] = false;
     eq($value[0][0], true);
-    eq([new Cbor\Tag(28, []), new Cbor\Tag(29, 0), []], cdec('83d81c80d81d0080', options: ['shared_ref' => false]));
+    eq([new Cbor\Tag(Cbor\Tag::SHAREABLE, []), new Cbor\Tag(Cbor\Tag::SHARED_REF, 0), []], cdec('83d81c80d81d0080', options: ['shared_ref' => false]));
     cdecThrows(CBOR_ERROR_TAG_TYPE, '83d81c80d81d0080', options: ['shared_ref' => true]);
     $value = cdec('83d81c80d81d0080', options: ['shared_ref' => 'unsafe_ref']);
     $value[0][0] = true;
@@ -70,7 +70,7 @@ run(function () {
 
     // Shareable is always shared
     $sh = new Cbor\Shareable('123');
-    eq('', cenc([$sh, $sh], options: ['shared_ref' => false]));
+    eq('0x82d81c43313233d81d00', cenc([$sh, $sh], options: ['shared_ref' => false]));
 });
 
 ?>
