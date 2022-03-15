@@ -46,7 +46,8 @@ typedef struct {
 	zval root;
 	stack_item *stack_top;
 	uint32_t stack_depth;
-	srns_item_t *srns;
+	srns_item_t *srns; /* string ref namespace */
+	HashTable refs; /* shared ref */
 } dec_context;
 
 typedef enum {
@@ -84,11 +85,15 @@ struct stack_item_t {
 			zval key;
 		} map;
 		zval tag_id;
+		struct stack_item_value_shareable_t {
+			zval value;
+			zval tmp;
+		} shareable;
 	} v;
 };
 
 struct srns_item_t {  /* srns: string ref namespace */
-	srns_item_t *prev_srns;
+	srns_item_t *prev_item;
 	HashTable str_table;
 };
 
@@ -195,16 +200,23 @@ static void stack_push_xstring(dec_context *ctx, si_type_t si_type)
 	stack_push_item(ctx, item);
 }
 
+#define FREE_LINKED_LIST(type_t, head, free_f)  do { \
+		for (type_t *item = head; item != NULL; ) { \
+			type_t *item_tmp = item->prev_item; \
+			free_f(item); \
+			item = item_tmp; \
+		} \
+	} while (0)
+
 static void free_ctx_content(dec_context *ctx)
 {
 	while (ctx->stack_top) {
 		stack_item *item = stack_pop_item(ctx);
 		stack_free_item(item);
 	}
-	for (srns_item_t *srns = ctx->srns; srns != NULL; ) {
-		srns_item_t *srns_tmp = srns->prev_srns;
-		free_srns_item(srns);
-		srns = srns_tmp;
+	FREE_LINKED_LIST(srns_item_t, ctx->srns, free_srns_item);
+	if (ctx->args.shared_ref) {
+		zend_hash_destroy(&ctx->refs);
 	}
 }
 
@@ -228,6 +240,9 @@ php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_a
 	ctx.data = ptr;
 	ctx.limit = ctx.length = length;
 	ctx.srns = NULL;
+	if (args->shared_ref) {
+		zend_hash_init(&ctx.refs, HT_MIN_SIZE, NULL, ZVAL_PTR_DTOR, false);
+	}
 	ctx.args = *args;
 	error = dec_zval(&ctx);
 	free_ctx_content(&ctx);
@@ -236,7 +251,15 @@ php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_a
 		ctx.args.error_arg = ctx.offset;
 	}
 	if (!error) {
-		ZVAL_COPY_VALUE(value, &ctx.root);
+		if (EXPECTED(Z_TYPE(ctx.root) != IS_REFERENCE)) {
+			ZVAL_COPY_VALUE(value, &ctx.root);
+		} else {
+			zval *tmp = &ctx.root;
+			ZVAL_DEREF(tmp);
+			ZVAL_COPY_VALUE(value, tmp);
+			Z_ADDREF_P(value);
+			zval_ptr_dtor(&ctx.root);
+		}
 	} else {
 		args->error_arg = ctx.args.error_arg;
 	}
@@ -320,7 +343,20 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 			ZEND_LTOA(Z_LVAL(item->v.map.key), num_str, sizeof num_str);
 			ZVAL_STRINGL(&item->v.map.key, num_str, strlen(num_str));
 		}
-		zend_std_write_property(Z_OBJ(item->v.map.dest), Z_STR(item->v.map.key), value, NULL);
+		if (UNEXPECTED(Z_TYPE_P(value) == IS_REFERENCE)) {
+			if (Z_TYPE_P(Z_REFVAL_P(value)) == IS_OBJECT) {
+				ZVAL_DEREF(value);
+			}
+		}
+		if (EXPECTED(Z_TYPE_P(value) != IS_REFERENCE)) {
+			zend_std_write_property(Z_OBJ(item->v.map.dest), Z_STR(item->v.map.key), value, NULL);
+		} else {
+			zval *dest = zend_std_get_property_ptr_ptr(Z_OBJ(item->v.map.dest), Z_STR(item->v.map.key), BP_VAR_W, NULL);
+			if (dest == NULL) {
+				RETURN_CB_ERROR_B(PHP_CBOR_ERROR_INTERNAL);
+			}
+			ZVAL_COPY_VALUE(dest, value);
+		}
 	} else {
 		if (Z_TYPE(item->v.map.key) == IS_LONG) {
 			assert(Z_LVAL(item->v.map.key) >= 0);
@@ -368,7 +404,7 @@ static bool append_item_to_tag(dec_context *ctx, zval *value, stack_item *item)
 
 static bool append_item_to_tag_handled(dec_context *ctx, zval *value, stack_item *item)
 {
-	zval storage;
+	zval storage, *orig_value = value;
 	assert(ctx->stack_top == item);
 	stack_pop_item(ctx);
 	if (item->tag_handler_exit)  {
@@ -377,7 +413,11 @@ static bool append_item_to_tag_handled(dec_context *ctx, zval *value, stack_item
 	stack_free_item(item);
 	if (ctx->cb_error || !append_item(ctx, value)) {
 		ASSERT_ERROR_SET();
-		zval_ptr_dtor(value);
+		/* while caller must free passed value when failed, exit handler may have changed adding value */
+		if (orig_value != value) {
+			Z_ADDREF_P(orig_value);
+			zval_ptr_dtor(value);
+		}
 		return false;
 	}
 	return true;
@@ -799,7 +839,7 @@ static void tag_handler_str_ref_ns_child(dec_context *ctx, stack_item *item, sta
 static zval *tag_handler_str_ref_ns_exit(dec_context *ctx, zval *value, stack_item *item, zval *storage)
 {
 	srns_item_t *srns = ctx->srns;
-	ctx->srns = srns->prev_srns;
+	ctx->srns = srns->prev_item;
 	free_srns_item(srns);
 	return value;
 }
@@ -822,7 +862,7 @@ static bool tag_handler_str_ref_ns_enter(dec_context *ctx, stack_item *item)
 	item->tag_handler_exit = &tag_handler_str_ref_ns_exit;
 	item->tag_handler_free = &tag_handler_str_ref_ns_free;
 	zend_hash_init(&srns->str_table, 16, NULL, NULL, false);
-	srns->prev_srns = ctx->srns;
+	srns->prev_item = ctx->srns;
 	ctx->srns = srns;
 	return true;
 }
@@ -841,7 +881,7 @@ static zval *tag_handler_str_ref_exit(dec_context *ctx, zval *value, stack_item 
 	if ((str = zend_hash_index_find(&ctx->srns->str_table, index)) == NULL) {
 		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_VALUE);
 	}
-	zval_ptr_dtor(value);
+	assert(Z_TYPE_P(value) == IS_LONG);	/* zval_ptr_dtor(value); */
 	Z_ADDREF_P(str);
 	return str;
 }
@@ -856,6 +896,55 @@ static bool tag_handler_str_ref_enter(dec_context *ctx, stack_item *item)
 	return true;
 }
 
+static zval *tag_handler_shareable_exit(dec_context *ctx, zval *value, stack_item *item, zval *storage)
+{
+	zval *entity;
+	ZVAL_COPY_VALUE(storage, &item->v.shareable.value);
+	Z_ADDREF_P(storage);  /* returning */
+	entity = storage;
+	ZVAL_DEREF(entity);
+	ZVAL_COPY_VALUE(entity, value);  /* move into ref content */
+	return storage;
+}
+
+static bool tag_handler_shareable_enter(dec_context *ctx, stack_item *item)
+{
+	item->tag_handler_exit = &tag_handler_shareable_exit;
+	ZVAL_UNDEF(&item->v.shareable.tmp);
+	ZVAL_NEW_REF(&item->v.shareable.value, &item->v.shareable.tmp);
+	if (zend_hash_next_index_insert(&ctx->refs, &item->v.shareable.value) == NULL) {
+		zval_ptr_dtor(&item->v.shareable.value);
+		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_INTERNAL);
+	}
+	return true;
+}
+
+static zval *tag_handler_shared_ref_exit(dec_context *ctx, zval *value, stack_item *item, zval *storage)
+{
+	zend_long index;
+	zval *ref_value;
+	if (Z_TYPE_P(value) != IS_LONG) {
+		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_TYPE);
+	}
+	index = Z_LVAL_P(value);
+	if (index < 0) {
+		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_VALUE);
+	}
+	if ((ref_value = zend_hash_index_find(&ctx->refs, index)) == NULL) {
+		/* the spec doesn't prohibit referencing future shareable, but it is unlikely */
+		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_VALUE);
+	}
+	assert(Z_TYPE_P(value) == IS_LONG);	/* zval_ptr_dtor(value); */
+	Z_ADDREF_P(ref_value);
+	return ref_value;
+}
+
+static bool tag_handler_shared_ref_enter(dec_context *ctx, stack_item *item)
+{
+	item->tag_handler_exit = &tag_handler_shared_ref_exit;
+	return true;
+}
+
 static bool do_tag_enter(dec_context *ctx, zend_long tag_id)
 {
 	/* must return true if pushed to stack or an error occurred */
@@ -864,6 +953,10 @@ static bool do_tag_enter(dec_context *ctx, zend_long tag_id)
 		handler = &tag_handler_str_ref_ns_enter;
 	} else if (tag_id == PHP_CBOR_TAG_STRING_REF && ctx->args.string_ref) {
 		handler = &tag_handler_str_ref_enter;
+	} else if (tag_id == PHP_CBOR_TAG_SHAREABLE && ctx->args.shared_ref) {
+		handler = &tag_handler_shareable_enter;
+	} else if (tag_id == PHP_CBOR_TAG_SHARED_REF && ctx->args.shared_ref) {
+		handler = &tag_handler_shared_ref_enter;
 	}
 	if (handler) {
 		stack_item *item = stack_new_item(ctx, SI_TYPE_TAG_HANDLED, 1);

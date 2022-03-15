@@ -94,12 +94,14 @@ php_cbor_error php_cbor_set_decode_options(php_cbor_decode_args *args, HashTable
 	args->max_depth = 64;
 	args->max_size = 65536;
 	args->string_ref = true;
+	args->shared_ref = true;
 	if (options == NULL) {
 		return 0;
 	}
 	CHECK_ERROR(uint32_option(&args->max_depth, ZEND_STRL("max_depth"), 0, 10000, options));
 	CHECK_ERROR(uint32_option(&args->max_size, ZEND_STRL("max_size"), 0, 0xffffffff, options));
 	CHECK_ERROR(bool_option(&args->string_ref, ZEND_STRL("string_ref"), options));
+	CHECK_ERROR(bool_option(&args->shared_ref, ZEND_STRL("shared_ref"), options));
 FINALLY:
 	return error;
 }

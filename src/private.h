@@ -43,6 +43,7 @@ typedef struct {
 	uint32_t max_size;
 	size_t error_arg;
 	bool string_ref;
+	bool shared_ref;
 } php_cbor_decode_args;
 
 #define CBOR_CE(name)  php_cbor_##name##_ce

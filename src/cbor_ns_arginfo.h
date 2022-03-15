@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 9e7abdb888de650f893eec0f5ab8cc3a53b292f1 */
+ * Stub hash: b9e77f905bf317829c3ea3653cd12a4ccbc57ee4 */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Encodable_cborEncode, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
@@ -24,7 +24,7 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Cbor_Tag___construct, 0, 0, 2)
 	ZEND_ARG_TYPE_INFO(0, tag, IS_LONG, 0)
-	ZEND_ARG_TYPE_INFO(0, data, IS_MIXED, 0)
+	ZEND_ARG_TYPE_INFO(0, content, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 
 
@@ -215,11 +215,11 @@ static zend_class_entry *register_class_Cbor_Tag(void)
 	zend_declare_typed_property(class_entry, property_tag_name, &property_tag_default_value, ZEND_ACC_PUBLIC, NULL, (zend_type) ZEND_TYPE_INIT_MASK(MAY_BE_LONG));
 	zend_string_release(property_tag_name);
 
-	zval property_data_default_value;
-	ZVAL_UNDEF(&property_data_default_value);
-	zend_string *property_data_name = zend_string_init("data", sizeof("data") - 1, 1);
-	zend_declare_typed_property(class_entry, property_data_name, &property_data_default_value, ZEND_ACC_PUBLIC, NULL, (zend_type) ZEND_TYPE_INIT_MASK(MAY_BE_ANY));
-	zend_string_release(property_data_name);
+	zval property_content_default_value;
+	ZVAL_UNDEF(&property_content_default_value);
+	zend_string *property_content_name = zend_string_init("content", sizeof("content") - 1, 1);
+	zend_declare_typed_property(class_entry, property_content_name, &property_content_default_value, ZEND_ACC_PUBLIC, NULL, (zend_type) ZEND_TYPE_INIT_MASK(MAY_BE_ANY));
+	zend_string_release(property_content_name);
 
 	return class_entry;
 }
