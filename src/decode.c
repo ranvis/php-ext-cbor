@@ -114,18 +114,26 @@ void php_cbor_minit_decode()
 
 /* just in case, defined as a macro, as function pointer is theoretically incompatible with data pointer */
 #define DECLARE_SI_SET_HANDLER_VEC(member)  \
-	static void register_handler_vec_##member(stack_item *item, member##_t *handler) \
+	static bool register_handler_vec_##member(stack_item *item, member##_t *handler) \
 	{ \
 		int i, count = sizeof item->member / sizeof item->member[0]; \
 		for (i = 0; i < count && item->member[i]; i++) { \
 			if (item->member[i] == handler) { \
-				return; \
+				return true; \
 			} \
 		} \
 		assert(i < count); \
+		if (i >= count) { \
+			return false; \
+		} \
 		item->member[i] = handler; \
+		return true; \
 	}
-#define SI_SET_HANDLER_VEC(member, si, handler)  register_handler_vec_##member(si, handler)
+#define SI_SET_HANDLER_VEC(member, si, handler)  do { \
+		if (!register_handler_vec_##member(si, handler) && !ctx->cb_error) { \
+			ctx->cb_error = PHP_CBOR_ERROR_INTERNAL; \
+		} \
+	} while (0)
 #define SI_SET_HANDLER(member, si, handler)  si->member = handler
 #define SI_CALL_HANDLER(si, member, ...)  (*si->member)(__VA_ARGS__)
 #define SI_CALL_HANDLER_VEC(member, si, ...)  do { \
