@@ -48,7 +48,7 @@ function run($func): void
 function eq($exp, $act, int $depth = 0): void
 {
     TestStats::inc('assertCompare');
-    $exported = !is_scalar($exp) || !is_scalar($act);
+    $exported = !is_string($exp) || !is_string($act);
     if ($exported) {
         $exp = var_export($exp, true);
         $act = var_export($act, true);
@@ -60,6 +60,24 @@ function eq($exp, $act, int $depth = 0): void
         $exp = var_export($exp, true);
         $act = var_export($act, true);
     }
+    echo "Expected: " . $exp . "\n";
+    echo "Actual  : " . $act . "\n";
+    trace($depth + 1);
+}
+
+function ok($value, int $depth = 0): void
+{
+    TestStats::inc('assertCompare');
+    if ($value) {
+        return;
+    }
+    $value = var_export($value, true);
+    echo "Value   : " . $value . "\n";
+    trace($depth + 1);
+}
+
+function trace(int $depth = 0)
+{
     $bt = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, $depth + 1)[$depth];
     static $phptMap = [];
     $phpt = $bt['file'] . 't';
@@ -79,8 +97,6 @@ function eq($exp, $act, int $depth = 0): void
             $phptMap[$phpt] = false;
         }
     }
-    echo "Expected: " . $exp . "\n";
-    echo "Actual  : " . $act . "\n";
     echo "File    : " . $bt['file'] . "\n";
     echo "Line    : " . $bt['line'] . "\n";
     echo "\n";

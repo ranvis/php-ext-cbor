@@ -41,6 +41,14 @@ run(function () {
 
     $value = cdec('82d81ca0d81d00', options: ['shared_ref' => true]);
     eq(spl_object_id($value[0]), spl_object_id($value[1]));
+    cdecThrows(CBOR_ERROR_TAG_TYPE, '82d81ca0d81d00', CBOR_MAP_AS_ARRAY, ['shared_ref' => true]);
+    $value = cdec('82d81ca0d81d00', CBOR_MAP_AS_ARRAY, ['shared_ref' => 'shareable']);
+    eq(Cbor\Shareable::class, get_class($value[1]));
+    eq(spl_object_id($value[0]), spl_object_id($value[1]));
+    $value = cdec('82d81ca0d81d00', CBOR_MAP_AS_ARRAY, ['shared_ref' => 'unsafe_ref']);
+    $value[0][0] = true;
+    $value[1][0] = false;
+    eq($value[0][0], false);
 
     $value = cdec('d81ca14140d81d00', options: ['shared_ref' => true]);
     eq(spl_object_id($value), spl_object_id($value->{'@'}));
