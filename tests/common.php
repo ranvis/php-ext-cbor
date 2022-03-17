@@ -121,13 +121,18 @@ function cenc(...$args): string
 
 function cdec($value, ...$args): mixed
 {
-    return cborDecode(hex2bin($value), ...$args);
+    return cborDecode(decodeHex($value), ...$args);
 }
 
 function cdecHex($value, ...$args): mixed
 {
-    $decoded = cborDecode(hex2bin($value), ...$args);
+    $decoded = cborDecode(decodeHex($value), ...$args);
     return toDump($decoded);
+}
+
+function decodeHex(string $value): string
+{
+    return hex2bin($value);
 }
 
 function toDump($value): string
@@ -157,7 +162,7 @@ function cencThrows(int $code, mixed $value, ...$args): void
 function cdecThrows(int $code, string $value, ...$args): void
 {
     TestStats::inc('assertThrows');
-    xThrows($code, fn () => cborDecode(hex2bin($value), ...$args));
+    xThrows($code, fn () => cborDecode(decodeHex($value), ...$args));
 }
 
 function getErrorName(int $code): string
