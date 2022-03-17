@@ -164,8 +164,12 @@ RETRY:
 		ENC_RESULT(enc_long(ctx, Z_LVAL_P(value)));
 	case IS_DOUBLE:
 		if (UNEXPECTED(ctx->args.flags & PHP_CBOR_FLOAT16)) {
+#if PHP_CBOR_LIBCBOR_HACK_B16_NAN || PHP_CBOR_LIBCBOR_HACK_B16_DENORM
+			ENC_RESULT(enc_typed_floatx(ctx, value, 16));
+#else
 			BX_ALLOC(3);
 			BX_PUT(cbor_encode_half((float)Z_DVAL_P(value), BX_ARGS));
+#endif
 		} else if (UNEXPECTED(ctx->args.flags & PHP_CBOR_FLOAT32)) {
 			BX_ALLOC(5);
 			BX_PUT(cbor_encode_single((float)Z_DVAL_P(value), BX_ARGS));
@@ -419,13 +423,57 @@ static php_cbor_error enc_typed_text(enc_context *ctx, zval *ins)
 static php_cbor_error enc_typed_floatx(enc_context *ctx, zval *ins, int bits)
 {
 	zval tmp_v, *value;
-	value = zend_read_property(CBOR_CE(floatx), Z_OBJ_P(ins), PROP_L("value"), false, &tmp_v);
-	if (!value) {
-		return PHP_CBOR_ERROR_INTERNAL;
+	if (Z_TYPE_P(ins) == IS_OBJECT) {
+		value = zend_read_property(CBOR_CE(floatx), Z_OBJ_P(ins), PROP_L("value"), false, &tmp_v);
+		if (!value) {
+			return PHP_CBOR_ERROR_INTERNAL;
+		}
+	} else {
+		value = ins;
 	}
 	BX_INIT(ctx);
 	BX_ALLOC(8);
 	if (bits == 16) {
+		/* The code assumes IEEE 754 float type */
+#if PHP_CBOR_LIBCBOR_HACK_B16_NAN || PHP_CBOR_LIBCBOR_HACK_B16_DENORM
+		binary32_alias binary32;
+		uint16_t binary16 = 0;
+		bool put = false;
+		binary32.f = (float)Z_DVAL_P(value);
+#endif
+#if PHP_CBOR_LIBCBOR_HACK_B16_NAN
+		if (CBOR_B32A_ISNAN(binary32)) {
+			binary16 = 0x7e00  /* 0b0_11111_10_0000_0000 */
+				| (uint16_t)((binary32.i & 0x80000000) >> 16)  /* sign */
+				| (uint16_t)((binary32.i & (0x03ff << 13)) >> 13);  /* 0b11_1111_1111 << 13 */
+			put = true;
+		}
+#endif
+#if PHP_CBOR_LIBCBOR_HACK_B16_DENORM
+		if (!put) {
+			uint32_t exp = ((binary32.i & (0xff << 23)) >> 23);  /* 0b0_1111_1111 << 23 */
+			if (exp < 127 - 24) {  /* Too small */
+				binary16 = (uint16_t)((binary32.i & 0x80000000) >> 16);  /* sign */
+				/* For exp = 127 - 24, think this does round to even to avoid negative shift below */
+				put = true;
+			} else if (exp < 127 - 14) {  /* binary32: 8bits; binary16: 5bits, with rounding */
+				uint32_t frac = binary32.i & 0x7fffff; /* 0b111_1111_1111_1111_1111_1111 */;
+				binary16 = 0
+					| (uint16_t)((binary32.i & 0x80000000) >> 16)  /* sign */
+					| (uint16_t)(1 << (exp - 127 + 24))  /* exp to fract; << 0..9 */
+					| (uint16_t)(((frac >> (127 - exp - 2)) + 1) >> 1);  /* Round half away from zero for simplicity; >> 22..13 */
+				put = true;
+			}
+		}
+#endif
+#if PHP_CBOR_LIBCBOR_HACK_B16_NAN || PHP_CBOR_LIBCBOR_HACK_B16_DENORM
+		if (put) {
+			((uint8_t *)BX_ARG_PTR)[0] = 0xf9; /* CBOR half-precision float */
+			((uint8_t *)BX_ARG_PTR)[1] = binary16 >> 8;
+			((uint8_t *)BX_ARG_PTR)[2] = binary16 & 0xff;
+			BX_PUT(3);
+		} else
+#endif
 		BX_PUT(cbor_encode_half((float)Z_DVAL_P(value), BX_ARGS));
 	} else {
 		BX_PUT(cbor_encode_single((float)Z_DVAL_P(value), BX_ARGS));

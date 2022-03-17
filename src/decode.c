@@ -754,6 +754,24 @@ static void do_floatx(dec_context *ctx, float val, int bits)
 static void cb_float2(void *vp_ctx, float val)
 {
 	dec_context *ctx = (dec_context *)vp_ctx;
+	binary32_alias binary32;
+#if PHP_CBOR_LIBCBOR_HACK_B16_NAN
+	/* The code assumes IEEE 754 float type */
+	binary32.f = val;
+	if (CBOR_B32A_ISNAN(binary32)) {
+		if (UNEXPECTED(ctx->data[ctx->offset] != 0xf9)) {  /* CBOR half-precision float */
+			RETURN_CB_ERROR(PHP_CBOR_ERROR_INTERNAL);
+		}
+		uint16_t binary16;
+		binary16 = (ctx->data[ctx->offset + 1] << 8) | ctx->data[ctx->offset + 2];
+		/* Force quiet NaN. If cast to double the bit is set anyway. */
+		binary32.i = 0x7fc00000  /* 0b0_11111111_100_0000_0000_0000_0000_0000 */
+			| ((binary16 & 0x8000) << 16)
+			| ((binary16 & 0x03ff) << 13);  /* 0b11_1111_1111 */
+		val = binary32.f;
+		assert((binary32.i & 0x7f800000) == 0x7f800000 && (binary32.i & 0x007fffff) != 0);
+	}
+#endif
 	do_floatx(ctx, val, 16);
 }
 

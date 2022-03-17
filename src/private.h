@@ -6,6 +6,12 @@
 #include "php_cbor.h"
 #include "flags.h"
 
+/* Override libcbor fixed-value process of half-precision NaN */
+#define PHP_CBOR_LIBCBOR_HACK_B16_NAN 1
+
+/* Override libcbor process of half-precision denormalized number */
+#define PHP_CBOR_LIBCBOR_HACK_B16_DENORM 1
+
 /* error codes */
 typedef enum {
 	/* E D   */ PHP_CBOR_ERROR_INVALID_FLAGS = 1,
@@ -55,6 +61,13 @@ typedef struct {
 	bool string_ref;
 	uint8_t shared_ref;
 } php_cbor_decode_args;
+
+typedef union binary32_alias_t {
+	uint32_t i;
+	float f;
+} binary32_alias;
+
+#define CBOR_B32A_ISNAN(b32a)  ((binary32.i & 0x7f800000) == 0x7f800000 && (binary32.i & 0x007fffff) != 0) /* isnan(b32a.f) */
 
 #define CBOR_CE(name)  php_cbor_##name##_ce
 
