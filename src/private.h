@@ -51,6 +51,7 @@ typedef struct {
 	uint32_t max_depth;
 	uint8_t string_ref;
 	uint8_t shared_ref;
+	bool datetime;
 } php_cbor_encode_args;
 
 typedef struct {

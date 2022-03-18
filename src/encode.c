@@ -4,6 +4,7 @@
  */
 
 #include "cbor.h"
+#include <ext/date/php_date.h>
 #include "private.h"
 #include "compatibility.h"
 #include "tags.h"
@@ -48,6 +49,10 @@
 
 #define CTX_TEXT_FLAG(ctx)  (((ctx)->args.flags & PHP_CBOR_TEXT) != 0)
 
+#define ZVAL_LITSTRING(z, ls)  do { \
+		ZVAL_NEW_STR(z, zend_string_init(ZEND_STRL(ls), 0)); \
+	} while (0)
+
 typedef struct {
 	uint32_t next_index;
 	HashTable *str_table[2];
@@ -59,6 +64,14 @@ typedef struct {
 	smart_str *buf;
 	srns_item_t *srns; /* string ref namespace */
 	HashTable *refs, *ref_lock; /* shared ref, lock is actually not needed fow now */
+	struct enc_ctx_ce {
+		zend_class_entry *date_i;
+	} ce;
+	struct {
+		struct {
+			zval format_fn, format;
+		} date;
+	} ext;
 } enc_context;
 
 typedef enum {
@@ -83,6 +96,7 @@ static void free_srns_stack(enc_context *ctx);
 static php_cbor_error enc_string_ref(enc_context *ctx, const char *value, size_t length, zend_string *v_str, bool to_text);
 static php_cbor_error enc_ref_counted(enc_context *ctx, zval *value);
 static php_cbor_error enc_shareable(enc_context *ctx, zval *value);
+static php_cbor_error enc_datetime(enc_context *ctx, zval *value);
 
 void php_cbor_minit_encode()
 {
@@ -103,6 +117,8 @@ php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_e
 	php_cbor_error error;
 	enc_context ctx;
 	smart_str buf = {0};
+	memset(&ctx, 0, sizeof ctx);
+	assert(IS_UNDEF == 0);
 	ctx.args = *args;
 	ctx.cur_depth = 0;
 	ctx.buf = &buf;
@@ -111,8 +127,6 @@ php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_e
 			|| (ctx.args.flags & PHP_CBOR_FLOAT16 && ctx.args.flags & PHP_CBOR_FLOAT32)) {
 		return PHP_CBOR_ERROR_INVALID_FLAGS;
 	}
-	ctx.srns = NULL;
-	ctx.refs = ctx.ref_lock = NULL;
 	if (ctx.args.flags & PHP_CBOR_SELF_DESCRIBE) {
 		ENC_CHECK(enc_tag_bare(&ctx, PHP_CBOR_TAG_SELF_DESCRIBE));
 	}
@@ -130,6 +144,10 @@ ENCODED:
 	}
 	if (ctx.ref_lock) {
 		zend_array_destroy(ctx.ref_lock);
+	}
+	if (Z_TYPE(ctx.ext.date.format_fn) != IS_UNDEF) {
+		zval_ptr_dtor(&ctx.ext.date.format_fn);
+		zval_ptr_dtor(&ctx.ext.date.format);
 	}
 	if (!error) {
 		*data = smart_str_extract(&buf);
@@ -213,10 +231,14 @@ RETRY:
 			}
 			ENC_RESULT(enc_hash(ctx, value, HASH_STD_CLASS));
 		} else {
-			/* TODO: */
-			BX_ALLOC(1);
-			BX_PUT(cbor_encode_undef(BX_ARGS));
-			error = PHP_CBOR_ERROR_UNSUPPORTED_TYPE;
+			if (!ctx->ce.date_i) {
+				ctx->ce.date_i = php_date_get_interface_ce();  /* in core */
+			}
+			if (ctx->args.datetime && instanceof_function(ce, ctx->ce.date_i)) {
+				ENC_RESULT(enc_datetime(ctx, value));
+			} else {
+				error = PHP_CBOR_ERROR_UNSUPPORTED_TYPE;
+			}
 		}
 		break;
 	}
@@ -636,4 +658,54 @@ static php_cbor_error enc_shareable(enc_context *ctx, zval *value)
 		return PHP_CBOR_ERROR_TAG_VALUE;  /* nested Shareable */
 	}
 	return enc_zval(ctx, value);
+}
+
+static php_cbor_error enc_datetime(enc_context *ctx, zval *value)
+{
+	php_cbor_error error;
+	zval r_value;
+	zval params[1];
+	zend_string *r_str;
+	int i, len;
+	if (Z_TYPE(ctx->ext.date.format_fn) == IS_UNDEF) {
+		ZVAL_LITSTRING(&ctx->ext.date.format_fn, "format");
+		ZVAL_LITSTRING(&ctx->ext.date.format, "Y-m-d\\TH:i:s.uP");
+	}
+	ZVAL_COPY_VALUE(&params[0], &ctx->ext.date.format);
+	if (call_user_function(NULL, value, &ctx->ext.date.format_fn, &r_value, 1, params) != SUCCESS) {
+		return PHP_CBOR_ERROR_INTERNAL;
+	}
+	r_str = Z_STR(r_value);
+	len = 32;
+	if (ZSTR_LEN(r_str) != len) {
+		ENC_CHECK(PHP_CBOR_ERROR_INTERNAL);
+	}
+	r_str = zend_string_separate(r_str, false);
+	/* remove redundant fractional zeros */
+	for (i = 25; ; i--) {
+		if (ZSTR_VAL(r_str)[i] != '0') {
+			if (ZSTR_VAL(r_str)[i] != '.') {
+				i++;
+			}
+			break;
+		}
+	}
+	if (i < 26) {
+		memmove(&ZSTR_VAL(r_str)[i], &ZSTR_VAL(r_str)[26], len - 26);
+		len -= 26 - i;
+	}
+	if (memcmp(&ZSTR_VAL(r_str)[len - 6], "+00:00", 6) == 0) {
+		/* convert +00:00 to Z */
+		len -= 5;
+		ZSTR_VAL(r_str)[len - 1] = 'Z';
+	}
+	if (len != 32) {
+		ZSTR_VAL(r_str)[len] = '\0';
+		r_str = zend_string_truncate(r_str, len, false);
+	}
+	ENC_CHECK(enc_tag_bare(ctx, PHP_CBOR_TAG_DATETIME));
+	ENC_CHECK(enc_string(ctx, r_str, true));
+ENCODED:
+	zend_string_release(r_str);
+	return error;
 }

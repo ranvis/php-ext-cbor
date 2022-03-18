@@ -90,12 +90,14 @@ php_cbor_error php_cbor_set_encode_options(php_cbor_encode_args *args, HashTable
 	args->max_depth = 64;
 	args->string_ref = 0;
 	args->shared_ref = 0;
+	args->datetime = true;
 	if (options == NULL) {
 		return 0;
 	}
 	CHECK_ERROR(uint32_option(&args->max_depth, ZEND_STRL("max_depth"), 0, 10000, options));
 	CHECK_ERROR(bool_n_option(&args->string_ref, ZEND_STRL("string_ref"), "explicit\0", options));
 	CHECK_ERROR(bool_n_option(&args->shared_ref, ZEND_STRL("shared_ref"), "-\0unsafe_ref\0", options));
+	CHECK_ERROR(bool_option(&args->datetime, ZEND_STRL("datetime"), options));
 FINALLY:
 	return error;
 }
