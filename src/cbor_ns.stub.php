@@ -74,6 +74,8 @@ final class Tag
     public const CBOR_TAG_SHAREABLE = 28;
     public const CBOR_TAG_SHARED_REF = 29;
     public const CBOR_TAG_DATETIME = 0;
+    public const CBOR_TAG_BIGNUM_U = 2;
+    public const CBOR_TAG_BIGNUM_N = 3;
     / tag constants end */
 
     public int $tag;

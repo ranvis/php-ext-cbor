@@ -38,7 +38,7 @@ static php_cbor_error bool_n_option(uint8_t *opt_value, const char *name, size_t
 	ZVAL_DEREF(value);
 	switch (Z_TYPE_P(value)) {
 	case IS_TRUE:
-		*opt_value = 1;
+		*opt_value = OPT_TRUE;
 		break;
 	case IS_FALSE:
 		*opt_value = 0;
@@ -91,6 +91,7 @@ php_cbor_error php_cbor_set_encode_options(php_cbor_encode_args *args, HashTable
 	args->string_ref = 0;
 	args->shared_ref = 0;
 	args->datetime = true;
+	args->bignum = OPT_TRUE;
 	if (options == NULL) {
 		return 0;
 	}
@@ -98,6 +99,7 @@ php_cbor_error php_cbor_set_encode_options(php_cbor_encode_args *args, HashTable
 	CHECK_ERROR(bool_n_option(&args->string_ref, ZEND_STRL("string_ref"), "explicit\0", options));
 	CHECK_ERROR(bool_n_option(&args->shared_ref, ZEND_STRL("shared_ref"), "-\0unsafe_ref\0", options));
 	CHECK_ERROR(bool_option(&args->datetime, ZEND_STRL("datetime"), options));
+	CHECK_ERROR(bool_n_option(&args->bignum, ZEND_STRL("bignum"), "force\0", options));
 FINALLY:
 	return error;
 }
