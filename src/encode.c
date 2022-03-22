@@ -496,9 +496,9 @@ static php_cbor_error enc_typed_floatx(enc_context *ctx, zval *ins, int bits)
 #endif
 #if PHP_CBOR_LIBCBOR_HACK_B16_NAN
 		if (CBOR_B32A_ISNAN(binary32)) {
-			binary16 = 0x7e00  /* 0b0_11111_10_0000_0000 */
+			binary16 = 0x7e00  /* qNaN (or sNaN may become INF), 0b0_11111_10_0000_0000 */
 				| (uint16_t)((binary32.i & 0x80000000) >> 16)  /* sign */
-				| (uint16_t)((binary32.i & (0x03ff << 13)) >> 13);  /* 0b11_1111_1111 << 13 */
+				| (uint16_t)((binary32.i & (0x03ff << 13)) >> 13);  /* high 10-bit fract, 0b11_1111_1111 << 13 */
 			put = true;
 		}
 #endif
@@ -507,7 +507,7 @@ static php_cbor_error enc_typed_floatx(enc_context *ctx, zval *ins, int bits)
 			uint32_t exp = ((binary32.i & (0xff << 23)) >> 23);  /* 0b0_1111_1111 << 23 */
 			if (exp < 127 - 24) {  /* Too small */
 				binary16 = (uint16_t)((binary32.i & 0x80000000) >> 16);  /* sign */
-				/* For exp = 127 - 24, think this does round to even to avoid negative shift below */
+				/* For exp = 127 - 25, think this does round to even to avoid negative shift below */
 				put = true;
 			} else if (exp < 127 - 14) {  /* binary32: 8bits; binary16: 5bits, with rounding */
 				uint32_t frac = binary32.i & 0x7fffff; /* 0b111_1111_1111_1111_1111_1111 */;
