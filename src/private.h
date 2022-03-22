@@ -44,8 +44,6 @@ enum {
 	/* shared ref */
 	OPT_SHAREABLE = 2,
 	OPT_UNSAFE_REF = 3,
-	/* bignum */
-	OPT_FORCE = 2,
 };
 
 typedef struct {
@@ -54,7 +52,7 @@ typedef struct {
 	uint8_t string_ref;
 	uint8_t shared_ref;
 	bool datetime;
-	uint8_t bignum;
+	bool bignum;
 } php_cbor_encode_args;
 
 typedef struct {

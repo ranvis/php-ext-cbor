@@ -164,7 +164,7 @@ Constants:
 - `Cbor\Tag::STRING_REF`
 
 The tag {stringref} is like a compression, that "references" the string previously appeared inside {stringref-namespace} tag. Note that it differs from PHP's reference to `string`, i.e. not the concept of `$stringRef = &$string`.
-On encode, it can save payload size by replacing the string already seen with the tag + index (or at the worst case increase by 3-bytes overall when single-namespaced). On decode it can save memory of decoded value because PHP can reference count the same `string` until one of them is going to be modified (copy-on-write). At the cost of bookkeeping all the strings on both encoding and decoding.
+On encode, it can save payload size by replacing the string already seen with the tag + index (or at the worst case increase by 3-bytes overall when single-namespaced). On decode it can save memory of decoded value because PHP can share the same `string` until one of them is going to be modified (copy-on-write). At the cost of bookkeeping all the strings on both encoding and decoding.
 
 For decoding, the option is enabled by default, while encoding it should be specified explicitly.
 If `true` is specified on encoding, data is always wrapped with {stringref-namespace} tag. It resets the string index (like compression dictionary) for the content inside the tag. `'explicit'` makes {stringref} active but the root namespace is not implicitly created, meaning {stringref} is not created on its own.

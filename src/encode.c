@@ -774,7 +774,7 @@ static php_cbor_error enc_bignum(enc_context *ctx, zval *value)
 	}
 	r_str = Z_STR(r_value);
 	len = ZSTR_LEN(r_str);
-	if (ctx->args.bignum == OPT_TRUE && len <= 8) {
+	if (len <= 8) {
 		uint64_t i_value = 0;
 		for (int i = 0; i < len; i++) {
 			i_value <<= 8;
@@ -783,7 +783,7 @@ static php_cbor_error enc_bignum(enc_context *ctx, zval *value)
 		ENC_CHECK(enc_xint(ctx, i_value, is_negative));
 		goto ENCODED;
 	}
-	/* OPT_FORCE || len > 8 */
+	/* len > 8 */
 	r_str = zend_string_separate(r_str, false);
 	if (len == 1 && ZSTR_VAL(r_str)[0] == '0') {  /* or already empty */
 		len = 0;
