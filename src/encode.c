@@ -630,15 +630,15 @@ static php_cbor_error enc_string_ref(enc_context *ctx, const char *value, size_t
 		ENC_RESULT(enc_long(ctx, Z_LVAL_P(str_index)));
 	}
 	if (!php_cbor_is_len_string_ref(length, srns->next_index)) {
-		ENC_CHECK(PHP_CBOR_STATUS_VALUE_FOLLOWS);
+		ENC_RESULT(PHP_CBOR_STATUS_VALUE_FOLLOWS);
 	}
 	if (srns->next_index == ZEND_LONG_MAX) {  /* until max - 1 for simplicity */
-		ENC_CHECK(PHP_CBOR_ERROR_INTERNAL);
+		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
 	}
 	ZVAL_LONG(&new_index, srns->next_index);
 	srns->next_index++;
 	if (!zend_hash_add_new(str_table, v_str, &new_index)) {
-		ENC_CHECK(PHP_CBOR_ERROR_INTERNAL);
+		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
 	}
 	error = PHP_CBOR_STATUS_VALUE_FOLLOWS;
 ENCODED:
@@ -709,7 +709,7 @@ static php_cbor_error enc_datetime(enc_context *ctx, zval *value)
 	r_str = Z_STR(r_value);
 	len = 32;
 	if (ZSTR_LEN(r_str) != len) {
-		ENC_CHECK(PHP_CBOR_ERROR_INTERNAL);
+		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
 	}
 	r_str = zend_string_separate(r_str, false);
 	/* remove redundant fractional zeros */
@@ -751,26 +751,26 @@ static php_cbor_error enc_bignum(enc_context *ctx, zval *value)
 	bool is_negative;
 	ZVAL_UNDEF(&r_value);
 	ZVAL_UNDEF(&com_value);
-	if (Z_TYPE(ctx->ext.gmp.export_fn) == IS_UNDEF) {
-		ZVAL_LITSTRING(&ctx->ext.gmp.cmp_fn, "gmp_cmp");
-		ZVAL_LITSTRING(&ctx->ext.gmp.com_fn, "gmp_com");
-		ZVAL_LITSTRING(&ctx->ext.gmp.export_fn, "gmp_export");
+	if (Z_TYPE(ctx->val[EXT_STRV_GMP_EXPORT_FN]) == IS_UNDEF) {
+		ZVAL_LITSTRING(&ctx->val[EXT_STRV_GMP_CMP_FN], "gmp_cmp");
+		ZVAL_LITSTRING(&ctx->val[EXT_STRV_GMP_COM_FN], "gmp_com");
+		ZVAL_LITSTRING(&ctx->val[EXT_STRV_GMP_EXPORT_FN], "gmp_export");
 	}
 	ZVAL_COPY_VALUE(&params[0], value);
 	ZVAL_LONG(&params[1], 0);
-	if (call_user_function(NULL, NULL, &ctx->ext.gmp.cmp_fn, &r_value, 2, params) != SUCCESS) {
+	if (call_user_function(NULL, NULL, &ctx->val[EXT_STRV_GMP_CMP_FN], &r_value, 2, params) != SUCCESS) {
 		return PHP_CBOR_ERROR_INTERNAL;
 	}
 	is_negative = Z_LVAL(r_value) < 0;
 	if (is_negative) {
-		if (call_user_function(NULL, NULL, &ctx->ext.gmp.com_fn, &com_value, 1, params) != SUCCESS) {
+		if (call_user_function(NULL, NULL, &ctx->val[EXT_STRV_GMP_COM_FN], &com_value, 1, params) != SUCCESS) {
 			return PHP_CBOR_ERROR_INTERNAL;
 		}
 		value = &com_value;
 		ZVAL_COPY_VALUE(&params[0], value);
 	}
 	if (call_user_function(NULL, NULL, &ctx->ext.gmp.export_fn, &r_value, 1, params) != SUCCESS) {
-		ENC_CHECK(PHP_CBOR_ERROR_INTERNAL);
+		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
 	}
 	r_str = Z_STR(r_value);
 	len = ZSTR_LEN(r_str);
