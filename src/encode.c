@@ -58,6 +58,18 @@ typedef struct {
 	HashTable *str_table[2];
 } srns_item_t;
 
+enum {
+	EXT_STR_GMP_CN = 0,
+	_EXT_STR_COUNT,
+
+	EXT_STRV_DATE_FORMAT_FN = 0,
+	EXT_STRV_DATE_FORMAT,
+	EXT_STRV_GMP_CMP_FN,
+	EXT_STRV_GMP_COM_FN,
+	EXT_STRV_GMP_EXPORT_FN,
+	_EXT_STRV_COUNT,
+};
+
 typedef struct {
 	php_cbor_encode_args args;
 	uint32_t cur_depth;
@@ -68,15 +80,8 @@ typedef struct {
 		zend_class_entry *date_i;
 		zend_class_entry *gmp;
 	} ce;
-	struct {
-		struct {
-			zval format_fn, format;
-		} date;
-		struct {
-			zend_string *gmp_cn;
-			zval cmp_fn, com_fn, export_fn;
-		} gmp;
-	} ext;
+	zend_string *str[_EXT_STR_COUNT];
+	zval val[_EXT_STRV_COUNT];
 } enc_context;
 
 typedef enum {
@@ -151,15 +156,13 @@ ENCODED:
 	if (ctx.ref_lock) {
 		zend_array_destroy(ctx.ref_lock);
 	}
-	if (Z_TYPE(ctx.ext.date.format_fn) != IS_UNDEF) {
-		zval_ptr_dtor(&ctx.ext.date.format_fn);
-		zval_ptr_dtor(&ctx.ext.date.format);
+	for (int i = 0; i < _EXT_STR_COUNT; i++) {
+		if (ctx.str[i]) {
+			zend_string_release(ctx.str[i]);
+		}
 	}
-	if (ctx.ext.gmp.gmp_cn) {
-		zend_string_release(ctx.ext.gmp.gmp_cn);
-		zval_ptr_dtor(&ctx.ext.gmp.cmp_fn);
-		zval_ptr_dtor(&ctx.ext.gmp.com_fn);
-		zval_ptr_dtor(&ctx.ext.gmp.export_fn);
+	for (int i = 0; i < _EXT_STRV_COUNT; i++) {
+		zval_ptr_dtor(&ctx.val[i]);
 	}
 	if (!error) {
 		*data = smart_str_extract(&buf);
@@ -245,9 +248,9 @@ RETRY:
 		} else {
 			if (!ctx->ce.date_i) {
 				ctx->ce.date_i = php_date_get_interface_ce();  /* in core */
-				ctx->ext.gmp.gmp_cn = zend_string_init(ZEND_STRL("gmp"), false);
-				if (zend_hash_exists(&module_registry, ctx->ext.gmp.gmp_cn)) {
-					ctx->ce.gmp = zend_lookup_class_ex(ctx->ext.gmp.gmp_cn, ctx->ext.gmp.gmp_cn, 0);
+				ctx->str[EXT_STR_GMP_CN] = zend_string_init(ZEND_STRL("gmp"), false);
+				if (zend_hash_exists(&module_registry, ctx->str[EXT_STR_GMP_CN])) {
+					ctx->ce.gmp = zend_lookup_class_ex(ctx->str[EXT_STR_GMP_CN], ctx->str[EXT_STR_GMP_CN], 0);
 				}
 			}
 			if (ctx->args.datetime && instanceof_function(ce, ctx->ce.date_i)) {
@@ -444,7 +447,7 @@ static php_cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 		zend_release_properties(ht);
 	}
 	if (is_indef_length) {
-		BX_ALLOC(8);
+		BX_ALLOC(1);
 		BX_PUT(cbor_encode_break(BX_ARGS));
 		BX_END_CHECK();
 	}
@@ -698,12 +701,12 @@ static php_cbor_error enc_datetime(enc_context *ctx, zval *value)
 	zval params[1];
 	zend_string *r_str;
 	int i, len;
-	if (Z_TYPE(ctx->ext.date.format_fn) == IS_UNDEF) {
-		ZVAL_LITSTRING(&ctx->ext.date.format_fn, "format");
-		ZVAL_LITSTRING(&ctx->ext.date.format, "Y-m-d\\TH:i:s.uP");
+	if (Z_TYPE(ctx->val[EXT_STRV_DATE_FORMAT_FN]) == IS_UNDEF) {
+		ZVAL_LITSTRING(&ctx->val[EXT_STRV_DATE_FORMAT_FN], "format");
+		ZVAL_LITSTRING(&ctx->val[EXT_STRV_DATE_FORMAT], "Y-m-d\\TH:i:s.uP");
 	}
-	ZVAL_COPY_VALUE(&params[0], &ctx->ext.date.format);
-	if (call_user_function(NULL, value, &ctx->ext.date.format_fn, &r_value, 1, params) != SUCCESS) {
+	ZVAL_COPY_VALUE(&params[0], &ctx->val[EXT_STRV_DATE_FORMAT]);
+	if (call_user_function(NULL, value, &ctx->val[EXT_STRV_DATE_FORMAT_FN], &r_value, 1, params) != SUCCESS) {
 		return PHP_CBOR_ERROR_INTERNAL;
 	}
 	r_str = Z_STR(r_value);
@@ -769,7 +772,7 @@ static php_cbor_error enc_bignum(enc_context *ctx, zval *value)
 		value = &com_value;
 		ZVAL_COPY_VALUE(&params[0], value);
 	}
-	if (call_user_function(NULL, NULL, &ctx->ext.gmp.export_fn, &r_value, 1, params) != SUCCESS) {
+	if (call_user_function(NULL, NULL, &ctx->val[EXT_STRV_GMP_EXPORT_FN], &r_value, 1, params) != SUCCESS) {
 		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
 	}
 	r_str = Z_STR(r_value);
