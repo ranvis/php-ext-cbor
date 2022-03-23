@@ -34,6 +34,7 @@ run(function () {
     cdecThrows(CBOR_ERROR_TAG_TYPE, '83d81c80d81d6080', options: ['shared_ref' => 'shareable']);
     cdecThrows(CBOR_ERROR_TAG_TYPE, '83d81c80d81d6080', options: ['shared_ref' => 'unsafe_ref']);
     cdecThrows(CBOR_ERROR_TAG_TYPE, '83d81c80d81d2080', options: ['shared_ref' => true]);
+    cdecThrows(CBOR_ERROR_TAG_TYPE, '83d81c8100d81d2080', options: ['shared_ref' => true]);
     cdecThrows(CBOR_ERROR_TAG_VALUE, '83d81d00d81c8080', options: ['shared_ref' => true]);
 
     cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a1d81c4140d81d00', options: ['shared_ref' => 'shareable']);

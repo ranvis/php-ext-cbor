@@ -975,7 +975,7 @@ static void tag_handler_shareable_child(dec_context *ctx, stack_item *item, stac
 			real_v = &self->v.tag_h.v.shareable.value;
 			ZVAL_NEW_REF(real_v, &tmp_v);
 		} else {
-			RETURN_CB_ERROR(PHP_CBOR_ERROR_TAG_VALUE);
+			RETURN_CB_ERROR(PHP_CBOR_ERROR_TAG_TYPE);
 		}
 	}
 	if (zend_hash_index_update(ctx->refs, self->v.tag_h.v.shareable.index, real_v) == NULL) {
