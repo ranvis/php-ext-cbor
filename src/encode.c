@@ -49,9 +49,7 @@
 
 #define CTX_TEXT_FLAG(ctx)  (((ctx)->args.flags & PHP_CBOR_TEXT) != 0)
 
-#define ZVAL_LITSTRING(z, ls)  do { \
-		ZVAL_NEW_STR(z, zend_string_init(ZEND_STRL(ls), 0)); \
-	} while (0)
+#define MAKE_ZSTR(ls)  zend_string_init(ZEND_STRL(ls), false)
 
 typedef struct {
 	uint32_t next_index;
@@ -62,18 +60,18 @@ enum {
 	EXT_STR_GMP_CN = 0,
 	EXT_STR_DEC_MN,
 	EXT_STR_DEC_CN,
-	_EXT_STR_COUNT,
 
-	EXT_STRV_DATE_FORMAT_FN = 0,
-	EXT_STRV_DATE_FORMAT,
-	EXT_STRV_GMP_CMP_FN,
-	EXT_STRV_GMP_COM_FN,
-	EXT_STRV_GMP_EXPORT_FN,
-	EXT_STRV_DEC_ISNAN_FN,
-	EXT_STRV_DEC_ISINF_FN,
-	EXT_STRV_DEC_ISNEG_FN,
-	EXT_STRV_DEC_TOSTR_FN,
-	_EXT_STRV_COUNT,
+	EXT_STR_DATE_FORMAT_FN,
+	EXT_STR_DATE_FORMAT,
+	EXT_STR_GMP_CMP_FN,
+	EXT_STR_GMP_COM_FN,
+	EXT_STR_GMP_EXPORT_FN,
+	EXT_STR_DEC_ISNAN_FN,
+	EXT_STR_DEC_ISINF_FN,
+	EXT_STR_DEC_ISNEG_FN,
+	EXT_STR_DEC_TOSTR_FN,
+
+	_EXT_STR_COUNT,
 };
 
 typedef struct {
@@ -88,7 +86,6 @@ typedef struct {
 		zend_class_entry *decimal;
 	} ce;
 	zend_string *str[_EXT_STR_COUNT];
-	zval val[_EXT_STRV_COUNT];
 } enc_context;
 
 typedef enum {
@@ -173,9 +170,6 @@ ENCODED:
 			zend_string_release(ctx.str[i]);
 		}
 	}
-	for (int i = 0; i < _EXT_STRV_COUNT; i++) {
-		zval_ptr_dtor(&ctx.val[i]);
-	}
 	if (!error) {
 		*data = smart_str_extract(&buf);
 	} else {
@@ -246,12 +240,12 @@ RETRY:
 		} else {
 			if (!ctx->ce.date_i) {
 				ctx->ce.date_i = php_date_get_interface_ce();  /* in core */
-				ctx->str[EXT_STR_GMP_CN] = zend_string_init(ZEND_STRL("gmp"), false);
+				ctx->str[EXT_STR_GMP_CN] = MAKE_ZSTR("gmp");
 				if (zend_hash_exists(&module_registry, ctx->str[EXT_STR_GMP_CN])) {
 					ctx->ce.gmp = zend_lookup_class_ex(ctx->str[EXT_STR_GMP_CN], ctx->str[EXT_STR_GMP_CN], 0);
 				}
-				ctx->str[EXT_STR_DEC_MN] = zend_string_init(ZEND_STRL("decimal"), false);
-				ctx->str[EXT_STR_DEC_CN] = zend_string_init(ZEND_STRL("decimal\\decimal"), false);
+				ctx->str[EXT_STR_DEC_MN] = MAKE_ZSTR("decimal");
+				ctx->str[EXT_STR_DEC_CN] = MAKE_ZSTR("decimal\\decimal");
 				if (zend_hash_exists(&module_registry, ctx->str[EXT_STR_DEC_MN])) {
 					ctx->ce.decimal = zend_lookup_class_ex(ctx->str[EXT_STR_DEC_CN], ctx->str[EXT_STR_DEC_CN], 0);
 				}
@@ -733,6 +727,13 @@ static php_cbor_error enc_shareable(enc_context *ctx, zval *value)
 	return enc_zval(ctx, value);
 }
 
+static zend_result call_fn(zval *object, zend_string *func_str, zval *retval_ptr, uint32_t param_count, zval params[]/*, HashTable *named_params*/)
+{
+	zval func_name;
+	ZVAL_NEW_STR(&func_name, func_str);
+	return call_user_function(NULL, object, &func_name, retval_ptr, param_count, params);
+}
+
 static php_cbor_error enc_datetime(enc_context *ctx, zval *value)
 {
 	php_cbor_error error;
@@ -740,12 +741,12 @@ static php_cbor_error enc_datetime(enc_context *ctx, zval *value)
 	zval params[1];
 	zend_string *r_str;
 	int i, len;
-	if (Z_TYPE(ctx->val[EXT_STRV_DATE_FORMAT_FN]) == IS_UNDEF) {
-		ZVAL_LITSTRING(&ctx->val[EXT_STRV_DATE_FORMAT_FN], "format");
-		ZVAL_LITSTRING(&ctx->val[EXT_STRV_DATE_FORMAT], "Y-m-d\\TH:i:s.uP");
+	if (!ctx->str[EXT_STR_DATE_FORMAT_FN]) {
+		ctx->str[EXT_STR_DATE_FORMAT_FN] = MAKE_ZSTR("format");
+		ctx->str[EXT_STR_DATE_FORMAT] = MAKE_ZSTR("Y-m-d\\TH:i:s.uP");
 	}
-	ZVAL_COPY_VALUE(&params[0], &ctx->val[EXT_STRV_DATE_FORMAT]);
-	if (call_user_function(NULL, value, &ctx->val[EXT_STRV_DATE_FORMAT_FN], &r_value, 1, params) != SUCCESS) {
+	ZVAL_NEW_STR(&params[0], ctx->str[EXT_STR_DATE_FORMAT]);
+	if (call_fn(value, ctx->str[EXT_STR_DATE_FORMAT_FN], &r_value, 1, params) != SUCCESS) {
 		return PHP_CBOR_ERROR_INTERNAL;
 	}
 	r_str = Z_STR(r_value);
@@ -793,25 +794,25 @@ static php_cbor_error enc_bignum(enc_context *ctx, zval *value)
 	bool is_negative;
 	ZVAL_UNDEF(&r_value);
 	ZVAL_UNDEF(&com_value);
-	if (Z_TYPE(ctx->val[EXT_STRV_GMP_EXPORT_FN]) == IS_UNDEF) {
-		ZVAL_LITSTRING(&ctx->val[EXT_STRV_GMP_CMP_FN], "gmp_cmp");
-		ZVAL_LITSTRING(&ctx->val[EXT_STRV_GMP_COM_FN], "gmp_com");
-		ZVAL_LITSTRING(&ctx->val[EXT_STRV_GMP_EXPORT_FN], "gmp_export");
+	if (!ctx->str[EXT_STR_GMP_EXPORT_FN]) {
+		ctx->str[EXT_STR_GMP_CMP_FN] = MAKE_ZSTR("gmp_cmp");
+		ctx->str[EXT_STR_GMP_COM_FN] = MAKE_ZSTR("gmp_com");
+		ctx->str[EXT_STR_GMP_EXPORT_FN] = MAKE_ZSTR("gmp_export");
 	}
 	ZVAL_COPY_VALUE(&params[0], value);
 	ZVAL_LONG(&params[1], 0);
-	if (call_user_function(NULL, NULL, &ctx->val[EXT_STRV_GMP_CMP_FN], &r_value, 2, params) != SUCCESS) {
+	if (call_fn(NULL, ctx->str[EXT_STR_GMP_CMP_FN], &r_value, 2, params) != SUCCESS) {
 		return PHP_CBOR_ERROR_INTERNAL;
 	}
 	is_negative = Z_LVAL(r_value) < 0;
 	if (is_negative) {
-		if (call_user_function(NULL, NULL, &ctx->val[EXT_STRV_GMP_COM_FN], &com_value, 1, params) != SUCCESS) {
+		if (call_fn(NULL, ctx->str[EXT_STR_GMP_COM_FN], &com_value, 1, params) != SUCCESS) {
 			return PHP_CBOR_ERROR_INTERNAL;
 		}
 		value = &com_value;
 		ZVAL_COPY_VALUE(&params[0], value);
 	}
-	if (call_user_function(NULL, NULL, &ctx->val[EXT_STRV_GMP_EXPORT_FN], &r_value, 1, params) != SUCCESS) {
+	if (call_fn(NULL, ctx->str[EXT_STR_GMP_EXPORT_FN], &r_value, 1, params) != SUCCESS) {
 		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
 	}
 	r_str = Z_STR(r_value);
@@ -856,30 +857,30 @@ static php_cbor_error enc_decimal(enc_context *ctx, zval *value)
 	zend_long exp, exp_p;
 	ZVAL_UNDEF(&r_value);
 	BX_INIT(ctx);
-	if (Z_TYPE(ctx->val[EXT_STRV_DEC_TOSTR_FN]) == IS_UNDEF) {
-		ZVAL_LITSTRING(&ctx->val[EXT_STRV_DEC_ISNAN_FN], "isnan");
-		ZVAL_LITSTRING(&ctx->val[EXT_STRV_DEC_ISINF_FN], "isinf");
-		ZVAL_LITSTRING(&ctx->val[EXT_STRV_DEC_ISNEG_FN], "isnegative");
-		ZVAL_LITSTRING(&ctx->val[EXT_STRV_DEC_TOSTR_FN], "tostring");
+	if (!ctx->str[EXT_STR_DEC_TOSTR_FN]) {
+		ctx->str[EXT_STR_DEC_ISNAN_FN] = MAKE_ZSTR("isnan");
+		ctx->str[EXT_STR_DEC_ISINF_FN] = MAKE_ZSTR("isinf");
+		ctx->str[EXT_STR_DEC_ISNEG_FN] = MAKE_ZSTR("isnegative");
+		ctx->str[EXT_STR_DEC_TOSTR_FN] = MAKE_ZSTR("tostring");
 	}
-	if (call_user_function(NULL, value, &ctx->val[EXT_STRV_DEC_ISNAN_FN], &r_value, 0, NULL) != SUCCESS) {
+	if (call_fn(value, ctx->str[EXT_STR_DEC_ISNAN_FN], &r_value, 0, NULL) != SUCCESS) {
 		return PHP_CBOR_ERROR_INTERNAL;
 	}
 	if (Z_TYPE(r_value) == IS_TRUE) {
 		zval *nan = zend_get_constant_str(ZEND_STRL("NAN"));  /* use PHP's constant, not the extension's compiler's */
 		ENC_RESULT(enc_z_double(ctx, nan, true));
 	}
-	if (call_user_function(NULL, value, &ctx->val[EXT_STRV_DEC_ISINF_FN], &r_value, 0, NULL) != SUCCESS) {
+	if (call_fn(value, ctx->str[EXT_STR_DEC_ISINF_FN], &r_value, 0, NULL) != SUCCESS) {
 		return PHP_CBOR_ERROR_INTERNAL;
 	}
 	if (Z_TYPE(r_value) == IS_TRUE) {
-		if (call_user_function(NULL, value, &ctx->val[EXT_STRV_DEC_ISNEG_FN], &r_value, 0, NULL) != SUCCESS) {
+		if (call_fn(value, ctx->str[EXT_STR_DEC_ISNEG_FN], &r_value, 0, NULL) != SUCCESS) {
 			return PHP_CBOR_ERROR_INTERNAL;
 		}
 		Z_DVAL(r_value) = (Z_TYPE(r_value) == IS_TRUE) ? -INFINITY : INFINITY;
 		ENC_RESULT(enc_z_double(ctx, &r_value, true));
 	}
-	if (call_user_function(NULL, value, &ctx->val[EXT_STRV_DEC_TOSTR_FN], &r_value, 0, NULL) != SUCCESS) {
+	if (call_fn(value, ctx->str[EXT_STR_DEC_TOSTR_FN], &r_value, 0, NULL) != SUCCESS) {
 		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
 	}
 	/* output will be like '-123.45E+67' */
