@@ -60,6 +60,8 @@ typedef struct {
 
 enum {
 	EXT_STR_GMP_CN = 0,
+	EXT_STR_DEC_MN,
+	EXT_STR_DEC_CN,
 	_EXT_STR_COUNT,
 
 	EXT_STRV_DATE_FORMAT_FN = 0,
@@ -67,6 +69,10 @@ enum {
 	EXT_STRV_GMP_CMP_FN,
 	EXT_STRV_GMP_COM_FN,
 	EXT_STRV_GMP_EXPORT_FN,
+	EXT_STRV_DEC_ISNAN_FN,
+	EXT_STRV_DEC_ISINF_FN,
+	EXT_STRV_DEC_ISNEG_FN,
+	EXT_STRV_DEC_TOSTR_FN,
 	_EXT_STRV_COUNT,
 };
 
@@ -79,6 +85,7 @@ typedef struct {
 	struct enc_ctx_ce {
 		zend_class_entry *date_i;
 		zend_class_entry *gmp;
+		zend_class_entry *decimal;
 	} ce;
 	zend_string *str[_EXT_STR_COUNT];
 	zval val[_EXT_STRV_COUNT];
@@ -92,6 +99,7 @@ typedef enum {
 
 static php_cbor_error enc_zval(enc_context *ctx, zval *value);
 static php_cbor_error enc_long(enc_context *ctx, zend_long value);
+static php_cbor_error enc_z_double(enc_context *ctx, zval *value, bool is_small);
 static php_cbor_error enc_string(enc_context *ctx, zend_string *value, bool to_text);
 static php_cbor_error enc_string_len(enc_context *ctx, const char *value, size_t length, zend_string *v_str, bool to_text);
 static php_cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type);
@@ -108,6 +116,10 @@ static php_cbor_error enc_ref_counted(enc_context *ctx, zval *value);
 static php_cbor_error enc_shareable(enc_context *ctx, zval *value);
 static php_cbor_error enc_datetime(enc_context *ctx, zval *value);
 static php_cbor_error enc_bignum(enc_context *ctx, zval *value);
+static php_cbor_error enc_decimal(enc_context *ctx, zval *value);
+
+static zend_string *decode_dec_str(const char *in_c, size_t in_len);
+static zend_string *bin_int_sub1(zend_string *str);
 
 void php_cbor_minit_encode()
 {
@@ -196,21 +208,7 @@ RETRY:
 	case IS_LONG:
 		ENC_RESULT(enc_long(ctx, Z_LVAL_P(value)));
 	case IS_DOUBLE:
-		if (UNEXPECTED(ctx->args.flags & PHP_CBOR_FLOAT16)) {
-#if PHP_CBOR_LIBCBOR_HACK_B16_NAN || PHP_CBOR_LIBCBOR_HACK_B16_DENORM
-			ENC_RESULT(enc_typed_floatx(ctx, value, 16));
-#else
-			BX_ALLOC(3);
-			BX_PUT(cbor_encode_half((float)Z_DVAL_P(value), BX_ARGS));
-#endif
-		} else if (UNEXPECTED(ctx->args.flags & PHP_CBOR_FLOAT32)) {
-			BX_ALLOC(5);
-			BX_PUT(cbor_encode_single((float)Z_DVAL_P(value), BX_ARGS));
-		} else {
-			BX_ALLOC(9);
-			BX_PUT(cbor_encode_double(Z_DVAL_P(value), BX_ARGS));
-		}
-		break;
+		ENC_RESULT(enc_z_double(ctx, value, false));
 	case IS_STRING:
 		if (!(ctx->args.flags & (PHP_CBOR_BYTE | PHP_CBOR_TEXT))) {
 			error = PHP_CBOR_ERROR_INVALID_FLAGS;
@@ -252,11 +250,18 @@ RETRY:
 				if (zend_hash_exists(&module_registry, ctx->str[EXT_STR_GMP_CN])) {
 					ctx->ce.gmp = zend_lookup_class_ex(ctx->str[EXT_STR_GMP_CN], ctx->str[EXT_STR_GMP_CN], 0);
 				}
+				ctx->str[EXT_STR_DEC_MN] = zend_string_init(ZEND_STRL("decimal"), false);
+				ctx->str[EXT_STR_DEC_CN] = zend_string_init(ZEND_STRL("decimal\\decimal"), false);
+				if (zend_hash_exists(&module_registry, ctx->str[EXT_STR_DEC_MN])) {
+					ctx->ce.decimal = zend_lookup_class_ex(ctx->str[EXT_STR_DEC_CN], ctx->str[EXT_STR_DEC_CN], 0);
+				}
 			}
 			if (ctx->args.datetime && instanceof_function(ce, ctx->ce.date_i)) {
 				ENC_RESULT(enc_datetime(ctx, value));
 			} else if (ctx->args.bignum && ce == ctx->ce.gmp) {
 				ENC_RESULT(enc_bignum(ctx, value));
+			} else if (ctx->args.decimal && ce == ctx->ce.decimal) {
+				ENC_RESULT(enc_decimal(ctx, value));
 			} else {
 				error = PHP_CBOR_ERROR_UNSUPPORTED_TYPE;
 			}
@@ -300,6 +305,29 @@ static php_cbor_error enc_long(enc_context *ctx, zend_long value)
 	return 0;
 }
 
+static php_cbor_error enc_z_double(enc_context *ctx, zval *value, bool is_small)
+{
+	php_cbor_error error = 0;
+	BX_INIT(ctx);
+	if (ctx->args.flags & PHP_CBOR_FLOAT16) {
+#if PHP_CBOR_LIBCBOR_HACK_B16_NAN || PHP_CBOR_LIBCBOR_HACK_B16_DENORM
+		ENC_RESULT(enc_typed_floatx(ctx, value, 16));
+#else
+		BX_ALLOC(3);
+		BX_PUT(cbor_encode_half((float)Z_DVAL_P(value), BX_ARGS));
+#endif
+	} else if (ctx->args.flags & PHP_CBOR_FLOAT32) {
+		BX_ALLOC(5);
+		BX_PUT(cbor_encode_single((float)Z_DVAL_P(value), BX_ARGS));
+	} else {
+		BX_ALLOC(9);
+		BX_PUT(cbor_encode_double(Z_DVAL_P(value), BX_ARGS));
+	}
+	BX_END_CHECK();
+ENCODED:
+	return error;
+}
+
 static php_cbor_error enc_xint(enc_context *ctx, uint64_t value, bool is_negative)
 {
 	BX_INIT(ctx);
@@ -311,6 +339,17 @@ static php_cbor_error enc_xint(enc_context *ctx, uint64_t value, bool is_negativ
 	}
 	BX_END_CHECK();
 	return 0;
+}
+
+static php_cbor_error enc_bin_int(enc_context *ctx, const char *str, size_t length, bool is_negative)
+{
+	uint64_t i_value = 0;
+	assert(length <= 8);
+	for (size_t i = 0; i < length; i++) {
+		i_value <<= 8;
+		i_value |= (uint8_t)str[i];
+	}
+	return enc_xint(ctx, i_value, is_negative);
 }
 
 static php_cbor_error enc_string(enc_context *ctx, zend_string *value, bool to_text)
@@ -803,4 +842,207 @@ ENCODED:
 		zend_string_release(r_str);
 	}
 	return error;
+}
+
+static php_cbor_error enc_decimal(enc_context *ctx, zval *value)
+{
+	php_cbor_error error;
+	zval r_value;
+	zend_string *r_str = NULL;
+	zend_string *bin_str = NULL;
+	const char *r_ptr, *c_ptr;
+	size_t len;
+	bool is_negative;
+	zend_long exp, exp_p;
+	ZVAL_UNDEF(&r_value);
+	BX_INIT(ctx);
+	if (Z_TYPE(ctx->val[EXT_STRV_DEC_TOSTR_FN]) == IS_UNDEF) {
+		ZVAL_LITSTRING(&ctx->val[EXT_STRV_DEC_ISNAN_FN], "isnan");
+		ZVAL_LITSTRING(&ctx->val[EXT_STRV_DEC_ISINF_FN], "isinf");
+		ZVAL_LITSTRING(&ctx->val[EXT_STRV_DEC_ISNEG_FN], "isnegative");
+		ZVAL_LITSTRING(&ctx->val[EXT_STRV_DEC_TOSTR_FN], "tostring");
+	}
+	if (call_user_function(NULL, value, &ctx->val[EXT_STRV_DEC_ISNAN_FN], &r_value, 0, NULL) != SUCCESS) {
+		return PHP_CBOR_ERROR_INTERNAL;
+	}
+	if (Z_TYPE(r_value) == IS_TRUE) {
+		zval *nan = zend_get_constant_str(ZEND_STRL("NAN"));  /* use PHP's constant, not the extension's compiler's */
+		ENC_RESULT(enc_z_double(ctx, nan, true));
+	}
+	if (call_user_function(NULL, value, &ctx->val[EXT_STRV_DEC_ISINF_FN], &r_value, 0, NULL) != SUCCESS) {
+		return PHP_CBOR_ERROR_INTERNAL;
+	}
+	if (Z_TYPE(r_value) == IS_TRUE) {
+		if (call_user_function(NULL, value, &ctx->val[EXT_STRV_DEC_ISNEG_FN], &r_value, 0, NULL) != SUCCESS) {
+			return PHP_CBOR_ERROR_INTERNAL;
+		}
+		Z_DVAL(r_value) = (Z_TYPE(r_value) == IS_TRUE) ? -INFINITY : INFINITY;
+		ENC_RESULT(enc_z_double(ctx, &r_value, true));
+	}
+	if (call_user_function(NULL, value, &ctx->val[EXT_STRV_DEC_TOSTR_FN], &r_value, 0, NULL) != SUCCESS) {
+		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
+	}
+	/* output will be like '-123.45E+67' */
+	r_str = Z_STR(r_value);
+	len = ZSTR_LEN(r_str);
+	if (!len) {
+		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
+	}
+	r_ptr = ZSTR_VAL(r_str);
+	is_negative = *r_ptr == '-';
+	if (is_negative) {
+		r_ptr++;
+		if (!--len) {
+			ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
+		}
+	}
+	exp = 0;
+	c_ptr = strchr(r_ptr, 'E');
+	if (c_ptr) {
+		size_t exp_len = len - (c_ptr - r_ptr);
+		/* Decimal extension appears not to support arbitraly length exponent. So is this. */
+		if (exp_len - 1 >= MAX_LENGTH_OF_LONG) {  /* skip 'E', exclude max length to avoid overflow */
+			ENC_RESULT(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+		}
+		exp = ZEND_ATOL(c_ptr + 1);
+		len -= exp_len;
+	}
+	bin_str = decode_dec_str(r_ptr, len);
+	if (!bin_str) {
+		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
+	}
+	if (is_negative) {
+		if (ZSTR_LEN(bin_str) == 0) {
+			/* No mention of decimal negative zero in RFC 8949.
+			 * We choose decimal without sign rather than -0f without precision. */
+			is_negative = false;
+		} else {
+			bin_str = bin_int_sub1(bin_str);
+		}
+	}
+	c_ptr = strchr(r_ptr, '.');
+	exp_p = c_ptr ? -(int)(len - 1 - (c_ptr - r_ptr)) : 0;  /* to keep precision of Decimal instance, exp never be greater than zero */
+	if ((exp > 0 && exp_p > ZEND_LONG_MAX - exp)
+			|| (exp < 0 && exp_p < ZEND_LONG_MIN - exp)) {
+		ENC_RESULT(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+	}
+	exp += exp_p;
+	len = ZSTR_LEN(bin_str);
+	if (exp || len > 8) {
+		enc_tag_bare(ctx, PHP_CBOR_TAG_DECIMAL);
+		BX_ALLOC(1);
+		BX_PUT(cbor_encode_array_start(2, BX_ARGS));
+		BX_END_CHECK();
+		ENC_CHECK(enc_long(ctx, exp));
+	}
+	if (len <= 8) {
+		ENC_RESULT(enc_bin_int(ctx, ZSTR_VAL(bin_str), len, is_negative));
+	}
+	ENC_CHECK(enc_tag_bare(ctx, is_negative ? PHP_CBOR_TAG_BIGNUM_N : PHP_CBOR_TAG_BIGNUM_U));
+	ENC_CHECK(enc_string(ctx, bin_str, false));
+ENCODED:
+	if (r_str) {
+		zend_string_release(r_str);
+	}
+	if (bin_str) {
+		zend_string_release(bin_str);
+	}
+	return error;
+}
+
+static int dec_char_to_int(uint8_t c)
+{
+	if (EXPECTED(c >= '0' && c <= '9')) {
+		return c - '0';
+	}
+	return 255;
+}
+
+static zend_string *decode_dec_str(const char *in_c, size_t in_len)
+{
+	int out_max = (int)(415241 * in_len / 1000000 + 1);  /* floor(log256(10) * in_len) + 1 */
+	bool out_c_heap, multi_c_heap;
+	uint8_t *out_c = do_alloca_ex(out_max, 256, out_c_heap);
+	uint8_t *multi_c = do_alloca_ex(out_max, 256, multi_c_heap);
+	int multi_pos = out_max - 1, multi_max;
+	int out_pos = out_max - 1;
+	int carry, i;
+	zend_string *out_str;
+	out_str = NULL;
+	if (UNEXPECTED(in_len > SIZE_MAX / 415241)) {
+		goto BAIL;
+	}
+	multi_c[multi_pos] = 1;
+	multi_max = multi_pos;
+	memset(out_c, 0, out_max);
+	out_c[out_pos] = 0;
+	for (int in_pos = (int)in_len - 1; in_pos >= 0; in_pos--) {
+		int n = dec_char_to_int(((uint8_t *)in_c)[in_pos]);
+		if (n > 9) {
+			continue;  /* skip non-digit */
+		}
+		if (n) {
+			carry = 0;
+			for (i = out_max - 1; i >= multi_pos; i--) {
+				int result = out_c[i] + carry + multi_c[i] * n;
+				out_c[i] = result & 0xff;
+				carry = result >> 8;
+			}
+			for (; carry; i--) {
+				if (i < 0) {
+					goto BAIL;
+				}
+				int result = out_c[i] + carry;
+				out_c[i] = result & 0xff;
+				carry = result >> 8;
+			}
+		}
+		carry = 0;
+		for (i = multi_max; i >= multi_pos; i--) {
+			int result = multi_c[i] * 10 + carry;
+			multi_c[i] = result & 0xff;
+			carry = result >> 8;
+		}
+		for (; carry; i--) {
+			if (i < 0) {
+				goto BAIL;
+			}
+			multi_c[i] = carry & 0xff;
+			carry = carry >> 8;
+			multi_pos--;
+		}
+		for (; multi_max >= multi_pos; multi_max--) {
+			if (multi_c[multi_max]) {
+				break;
+			}
+		}
+	}
+	for (i = 0; i < out_max && !out_c[i]; i++) {
+		/* skip zeros */
+	}
+	out_str = zend_string_init((const char *)&out_c[i], out_max - i, false);
+BAIL:
+	free_alloca(out_c, out_c_heap);
+	free_alloca(multi_c, multi_c_heap);
+	return out_str;
+}
+
+static zend_string *bin_int_sub1(zend_string *str)
+{
+	uint8_t *in_c = (uint8_t *)ZSTR_VAL(str);
+	size_t in_len = ZSTR_LEN(str);
+	size_t i;
+	assert(in_len);
+	for (i = in_len; --i <= in_len; ) {
+		in_c[i]--;
+		if (in_c[i] != 0xff) {
+			break;
+		}
+	}
+	assert(i >= 0);  /* input must not be 0 */
+	if (i == 0 && !in_c[0]) {
+		memmove(&in_c[0], &in_c[1], in_len - 1);
+		str = zend_string_realloc(str, in_len - 1, false);
+	}
+	return str;
 }

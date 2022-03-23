@@ -76,6 +76,7 @@ final class Tag
     public const CBOR_TAG_DATETIME = 0;
     public const CBOR_TAG_BIGNUM_U = 2;
     public const CBOR_TAG_BIGNUM_N = 3;
+    public const CBOR_TAG_DECIMAL = 4;
     / tag constants end */
 
     public int $tag;

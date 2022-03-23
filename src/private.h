@@ -53,6 +53,7 @@ typedef struct {
 	uint8_t shared_ref;
 	bool datetime;
 	bool bignum;
+	bool decimal;
 } php_cbor_encode_args;
 
 typedef struct {
