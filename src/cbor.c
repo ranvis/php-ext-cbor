@@ -21,7 +21,7 @@ ZEND_DECLARE_MODULE_GLOBALS(cbor)
 /* True global resources - no need for thread safety here */
 zend_class_entry
 	*CBOR_CE(exception),
-	*CBOR_CE(encodable),
+	*CBOR_CE(serializable),
 	*CBOR_CE(undefined),
 	*CBOR_CE(xstring),
 	*CBOR_CE(byte),
@@ -106,7 +106,7 @@ PHP_MINIT_FUNCTION(cbor)
 
 #define REG_CLASS(name, name_cc)  CBOR_CE(name) = register_class_Cbor_##name_cc
 	REG_CLASS(exception, Exception)(zend_ce_exception);
-	REG_CLASS(encodable, Encodable)();
+	REG_CLASS(serializable, Serializable)();
 	REG_CLASS(undefined, Undefined)();
 	REG_CLASS(xstring, XString)();
 	REG_CLASS(byte, Byte)(CBOR_CE(xstring));

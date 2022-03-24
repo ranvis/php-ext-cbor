@@ -165,6 +165,17 @@ function cdecThrows(int $code, string $value, ...$args): void
     xThrows($code, fn () => cborDecode(decodeHex($value), ...$args));
 }
 
+function throws(string $exception, callable $fn): void
+{
+    TestStats::inc('assertThrows');
+    try {
+        $actual = toDump($fn());
+    } catch (Throwable $e) {
+        $actual = get_class($e);
+    }
+    eq($exception, $actual, 1);
+}
+
 function getErrorName(int $code): string
 {
     $errors = [

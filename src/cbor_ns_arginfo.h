@@ -1,7 +1,7 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 470754250b8deef824a68925a49a7ba9d685954e */
+ * Stub hash: 13fe37ba3ba5fffbbf0e17a60adf8466f369289f */
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Encodable_cborEncode, 0, 0, IS_MIXED, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Serializable_cborSerialize, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Cbor_Undefined___construct, 0, 0, 0)
@@ -46,8 +46,8 @@ static const zend_function_entry class_Cbor_Exception_methods[] = {
 };
 
 
-static const zend_function_entry class_Cbor_Encodable_methods[] = {
-	ZEND_ABSTRACT_ME_WITH_FLAGS(Cbor_Encodable, cborEncode, arginfo_class_Cbor_Encodable_cborEncode, ZEND_ACC_PUBLIC|ZEND_ACC_ABSTRACT)
+static const zend_function_entry class_Cbor_Serializable_methods[] = {
+	ZEND_ABSTRACT_ME_WITH_FLAGS(Cbor_Serializable, cborSerialize, arginfo_class_Cbor_Serializable_cborSerialize, ZEND_ACC_PUBLIC|ZEND_ACC_ABSTRACT)
 	ZEND_FE_END
 };
 
@@ -113,11 +113,11 @@ static zend_class_entry *register_class_Cbor_Exception(zend_class_entry *class_e
 	return class_entry;
 }
 
-static zend_class_entry *register_class_Cbor_Encodable(void)
+static zend_class_entry *register_class_Cbor_Serializable(void)
 {
 	zend_class_entry ce, *class_entry;
 
-	INIT_NS_CLASS_ENTRY(ce, "Cbor", "Encodable", class_Cbor_Encodable_methods);
+	INIT_NS_CLASS_ENTRY(ce, "Cbor", "Serializable", class_Cbor_Serializable_methods);
 	class_entry = zend_register_internal_interface(&ce);
 
 	return class_entry;

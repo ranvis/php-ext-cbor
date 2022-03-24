@@ -28,7 +28,9 @@ PHP_FUNCTION(cbor_encode)
 		error = php_cbor_encode(value, &str, &args);
 	}
 	if (error) {
-		throw_error(error, false, 0);
+		if (error != PHP_CBOR_ERROR_EXCEPTION) {
+			throw_error(error, false, 0);
+		}
 		RETURN_THROWS();
 	}
 	assert(str);
@@ -56,7 +58,9 @@ PHP_FUNCTION(cbor_decode)
 		error = php_cbor_decode(data, &value, &args);
 	}
 	if (error) {
-		throw_error(error, true, args.error_arg);
+		if (error != PHP_CBOR_ERROR_EXCEPTION) {
+			throw_error(error, true, args.error_arg);
+		}
 		RETURN_THROWS();
 	}
 	RETVAL_COPY_VALUE(&value);

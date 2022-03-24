@@ -32,9 +32,10 @@ typedef enum {
 	/*   D   */ PHP_CBOR_ERROR_TAG_SYNTAX = 41,
 	/*   D   */ PHP_CBOR_ERROR_TAG_TYPE,
 	/*   D   */ PHP_CBOR_ERROR_TAG_VALUE,
-	/* E D   */ PHP_CBOR_ERROR_INTERNAL = 255,
+	/* E D   */ PHP_CBOR_ERROR_INTERNAL = 241,
 
-	PHP_CBOR_STATUS_VALUE_FOLLOWS,
+	PHP_CBOR_STATUS_VALUE_FOLLOWS = 254,
+	PHP_CBOR_ERROR_EXCEPTION,
 } php_cbor_error;
 
 enum {
@@ -76,7 +77,7 @@ typedef union binary32_alias_t {
 
 extern zend_class_entry
 	*CBOR_CE(exception),
-	*CBOR_CE(encodable),
+	*CBOR_CE(serializable),
 	*CBOR_CE(undefined),
 	*CBOR_CE(xstring),
 	*CBOR_CE(byte),

@@ -13,10 +13,9 @@ class Exception extends \Exception
 {
 }
 
-// EXPERIMENTAL: TODO:
-interface Encodable
+interface Serializable
 {
-    public function cborEncode(): mixed;
+    public function cborSerialize(): mixed;
 }
 
 final class Undefined

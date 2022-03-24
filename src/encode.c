@@ -61,6 +61,7 @@ enum {
 	EXT_STR_DEC_MN,
 	EXT_STR_DEC_CN,
 
+	EXT_STR_ENC_SERIALIZE_FN,
 	EXT_STR_DATE_FORMAT_FN,
 	EXT_STR_DATE_FORMAT,
 	EXT_STR_GMP_CMP_FN,
@@ -105,6 +106,7 @@ static php_cbor_error enc_typed_text(enc_context *ctx, zval *ins);
 static php_cbor_error enc_typed_floatx(enc_context *ctx, zval *ins, int bits);
 static php_cbor_error enc_tag(enc_context *ctx, zval *ins);
 static php_cbor_error enc_tag_bare(enc_context *ctx, zend_long tag_id);
+static php_cbor_error enc_serializable(enc_context *ctx, zval *value);
 
 static void init_srns_stack(enc_context *ctx);
 static void free_srns_stack(enc_context *ctx);
@@ -115,6 +117,7 @@ static php_cbor_error enc_datetime(enc_context *ctx, zval *value);
 static php_cbor_error enc_bignum(enc_context *ctx, zval *value);
 static php_cbor_error enc_decimal(enc_context *ctx, zval *value);
 
+static zend_result call_fn(zval *object, zend_string *func_str, zval *retval_ptr, uint32_t param_count, zval params[]/*, HashTable *named_params*/);
 static zend_string *decode_dec_str(const char *in_c, size_t in_len);
 static zend_string *bin_int_sub1(zend_string *str);
 
@@ -237,6 +240,8 @@ RETRY:
 				}
 			}
 			ENC_RESULT(enc_hash(ctx, value, HASH_STD_CLASS));
+		} else if (instanceof_function(ce, CBOR_CE(serializable))) {
+			ENC_RESULT(enc_serializable(ctx, value));
 		} else {
 			if (!ctx->ce.date_i) {
 				ctx->ce.date_i = php_date_get_interface_ce();  /* in core */
@@ -623,6 +628,29 @@ ENCODED:
 		free_srns_stack(ctx);
 		ctx->srns = orig_srns;
 	}
+	return error;
+}
+
+static php_cbor_error enc_serializable(enc_context *ctx, zval *value)
+{
+	php_cbor_error error;
+	zval r_value;
+	if (Z_IS_RECURSIVE_P(value)) {
+		return PHP_CBOR_ERROR_RECURSION;
+	}
+	if (!ctx->str[EXT_STR_ENC_SERIALIZE_FN]) {
+		ctx->str[EXT_STR_ENC_SERIALIZE_FN] = MAKE_ZSTR("cborserialize");
+	}
+	if (call_fn(value, ctx->str[EXT_STR_ENC_SERIALIZE_FN], &r_value, 0, NULL) != SUCCESS) {
+		return PHP_CBOR_ERROR_INTERNAL;
+	}
+	if (UNEXPECTED(EG(exception))) {
+		return PHP_CBOR_ERROR_EXCEPTION;
+	}
+	Z_PROTECT_RECURSION_P(value);
+	error = enc_zval(ctx, &r_value);
+	Z_UNPROTECT_RECURSION_P(value);
+	zval_ptr_dtor(&r_value);
 	return error;
 }
 
