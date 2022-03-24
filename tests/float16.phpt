@@ -22,8 +22,11 @@ run(function () {
     eq(bin32Hex(0b0_11111111_100_0000_0000_0000_0000_0000), floatHex(cdec('f9' . bin16Hex(0b0_11111_1000000000), CBOR_FLOAT16)));
     eq('0xf9' . bin16Hex(0b0_11111_1000000000), cenc(floatBin(0b0_11111111_100_0000_0000_0000_0000_0000), CBOR_FLOAT16));
     // NAN bits flipped (except signaling)
-    eq(bin32Hex(0b1_11111111_111_1111_1110_0000_0000_0000), floatHex(cdec('f9' . bin16Hex(0b1_11111_1111111111), CBOR_FLOAT16)));
-    eq('0xf9' . bin16Hex(0b1_11111_1111111111), cenc(floatBin(0b1_11111111_111_1111_1110_0000_0000_0000), CBOR_FLOAT16));
+    eq(
+        bin32Hex('ffffe000'), // 0b1_11111111_111_1111_1110_0000_0000_0000
+        floatHex(cdec('f9' . bin16Hex(0b1_11111_1111111111), CBOR_FLOAT16)),
+    );
+    eq('0xf9' . bin16Hex(0b1_11111_1111111111), cenc(floatBin('ffffe000'), CBOR_FLOAT16));
     // zeros
     eq('0xf90000', cenc(0.0, CBOR_FLOAT16));
     eq('0xf98000', cenc(-0.0, CBOR_FLOAT16));
@@ -36,14 +39,16 @@ function floatHex(float $num): string
     return bin2hex(pack('G', $num));
 }
 
-function floatBin(int $num): float
+function floatBin(int|string $num): float
 {
-    return unpack('G', pack('N', $num))[1];
+    $num = is_string($num) ? hex2bin($num) : pack('N', $num);
+    return unpack('G', $num)[1];
 }
 
-function bin32Hex(int $num): string
+function bin32Hex(int|string $num): string
 {
-    return unpack('H*', pack('N', $num))[1];
+    $num = is_string($num) ? hex2bin($num) : pack('N', $num);
+    return unpack('H*', $num)[1];
 }
 
 function bin16Hex(int $num): string

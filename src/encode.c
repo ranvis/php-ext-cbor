@@ -618,7 +618,7 @@ static php_cbor_error enc_tag(enc_context *ctx, zval *ins)
 			return PHP_CBOR_ERROR_TAG_SYNTAX;
 		}
 		tag_content = Z_LVAL_P(content);
-		if (tag_content < 0 || tag_content >= ctx->srns->next_index) {
+		if (tag_content < 0 || (zend_ulong)tag_content >= ctx->srns->next_index) {
 			return PHP_CBOR_ERROR_TAG_VALUE;
 		}
 	}
@@ -768,7 +768,7 @@ static php_cbor_error enc_datetime(enc_context *ctx, zval *value)
 	zval r_value;
 	zval params[1];
 	zend_string *r_str;
-	int i, len;
+	size_t i, len;
 	if (!ctx->str[EXT_STR_DATE_FORMAT_FN]) {
 		ctx->str[EXT_STR_DATE_FORMAT_FN] = MAKE_ZSTR("format");
 		ctx->str[EXT_STR_DATE_FORMAT] = MAKE_ZSTR("Y-m-d\\TH:i:s.uP");
@@ -785,6 +785,7 @@ static php_cbor_error enc_datetime(enc_context *ctx, zval *value)
 	r_str = zend_string_separate(r_str, false);
 	/* remove redundant fractional zeros */
 	for (i = 25; ; i--) {
+		assert(i >= 19);
 		if (ZSTR_VAL(r_str)[i] != '0') {
 			if (ZSTR_VAL(r_str)[i] != '.') {
 				i++;
@@ -847,7 +848,7 @@ static php_cbor_error enc_bignum(enc_context *ctx, zval *value)
 	len = ZSTR_LEN(r_str);
 	if (len <= 8) {
 		uint64_t i_value = 0;
-		for (int i = 0; i < len; i++) {
+		for (size_t i = 0; i < len; i++) {
 			i_value <<= 8;
 			i_value |= (uint8_t)ZSTR_VAL(r_str)[i];
 		}
