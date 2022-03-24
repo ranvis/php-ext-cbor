@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 13fe37ba3ba5fffbbf0e17a60adf8466f369289f */
+ * Stub hash: f90508f98d9ec4304257d4a4437705f3bce0655a */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Serializable_cborSerialize, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
@@ -22,6 +22,10 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Cbor_FloatX___construct, 0, 0, 1)
 	ZEND_ARG_TYPE_INFO(0, value, IS_DOUBLE, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Cbor_FloatX_fromBinary, 0, 1, Cbor\\Float16, 0)
+	ZEND_ARG_TYPE_INFO(0, value, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Cbor_Tag___construct, 0, 0, 2)
 	ZEND_ARG_TYPE_INFO(0, tag, IS_LONG, 0)
 	ZEND_ARG_TYPE_INFO(0, content, IS_MIXED, 0)
@@ -37,6 +41,7 @@ ZEND_METHOD(Cbor_Undefined, __set_state);
 ZEND_METHOD(Cbor_Undefined, get);
 ZEND_METHOD(Cbor_XString, __construct);
 ZEND_METHOD(Cbor_FloatX, __construct);
+ZEND_METHOD(Cbor_FloatX, fromBinary);
 ZEND_METHOD(Cbor_Tag, __construct);
 ZEND_METHOD(Cbor_Shareable, __construct);
 
@@ -78,6 +83,7 @@ static const zend_function_entry class_Cbor_Text_methods[] = {
 
 static const zend_function_entry class_Cbor_FloatX_methods[] = {
 	ZEND_ME(Cbor_FloatX, __construct, arginfo_class_Cbor_FloatX___construct, ZEND_ACC_PUBLIC)
+	ZEND_ME(Cbor_FloatX, fromBinary, arginfo_class_Cbor_FloatX_fromBinary, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	ZEND_FE_END
 };
 
@@ -180,12 +186,6 @@ static zend_class_entry *register_class_Cbor_FloatX(void)
 	INIT_NS_CLASS_ENTRY(ce, "Cbor", "FloatX", class_Cbor_FloatX_methods);
 	class_entry = zend_register_internal_class_ex(&ce, NULL);
 	class_entry->ce_flags |= ZEND_ACC_ABSTRACT;
-
-	zval property_value_default_value;
-	ZVAL_UNDEF(&property_value_default_value);
-	zend_string *property_value_name = zend_string_init("value", sizeof("value") - 1, 1);
-	zend_declare_typed_property(class_entry, property_value_name, &property_value_default_value, ZEND_ACC_PUBLIC, NULL, (zend_type) ZEND_TYPE_INIT_MASK(MAY_BE_DOUBLE));
-	zend_string_release(property_value_name);
 
 	return class_entry;
 }

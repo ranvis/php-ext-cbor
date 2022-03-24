@@ -1,4 +1,8 @@
 <?php
+/**
+ * @author SATO Kentaro
+ * @license BSD-2-Clause
+ */
 
 declare(strict_types=1);
 
@@ -198,7 +202,7 @@ function getErrorName(int $code): string
          41 => 'CBOR_ERROR_TAG_SYNTAX',
                'CBOR_ERROR_TAG_TYPE',
                'CBOR_ERROR_TAG_VALUE',
-        255 => 'CBOR_ERROR_INTERNAL',
+        241 => 'CBOR_ERROR_INTERNAL',
         /* error names end */
     ];
     return $errors[$code] ?? "#$code";

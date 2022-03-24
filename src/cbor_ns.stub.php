@@ -49,9 +49,10 @@ final class Text extends XString
 /** @internal */
 abstract class FloatX
 {
-    public float $value;
+    //public float $value;
 
     public function __construct(float $value) {}
+    public static function fromBinary(string $value): Float16 {}
 }
 
 final class Float16 extends FloatX

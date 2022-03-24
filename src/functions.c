@@ -7,8 +7,6 @@
 #include "private.h"
 #include <Zend/zend_smart_string.h>
 
-static void throw_error(php_cbor_error error, bool has_arg, size_t arg);
-
 /* {{{ proto string cbor_encode(mixed $value, int $flags = CBOR_BYTE, ?array $options = [...])
    Return a CBOR encoded string of a value. */
 PHP_FUNCTION(cbor_encode)
@@ -29,7 +27,7 @@ PHP_FUNCTION(cbor_encode)
 	}
 	if (error) {
 		if (error != PHP_CBOR_ERROR_EXCEPTION) {
-			throw_error(error, false, 0);
+			php_cbor_throw_error(error, false, 0);
 		}
 		RETURN_THROWS();
 	}
@@ -59,7 +57,7 @@ PHP_FUNCTION(cbor_decode)
 	}
 	if (error) {
 		if (error != PHP_CBOR_ERROR_EXCEPTION) {
-			throw_error(error, true, args.error_arg);
+			php_cbor_throw_error(error, true, args.error_arg);
 		}
 		RETURN_THROWS();
 	}
@@ -67,7 +65,7 @@ PHP_FUNCTION(cbor_decode)
 }
 /* }}} */
 
-static void throw_error(php_cbor_error error, bool has_arg, size_t arg)
+void php_cbor_throw_error(php_cbor_error error, bool has_arg, size_t arg)
 {
 	const char *message = "Unknown error code.";
 	bool can_have_arg = true;

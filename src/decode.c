@@ -734,19 +734,30 @@ static void cb_tag(void *vp_ctx, uint64_t val)
 	stack_push_tag(ctx, (zend_long)val);
 }
 
-static void do_floatx(dec_context *ctx, float val, int bits)
+static void do_floatx(dec_context *ctx, const char *raw, int bits)
 {
 	zval container, value;
-	ZVAL_DOUBLE(&value, (double)val);
+	zend_object *obj;
 	int type_flag = bits == 32 ? PHP_CBOR_FLOAT32 : PHP_CBOR_FLOAT16;
 	zend_class_entry *float_ce = bits == 32 ? CBOR_CE(float32) : CBOR_CE(float16);
 	if (ctx->args.flags & type_flag) {
+		if (bits == 32) {
+			binary32_alias binary32;
+			binary32.c.c0 = raw[0];
+			binary32.c.c1 = raw[1];
+			binary32.c.c2 = raw[2];
+			binary32.c.c3 = raw[3];
+			ZVAL_DOUBLE(&value, (double)binary32.f);
+		} else {
+			uint8_t *u8 = (uint8_t *)raw;
+			ZVAL_DOUBLE(&value, php_cbor_from_float16((u8[0] << 8) | u8[1]));
+		}
 		append_item(ctx, &value);
 		return;
 	}
-	if (!create_value_object(&container, &value, float_ce)) {
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_INTERNAL);
-	}
+	obj = php_cbor_floatx_create(float_ce);
+	php_cbor_floatx_set_value(obj, NULL, raw);  /* always succeeds */
+	ZVAL_OBJ(&container, obj);
 	append_item(ctx, &container);
 	zval_ptr_dtor(&container);
 }
@@ -754,31 +765,19 @@ static void do_floatx(dec_context *ctx, float val, int bits)
 static void cb_float2(void *vp_ctx, float val)
 {
 	dec_context *ctx = (dec_context *)vp_ctx;
-	binary32_alias binary32;
-#if PHP_CBOR_LIBCBOR_HACK_B16_NAN
-	/* The code assumes IEEE 754 float type */
-	binary32.f = val;
-	if (CBOR_B32A_ISNAN(binary32)) {
-		if (UNEXPECTED(ctx->data[ctx->offset] != 0xf9)) {  /* CBOR half-precision float */
-			RETURN_CB_ERROR(PHP_CBOR_ERROR_INTERNAL);
-		}
-		uint16_t binary16;
-		binary16 = (ctx->data[ctx->offset + 1] << 8) | ctx->data[ctx->offset + 2];
-		/* Force quiet NaN. If cast to double the bit is set anyway. */
-		binary32.i = 0x7fc00000  /* 0b0_11111111_100_0000_0000_0000_0000_0000 */
-			| ((binary16 & 0x8000) << 16)
-			| ((binary16 & 0x03ff) << 13);  /* 0b11_1111_1111 */
-		val = binary32.f;
-		assert((binary32.i & 0x7f800000) == 0x7f800000 && (binary32.i & 0x007fffff) != 0);
+	if (UNEXPECTED(ctx->data[ctx->offset] != 0xf9)) {  /* CBOR half-precision float */
+		RETURN_CB_ERROR(PHP_CBOR_ERROR_INTERNAL);
 	}
-#endif
-	do_floatx(ctx, val, 16);
+	do_floatx(ctx, (char *)&ctx->data[ctx->offset + 1], 16);
 }
 
 static void cb_float4(void *vp_ctx, float val)
 {
 	dec_context *ctx = (dec_context *)vp_ctx;
-	do_floatx(ctx, val, 32);
+	if (UNEXPECTED(ctx->data[ctx->offset] != 0xfa)) {  /* CBOR single-precision float */
+		RETURN_CB_ERROR(PHP_CBOR_ERROR_INTERNAL);
+	}
+	do_floatx(ctx, (char *)&ctx->data[ctx->offset + 1], 32);
 }
 
 static void cb_float8(void *vp_ctx, double val)
