@@ -147,7 +147,7 @@ php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_e
 	ctx.buf = &buf;
 	if ((ctx.args.flags & PHP_CBOR_BYTE && ctx.args.flags & PHP_CBOR_TEXT)
 			|| (ctx.args.flags & PHP_CBOR_KEY_BYTE && ctx.args.flags & PHP_CBOR_KEY_TEXT)
-			|| (ctx.args.flags & PHP_CBOR_FLOAT16 && ctx.args.flags & PHP_CBOR_FLOAT32)) {
+	) {
 		return PHP_CBOR_ERROR_INVALID_FLAGS;
 	}
 	if (ctx.args.flags & PHP_CBOR_SELF_DESCRIBE) {
@@ -307,15 +307,33 @@ static php_cbor_error enc_long(enc_context *ctx, zend_long value)
 static php_cbor_error enc_z_double(enc_context *ctx, zval *value, bool is_small)
 {
 	php_cbor_error error = 0;
+	int float_type = ctx->args.flags & (PHP_CBOR_FLOAT16 | PHP_CBOR_FLOAT32);
 	BX_INIT(ctx);
-	if (ctx->args.flags & PHP_CBOR_FLOAT16) {
+	if (float_type == (PHP_CBOR_FLOAT16 | PHP_CBOR_FLOAT32)) {
+		/* Test if smaller type will fit. (But not to denormalized numbers.) */
+		binary64_alias bin64;
+		bin64.f = Z_DVAL_P(value);
+		unsigned exp = (bin64.i >> 52) & 0x7ff;  /* exp */
+		uint64_t frac = bin64.i & 0xfffffffffffff;  /* fraction */
+		bool is_inf_nan = exp == 0x7ff;
+		if ((is_inf_nan || (exp >= 1023 - 126 && exp <= 1023 + 127)) && !(frac & 0x1fffffff)) {  /* fraction: 52 to 23 */
+			if ((is_inf_nan || (exp >= 1023 - 14 && exp <= 1023 + 15)) && !(frac & 0x3ffffffffff)) {  /* fraction: 52 to 10 */
+				float_type = PHP_CBOR_FLOAT16;
+			} else {
+				float_type = PHP_CBOR_FLOAT32;
+			}
+		}
+	}
+	if (float_type == PHP_CBOR_FLOAT16) {
 		ENC_RESULT(enc_typed_floatx(ctx, value, 16));
-	} else if (ctx->args.flags & PHP_CBOR_FLOAT32) {
+	} else if (float_type == PHP_CBOR_FLOAT32) {
 		BX_ALLOC(5);
 		BX_PUT(cbor_encode_single((float)Z_DVAL_P(value), BX_ARGS));
 	} else {
 		BX_ALLOC(9);
-		BX_PUT(cbor_encode_double(Z_DVAL_P(value), BX_ARGS));
+		binary64_alias bin64;
+		bin64.f = Z_DVAL_P(value);
+		BX_PUT(cbor_encode_double(bin64.f, BX_ARGS));
 	}
 	BX_END_CHECK();
 ENCODED:

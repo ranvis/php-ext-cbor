@@ -67,9 +67,6 @@
  */
 #define PHP_CBOR_FLOAT32          (1 << 9)
 
-/** EXPERIMENTAL: TODO: */
-#define PHP_CBOR_COMPACT_FLOAT    (1 << 10)
-
 /**
  * Encode: Store length of arrays/maps as indefinite if number of elements are large enough. While it makes encoded stream shorter by a byte or two per group, decoding can have a little overhead due to inefficient memory allocations.
  * Any use case?
