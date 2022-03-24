@@ -54,7 +54,7 @@
 typedef struct {
 	uint32_t next_index;
 	HashTable *str_table[2];
-} srns_item_t;
+} srns_item;
 
 enum {
 	EXT_STR_GMP_CN = 0,
@@ -79,7 +79,7 @@ typedef struct {
 	php_cbor_encode_args args;
 	uint32_t cur_depth;
 	smart_str *buf;
-	srns_item_t *srns; /* string ref namespace */
+	srns_item *srns; /* string ref namespace */
 	HashTable *refs, *ref_lock; /* shared ref, lock is actually not needed fow now */
 	struct enc_ctx_ce {
 		zend_class_entry *date_i;
@@ -550,7 +550,7 @@ static php_cbor_error enc_tag(enc_context *ctx, zval *ins)
 	zval tmp_tag, tmp_content;
 	zval *tag, *content;
 	zend_long tag_id;
-	srns_item_t *orig_srns = NULL;
+	srns_item *orig_srns = NULL;
 	bool new_srns = false;
 	tag = zend_read_property(CBOR_CE(tag), Z_OBJ_P(ins), PROP_L("tag"), false, &tmp_tag);
 	content = zend_read_property(CBOR_CE(tag), Z_OBJ_P(ins), PROP_L("content"), false, &tmp_content);
@@ -613,7 +613,7 @@ static php_cbor_error enc_serializable(enc_context *ctx, zval *value)
 
 static void init_srns_stack(enc_context *ctx)
 {
-	srns_item_t *srns = (srns_item_t *)emalloc(sizeof *srns);
+	srns_item *srns = (srns_item *)emalloc(sizeof *srns);
 	ctx->srns = srns;
 	srns->next_index = 0;
 	srns->str_table[0] = zend_new_array(0);
@@ -622,7 +622,7 @@ static void init_srns_stack(enc_context *ctx)
 
 static void free_srns_stack(enc_context *ctx)
 {
-	srns_item_t *srns = ctx->srns;
+	srns_item *srns = ctx->srns;
 	if (srns) {
 		zend_array_release(srns->str_table[0]);
 		zend_array_release(srns->str_table[1]);
@@ -633,7 +633,7 @@ static void free_srns_stack(enc_context *ctx)
 static php_cbor_error enc_string_ref(enc_context *ctx, const char *value, size_t length, zend_string *v_str, bool to_text)
 {
 	php_cbor_error error = 0;
-	srns_item_t *srns = ctx->srns;
+	srns_item *srns = ctx->srns;
 	HashTable *str_table;
 	int table_index;
 	zval new_index, *str_index;

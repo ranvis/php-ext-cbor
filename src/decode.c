@@ -33,8 +33,8 @@
 
 static struct cbor_callbacks callbacks;
 
-typedef struct stack_item_t stack_item;
-typedef struct srns_item_t srns_item_t;
+typedef struct stack_item stack_item;
+typedef struct srns_item srns_item;
 
 typedef struct {
 	php_cbor_decode_args args;
@@ -46,7 +46,7 @@ typedef struct {
 	zval root;
 	stack_item *stack_top;
 	uint32_t stack_depth;
-	srns_item_t *srns; /* string ref namespace */
+	srns_item *srns; /* string ref namespace */
 	HashTable *refs; /* shared ref */
 } dec_context;
 
@@ -69,7 +69,7 @@ typedef void (tag_handler_child_t)(dec_context *ctx, stack_item *item, stack_ite
 typedef zval *(tag_handler_exit_t)(dec_context *ctx, zval *value, stack_item *item, zval *tmp_v);
 typedef void (tag_handler_free_t)(stack_item *item);
 
-struct stack_item_t {
+struct stack_item {
 	stack_item *next_item;
 	si_type_t si_type;
 	uint32_t count;
@@ -88,7 +88,7 @@ struct stack_item_t {
 		struct si_value_tag_handled_t {
 			zend_ulong tag_id;
 			union si_value_tag_h_value_t{
-				srns_item_t *srns_detached;
+				srns_item *srns_detached;
 				struct si_tag_shareable_t {
 					zval value;
 					zend_long index;
@@ -98,14 +98,14 @@ struct stack_item_t {
 	} v;
 };
 
-struct srns_item_t {  /* srns: string ref namespace */
-	srns_item_t *prev_item;
+struct srns_item {  /* srns: string ref namespace */
+	srns_item *prev_item;
 	HashTable *str_table;
 };
 
 static php_cbor_error dec_zval(dec_context *ctx);
 static void set_callbacks();
-static void free_srns_item(srns_item_t *srns);
+static void free_srns_item(srns_item *srns);
 
 void php_cbor_minit_decode()
 {
@@ -257,7 +257,7 @@ static void free_ctx_content(dec_context *ctx)
 		stack_item *item = stack_pop_item(ctx);
 		stack_free_item(item);
 	}
-	FREE_LINKED_LIST(srns_item_t, ctx->srns, free_srns_item);
+	FREE_LINKED_LIST(srns_item, ctx->srns, free_srns_item);
 	if (ctx->args.shared_ref) {
 		zend_array_destroy(ctx->refs);
 	}
@@ -891,13 +891,13 @@ static void tag_handler_str_ref_ns_child(dec_context *ctx, stack_item *item, sta
 
 static zval *tag_handler_str_ref_ns_exit(dec_context *ctx, zval *value, stack_item *item, zval *tmp_v)
 {
-	srns_item_t *srns = ctx->srns;
+	srns_item *srns = ctx->srns;
 	ctx->srns = srns->prev_item;
 	item->v.tag_h.v.srns_detached = srns;
 	return value;
 }
 
-static void free_srns_item(srns_item_t *srns)
+static void free_srns_item(srns_item *srns)
 {
 	zend_array_destroy(srns->str_table);
 	efree(srns);
@@ -912,7 +912,7 @@ static void tag_handler_str_ref_ns_free(stack_item *item)
 
 static bool tag_handler_str_ref_ns_enter(dec_context *ctx, stack_item *item)
 {
-	srns_item_t *srns = emalloc(sizeof *srns);
+	srns_item *srns = emalloc(sizeof *srns);
 	SI_SET_DATA_HANDLER(item, &tag_handler_str_ref_ns_data);
 	SI_SET_CHILD_HANDLER(item, &tag_handler_str_ref_ns_child);
 	SI_SET_EXIT_HANDLER(item, &tag_handler_str_ref_ns_exit);
