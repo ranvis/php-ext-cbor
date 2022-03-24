@@ -12,7 +12,7 @@ BSD 2-Clause License
 
 CBOR, Concise Binary Object Representation is a binary data format designed to be small message size.
 
-See [RFC8949](https://datatracker.ietf.org/doc/html/rfc8949) for the details and why we are having yet another binary serialization format.
+See [RFC 8949](https://datatracker.ietf.org/doc/html/rfc8949) for the details and why we are having yet another binary serialization format.
 
 
 ## Installation
@@ -50,9 +50,9 @@ function cbor_decode(
   To handle arrays/maps/tags, at least 1 depth is required.
 
 - `max_size`: (default:`65536`; range: `0`..`0xffffffff`)
-  Maximum number of elements to process for array and map when decoding.
+  Maximum number of elements to process for definite-length array and map when decoding.
 
-See "Supported Tags" below for the following option:
+See "Supported Tags" below for the following options:
 
 - `string_ref`:
   - Encode: default: `false`; values: `bool` | `'explicit'`
@@ -62,36 +62,39 @@ See "Supported Tags" below for the following option:
   - Encode: default: `false`; values: `bool` | `'unsafe_ref'`
   - Decode: default: `true`; values: `bool` | `'shareable'` | `'unsafe_ref'`
 
+- `datetime`, `bignum`, `decimal`:
+  - Encode: default: `true`; values: `bool`
+
 ### Types of CBOR and PHP
 
 #### Integers
 
-CBOR `unsigned integer` and `negative integer` is translated to PHP `int`.
+CBOR `unsigned integer` and `negative integer` are translated to PHP `int`.
 The value must be within the range PHP can handle.
 
 #### Floating-Point Numbers
 
 CBOR `float` has three sizes. 64 bits value is translated to PHP `float`.
 
-32 bits value and 16 bits value are translated to PHP `Cbor\Float32` and `Cbor\Float16` respectively.
+32 bits values and 16 bits values are translated to PHP `Cbor\Float32` and `Cbor\Float16` respectively.
 But if the flags `CBOR_FLOAT32` and/or `CBOR_FLOAT16` is passed, they are treated as PHP `float`.
 
 #### Strings
 
-CBOR has two type of strings: `byte string` (binary data) and `text string` (UTF-8 encoded string).
+CBOR has two types of strings: `byte string` (binary data) and `text string` (UTF-8 encoded string).
 PHP `string` type does not have this distinction.
 If you specify `CBOR_BYTE` flag (default) and/or `CBOR_TEXT` flag on decoding, those strings are decoded to PHP `string`. If the flag is not specified, it is decoded to `Cbor\Byte` and `Cbor\Text` object respectively.
 On encoding PHP `string`, you must specify either of the flag so that the extension knows to which you want your string to be encoded.
 
 `CBOR_KEY_BYTE` and `CBOR_KEY_TEXT` are for strings of CBOR `map` keys.
 
-If `text` string is not a valid UTF-8 sequence, an error is thrown unless you pass `PHP_CBOR_UNSAFE_TEXT` flag.
+If `text` string is not a valid UTF-8 sequence, an error is thrown unless you pass `CBOR_UNSAFE_TEXT` flag.
 
 #### Arrays
 
 CBOR `array` is translated to PHP `array`.
 
-If PHP `array` has holes or `string` keys (i.e. array is not not "list"), it is encoded to CBOR `map`.
+If PHP `array` has holes or `string` keys (i.e. the array is not a "list"), it is encoded to CBOR `map`.
 
 Number of elements in an array must be under 2**32.
 
@@ -100,8 +103,8 @@ Number of elements in an array must be under 2**32.
 CBOR map is translated to PHP `stdClass` object.
 If `CBOR_MAP_AS_ARRAY` flag is passed when decoding, it is translated to PHP `array` instead.
 
-Key must be of string type.
-The extension may accept CBOR `unsigned integer` key if `CBOR_INT_KEY` flag is passed. Also the flag will encode PHP unsigned integer key as CBOR `unsigned integer` key.
+Keys must be of CBOR `string` type.
+The extension may accept CBOR `unsigned integer` key if `CBOR_INT_KEY` flag is passed. Also the flag will encode PHP unsigned `int` key as CBOR `unsigned integer` key.
 
 Number of properties in an object must be under 2**32.
 
@@ -109,12 +112,12 @@ Number of properties in an object must be under 2**32.
 
 CBOR `tag` is translated to PHP `Cbor\Tag(int $tag, mixed $content)` object.
 
-Tag is a marker to mark data (including another tag) as some type using unsigned number.
+Tag is a marker to mark data (including another tag) as some type using an unsigned number.
 You can consult [CBOR tag registry](https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml) for valid tags.
 
 Also see "Supported Tags" below.
 
-#### Undefined
+#### Null and Undefined
 
 CBOR has `null` and `undefined` value, but PHP does not have `undefined` value.
 
@@ -133,12 +136,10 @@ var_dump($undefined === clone $undefined); // true
 
 Flag:
 - `CBOR_SELF_DESCRIBE`
-  - default: `false`; values: `bool`
+  - default: `false`
 
-Constant:
-- `CBOR_TAG_SELF_DESCRIBE`
-
-Data:
+Constants:
+- `Cbor\Tag::SELF_DESCRIBE`
 - `CBOR_TAG_SELF_DESCRIBE_DATA`
 
 Self-Described CBOR is CBOR data that has this tag for the data.
@@ -167,14 +168,16 @@ The tag {stringref} is like a compression, that "references" the string previous
 On encode, it can save payload size by replacing the string already seen with the tag + index (or at the worst case increase by 3-bytes overall when single-namespaced). On decode it can save memory of decoded value because PHP can share the same `string` until one of them is going to be modified (copy-on-write). At the cost of bookkeeping all the strings on both encoding and decoding.
 
 For decoding, the option is enabled by default, while encoding it should be specified explicitly.
-If `true` is specified on encoding, data is always wrapped with {stringref-namespace} tag. It resets the string index (like compression dictionary) for the content inside the tag. `'explicit'` makes {stringref} active but the root namespace is not implicitly created, meaning {stringref} is not created on its own.
+If `true` is specified on encoding, data is always wrapped with {stringref-namespace} tag. It initializes the string index (like compression dictionary) for the content inside the tag. `'explicit'` makes {stringref} active but the root namespace is not implicitly created, meaning {stringref} is not created on its own.
 
 On encoding, the {stringref-namespace} tag added implicitly is handled specially and not counted as `max_depth` level.
 
-Note that CBOR data that use {stringref} can be embedded in other CBOR. But data that doesn't use cannot always be embedded safely in {stringref} CBOR, because it will corrupt reference index of the following strings.
-(As of now, the extension cannot embed raw CBOR data on encoding.)
+The use of this tag makes CBOR contextual.
+CBOR data that use {stringref} can be embedded in other CBOR. But data that doesn't use cannot always be embedded safely in {stringref} CBOR, because it will corrupt reference indices of the following strings.
+(As of now, the extension cannot embed raw CBOR data on encoding though.)
 
-Decoders without the support of this tag cannot decode data correctly.
+Decoders without the support of this tag cannot decode data using {stringref} correctly.
+It is recommended to explicity enable `string_ref` option on decoding if you are sure of the use of {stringref}, so that readers of the code will know of it.
 
 ### tag(28): shareable, tag(29): sharedref
 
@@ -189,18 +192,25 @@ Constants:
 
 The tag {sharedref} can refer the previously-defined data.
 
-If the option is enabled, CBOR maps tagged as {shareable} and decoded into PHP object will share the instance among {sharedref} references. If other type of values like CBOR array is tagged {shareable}, it triggers an error. See other option values for possible workarounds.
+If the option is enabled, CBOR maps tagged as {shareable} once decoded into PHP object will share the instance among {sharedref} references. If other type of values like CBOR array is tagged {shareable}, it triggers an error. See other option values for possible workarounds.
 
 The option is enabled by default on decoding.
 
-On encoding, potentially shared PHP objects (i.e. there are variables holding the object somewhere) are tagged {shareable}, and once reused, {sharedref} tag is emitted.
+On encoding, potentially shared PHP objects (i.e. there are variables holding the object somewhere) are tagged {shareable}, and once reused, {sharedref} tag is emitted. A reference to variable is dereferenced.
 
-If `'shareable'` is specified, non-object CBOR values tagged as {shareable} is wrapped into `Cbor\Shareable` object on decoding and the instance is reused on {sharedref} tag. On encoding, `Cbor\Shareable` value is tagged {shareable} regardless of the option value.
+If `'shareable'` is specified, non-object CBOR values tagged as {shareable} is wrapped into `Cbor\Shareable` object on decoding and the instance is reused on {sharedref} tag. On encoding, an instance of `Cbor\Shareable` is tagged {shareable} regardless of the option value.
 
-If `'unsafe_ref'` is specified, {shareable} tagged data that decoded to non-object becomes PHP `&` reference.
-At first glance it may seem natural to use PHP reference for shared scalars and arrays. But this will cause unexpected side effects when the decoded structure contains references that you don't expect. You change a single scalar value, and somewhere else is changed too!
+If `'unsafe_ref'` is specified, {shareable} tagged data that decoded to non-object becomes PHP `&` reference. On encoding a reference to variable is tagged {shareable} too.
+At first glance it may seem natural to use PHP reference for shared scalars and arrays. But this will cause unexpected side effects when the decoded structure contains references that you don't expect. You replace a single scalar value, and somewhere else is changed too!
 
 Note that decoder's return value cannot be a PHP reference. Moreover, a reference to a PHP object cannot be described even with this option.
+
+The use of this tag makes CBOR contextual.
+
+### tag(0): date/time string
+
+### tag(2) tag(3): bignum, tag(4) decimal
+
 
 ## Examples
 
