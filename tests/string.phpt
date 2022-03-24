@@ -31,9 +31,10 @@ run(function () {
     // indefinite contains non-string
     cdecThrows(CBOR_ERROR_SYNTAX, '5f01ff', CBOR_BYTE);
 
-    eq('0x80', cdecHex('4180'));
-    eq('0x80', cdecHex('6180', CBOR_TEXT | CBOR_UNSAFE_TEXT));
-    cdecThrows(CBOR_ERROR_UTF8, '6180', CBOR_TEXT);
+    eq('0xc180', cdecHex('42c180'));
+    eq('0xc180', cdecHex('62c180', CBOR_TEXT | CBOR_UNSAFE_TEXT));
+    cdecThrows(CBOR_ERROR_UTF8, '62c180', CBOR_TEXT);
+    cdecThrows(CBOR_ERROR_UTF8, '66eda0bdedb880', CBOR_TEXT);
     eq('0x64f09f9880', cenc('😀', CBOR_TEXT));
 
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, '41');
