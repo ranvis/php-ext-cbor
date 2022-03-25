@@ -128,7 +128,7 @@ static int xstring_cast_object_handler(zend_object *obj, zval *retval, int type)
 		return FAILURE;
 	}
 	value = zend_read_property(obj->ce, obj, LIT_PROP("value"), false, &zv);
-	Z_ADDREF_P(value);
+	Z_TRY_ADDREF_P(value);
 	ZVAL_COPY_VALUE(retval, value);
 	return SUCCESS;
 }
@@ -146,7 +146,7 @@ zend_string *php_cbor_get_xstring_value(zval *ins)
 {
 	zval *value, zv;
 	value = zend_read_property(Z_OBJ_P(ins)->ce, Z_OBJ_P(ins), LIT_PROP("value"), false, &zv);
-	Z_ADDREF_P(value);
+	Z_TRY_ADDREF_P(value);
 	return Z_STR_P(value);
 }
 
