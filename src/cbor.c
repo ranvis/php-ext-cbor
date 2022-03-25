@@ -4,6 +4,7 @@
  */
 
 #include "cbor.h"
+#include <ext/json/php_json.h>
 #include "private.h"
 #include "cbor_arginfo.h"
 #include "cbor_ns_arginfo.h"
@@ -106,15 +107,15 @@ PHP_MINIT_FUNCTION(cbor)
 #define REG_CLASS(name, name_cc)  CBOR_CE(name) = register_class_Cbor_##name_cc
 	REG_CLASS(exception, Exception)(zend_ce_exception);
 	REG_CLASS(serializable, Serializable)();
-	REG_CLASS(undefined, Undefined)();
-	REG_CLASS(xstring, XString)();
+	REG_CLASS(undefined, Undefined)(php_json_serializable_ce);
+	REG_CLASS(xstring, XString)(php_json_serializable_ce);
 	REG_CLASS(byte, Byte)(CBOR_CE(xstring));
 	REG_CLASS(text, Text)(CBOR_CE(xstring));
-	REG_CLASS(floatx, FloatX)();
+	REG_CLASS(floatx, FloatX)(php_json_serializable_ce);
 	REG_CLASS(float16, Float16)(CBOR_CE(floatx));
 	REG_CLASS(float32, Float32)(CBOR_CE(floatx));
 	REG_CLASS(tag, Tag)();
-	REG_CLASS(shareable, Shareable)();
+	REG_CLASS(shareable, Shareable)(php_json_serializable_ce);
 
 #define REG_CLASS_CONST_LONG(cls, prefix, name)  zend_declare_class_constant_long(CBOR_CE(cls), ZEND_STRL(#name), prefix##name);
 	/* tag constants start */

@@ -18,7 +18,7 @@ interface Serializable
     public function cborSerialize(): mixed;
 }
 
-final class Undefined
+final class Undefined implements \JsonSerializable
 {
     private function __construct() {}
     public static function __set_state(array $properties): object {}
@@ -26,14 +26,16 @@ final class Undefined
     public static function get(): Undefined {}
     //public function __clone(): self {}
     //public function __toBool(): false {}
+    public function jsonSerialize(): mixed {}
 }
 
 /** @internal */
-abstract class XString
+abstract class XString implements \JsonSerializable
 {
     public string $value;
 
     public function __construct(string $value) {}
+    public function jsonSerialize(): mixed {}
 }
 
 final class Byte extends XString
@@ -47,12 +49,13 @@ final class Text extends XString
 }
 
 /** @internal */
-abstract class FloatX
+abstract class FloatX implements \JsonSerializable
 {
     //public float $value;
 
     public function __construct(float $value) {}
     public static function fromBinary(string $value): Float16 {}
+    public function jsonSerialize(): mixed {}
 }
 
 final class Float16 extends FloatX
@@ -85,9 +88,10 @@ final class Tag
     public function __construct(int $tag, mixed $content) {}
 }
 
-final class Shareable
+final class Shareable implements \JsonSerializable
 {
     public mixed $value;
 
     public function __construct(mixed $value) {}
+    public function jsonSerialize(): mixed {}
 }

@@ -111,6 +111,11 @@ PHP_METHOD(Cbor_Undefined, get)
 	Z_ADDREF_P(return_value);
 }
 
+PHP_METHOD(Cbor_Undefined, jsonSerialize)
+{
+	RETURN_NULL();
+}
+
 static zend_object *xstring_create_object_handler(zend_class_entry *ce)
 {
 	zend_object *obj = zend_objects_new(ce);
@@ -128,8 +133,7 @@ static int xstring_cast_object_handler(zend_object *obj, zval *retval, int type)
 		return FAILURE;
 	}
 	value = zend_read_property(obj->ce, obj, LIT_PROP("value"), false, &zv);
-	Z_TRY_ADDREF_P(value);
-	ZVAL_COPY_VALUE(retval, value);
+	ZVAL_COPY(retval, value);
 	return SUCCESS;
 }
 
@@ -148,6 +152,11 @@ zend_string *php_cbor_get_xstring_value(zval *ins)
 	value = zend_read_property(Z_OBJ_P(ins)->ce, Z_OBJ_P(ins), LIT_PROP("value"), false, &zv);
 	Z_TRY_ADDREF_P(value);
 	return Z_STR_P(value);
+}
+
+PHP_METHOD(Cbor_XString, jsonSerialize)
+{
+	RETURN_STR(php_cbor_get_xstring_value(ZEND_THIS));
 }
 
 #undef THIS_PROP
@@ -231,6 +240,13 @@ PHP_METHOD(Cbor_FloatX, fromBinary)
 		RETURN_THROWS();
 	}
 	RETURN_OBJ(obj);
+}
+
+PHP_METHOD(Cbor_FloatX, jsonSerialize)
+{
+	zend_object *obj = Z_OBJ_P(ZEND_THIS);
+	TEST_FLOATX_CLASS(obj->ce);
+	RETURN_DOUBLE(floatx_read_p_value(obj));
 }
 
 bool php_cbor_floatx_set_value(zend_object *obj, zval *value, const char *raw)
@@ -451,6 +467,14 @@ PHP_METHOD(Cbor_Shareable, __construct)
 		RETURN_THROWS();
 	}
 	zend_update_property(THIS_PROP("value"), value);
+}
+
+PHP_METHOD(Cbor_Shareable, jsonSerialize)
+{
+	zend_object *obj = Z_OBJ_P(ZEND_THIS);
+	zval *value, zv;
+	value = zend_read_property(obj->ce, obj, LIT_PROP("value"), false, &zv);
+	RETURN_COPY(value);
 }
 
 #undef THIS_PROP
