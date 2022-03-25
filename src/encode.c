@@ -881,7 +881,7 @@ static php_cbor_error enc_decimal(enc_context *ctx, zval *value)
 		if (call_fn(value, ctx->str[EXT_STR_DEC_ISNEG_FN], &r_value, 0, NULL) != SUCCESS) {
 			return PHP_CBOR_ERROR_INTERNAL;
 		}
-		Z_DVAL(r_value) = (Z_TYPE(r_value) == IS_TRUE) ? -INFINITY : INFINITY;
+		ZVAL_DOUBLE(&r_value, (Z_TYPE(r_value) == IS_TRUE) ? -INFINITY : INFINITY);
 		ENC_RESULT(enc_z_double(ctx, &r_value, true));
 	}
 	if (call_fn(value, ctx->str[EXT_STR_DEC_TOSTR_FN], &r_value, 0, NULL) != SUCCESS) {
