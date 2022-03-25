@@ -44,6 +44,10 @@ run(function () {
     eq(1.0, $instance2->value);
     // string of the valid length is accepted
     $instance->value = 'abcd';
+    // serialization
+    eq($instance, unserialize(serialize($instance)));
+    // export/restore
+    eq($instance, eval('return ' . var_export($instance, true) . ';'));
     // invalid type
     throws(TypeError::class, fn () => new Cbor\Float32('abcd'));
     throws(TypeError::class, fn () => Cbor\Float32::fromBinary([]));

@@ -38,7 +38,7 @@ static zval *floatx_get_property_ptr_ptr(zend_object *obj, zend_string *member, 
 static int floatx_has_property(zend_object *obj, zend_string *member, int has_set_exists, void **cache_slot);
 static void floatx_unset_property(zend_object *obj, zend_string *member, void **cache_slot);
 
-static HashTable *floatx_get_debug_info(zend_object *obj, int *is_temp);
+static zend_array *floatx_get_properties_for(zend_object *obj, zend_prop_purpose purpose);
 
 void php_cbor_minit_types()
 {
@@ -63,7 +63,7 @@ void php_cbor_minit_types()
 	floatx_handlers.has_property = &floatx_has_property;
 	floatx_handlers.unset_property = &floatx_unset_property;
 	floatx_handlers.cast_object = &floatx_cast_object_handler;
-	floatx_handlers.get_debug_info = &floatx_get_debug_info;
+	floatx_handlers.get_properties_for = &floatx_get_properties_for;
 }
 
 /* PHP has IS_UNDEF type, but it is semantically different from CBOR's "undefined" value. */
@@ -234,16 +234,54 @@ PHP_METHOD(Cbor_FloatX, fromBinary)
 	}
 	TEST_FLOATX_CLASS(ctx_ce);
 	obj = php_cbor_floatx_create(ctx_ce);
-	if (!obj) {
-		php_cbor_throw_error(PHP_CBOR_ERROR_INTERNAL, false, 0);
-		RETURN_THROWS();
-	}
 	ZVAL_STR(&value, str);
 	if (!php_cbor_floatx_set_value(obj, &value, NULL)) {
 		zend_objects_destroy_object(obj);
 		RETURN_THROWS();
 	}
 	RETURN_OBJ(obj);
+}
+
+static bool floatx_restore(zend_object *obj, HashTable *ht)
+{
+	zval *value;
+	value = zend_hash_index_find(ht, 0);
+	if (Z_TYPE_P(value) != IS_STRING
+			|| !php_cbor_floatx_set_value(obj, value, NULL)) {
+		return false;
+	}
+	return true;
+}
+
+PHP_METHOD(Cbor_FloatX, __set_state)
+{
+	zend_class_entry *ctx_ce = zend_get_called_scope(execute_data);
+	zend_object *obj;
+	HashTable *ht;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "h", &ht) == FAILURE) {
+		RETURN_THROWS();
+	}
+	TEST_FLOATX_CLASS(ctx_ce);
+	obj = php_cbor_floatx_create(ctx_ce);
+	if (!floatx_restore(obj, ht)) {
+		zend_objects_destroy_object(obj);
+		RETURN_THROWS();
+	}
+	RETURN_OBJ(obj);
+}
+
+PHP_METHOD(Cbor_FloatX, __unserialize)
+{
+	zend_class_entry *ctx_ce = zend_get_called_scope(execute_data);
+	zend_object *obj = Z_OBJ_P(ZEND_THIS);
+	HashTable *ht;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "h", &ht) == FAILURE) {
+		RETURN_THROWS();
+	}
+	TEST_FLOATX_CLASS(ctx_ce);
+	if (!floatx_restore(obj, ht)) {
+		RETURN_THROWS();
+	}
 }
 
 PHP_METHOD(Cbor_FloatX, jsonSerialize)
@@ -356,7 +394,7 @@ static void floatx_unset_property(zend_object *obj, zend_string *member, void **
 	zend_std_unset_property(obj, member, cache_slot);
 }
 
-void php_cbor_floatx_get_value(zend_object *obj, char *out)
+size_t php_cbor_floatx_get_value(zend_object *obj, char *out)
 {
 	floatx_class *base = CUSTOM_OBJ(floatx_class, obj);
 	if (obj->ce == CBOR_CE(float32)) {
@@ -364,27 +402,48 @@ void php_cbor_floatx_get_value(zend_object *obj, char *out)
 		out[1] = base->v.binary32.c.c1;
 		out[2] = base->v.binary32.c.c2;
 		out[3] = base->v.binary32.c.c3;
-	} else {
-		out[0] = (char)(base->v.binary16 >> 8);
-		out[1] = (char)(base->v.binary16 & 0xff);
+		return 4;
 	}
+	out[0] = (char)(base->v.binary16 >> 8);
+	out[1] = (char)(base->v.binary16 & 0xff);
+	return 2;
 }
 
-static HashTable *floatx_get_debug_info(zend_object *obj, int *is_temp)
+static zend_array *floatx_get_properties_for(zend_object *obj, zend_prop_purpose purpose)
 {
 	floatx_class *base = CUSTOM_OBJ(floatx_class, obj);
-	HashTable *info = zend_new_array(1);
+	zend_array *props;
 	zval zv;
-	double value;
-	if (obj->ce == CBOR_CE(float32)) {
-		value = (double)base->v.binary32.f;
-	} else {
-		value = php_cbor_from_float16(base->v.binary16);
+	bool decode = false;
+	switch (purpose) {
+	case ZEND_PROP_PURPOSE_DEBUG:
+	case ZEND_PROP_PURPOSE_ARRAY_CAST:
+		decode = true;
+		break;
+	case ZEND_PROP_PURPOSE_SERIALIZE:
+	case ZEND_PROP_PURPOSE_VAR_EXPORT:
+		break;
+	default:
+		return zend_std_get_properties_for(obj, purpose);
 	}
-	ZVAL_DOUBLE(&zv, value);
-	zend_hash_str_add_new(info, ZEND_STRL("value"), &zv);
-	*is_temp = 1;
-	return info;
+	/* While floatX can have custom properties for now, they are not dumped or restored. */
+	props = zend_new_array(1);
+	if (decode) {
+		double value;
+		if (obj->ce == CBOR_CE(float32)) {
+			value = (double)base->v.binary32.f;
+		} else {
+			value = php_cbor_from_float16(base->v.binary16);
+		}
+		ZVAL_DOUBLE(&zv, value);
+		zend_hash_str_add_new(props, ZEND_STRL("value"), &zv);
+	} else {
+		char bin[4];
+		size_t len = php_cbor_floatx_get_value(obj, bin);
+		ZVAL_STRINGL(&zv, bin, len);
+		zend_hash_next_index_insert(props, &zv);
+	}
+	return props;
 }
 
 double php_cbor_from_float16(uint16_t value)

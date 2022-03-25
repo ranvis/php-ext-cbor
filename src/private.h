@@ -113,7 +113,7 @@ extern php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_d
 extern zend_string *php_cbor_get_xstring_value(zval *value);
 extern zend_object *php_cbor_floatx_create(zend_class_entry *ce);
 extern bool php_cbor_floatx_set_value(zend_object *self, zval *value, const char *raw);
-extern void php_cbor_floatx_get_value(zend_object *self, char *out);
+extern size_t php_cbor_floatx_get_value(zend_object *self, char *out);
 extern double php_cbor_from_float16(uint16_t value);
 extern uint16_t php_cbor_to_float16(float value);
 

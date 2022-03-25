@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 5d3e0253d47d0bcb57d2d85ce357474bf4a0322a */
+ * Stub hash: 257b1de16423fe867b023c4d32b20a6ec1adfabd */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Serializable_cborSerialize, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
@@ -30,6 +30,14 @@ ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Cbor_FloatX_fromBinary, 0, 
 	ZEND_ARG_TYPE_INFO(0, value, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Cbor_FloatX___set_state, 0, 1, Cbor\\FloatX, 0)
+	ZEND_ARG_TYPE_INFO(0, properties, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_FloatX___unserialize, 0, 1, IS_VOID, 0)
+	ZEND_ARG_TYPE_INFO(0, data, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
 #define arginfo_class_Cbor_FloatX_jsonSerialize arginfo_class_Cbor_Serializable_cborSerialize
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Cbor_Tag___construct, 0, 0, 2)
@@ -52,6 +60,8 @@ ZEND_METHOD(Cbor_XString, __construct);
 ZEND_METHOD(Cbor_XString, jsonSerialize);
 ZEND_METHOD(Cbor_FloatX, __construct);
 ZEND_METHOD(Cbor_FloatX, fromBinary);
+ZEND_METHOD(Cbor_FloatX, __set_state);
+ZEND_METHOD(Cbor_FloatX, __unserialize);
 ZEND_METHOD(Cbor_FloatX, jsonSerialize);
 ZEND_METHOD(Cbor_Tag, __construct);
 ZEND_METHOD(Cbor_Shareable, __construct);
@@ -98,6 +108,8 @@ static const zend_function_entry class_Cbor_Text_methods[] = {
 static const zend_function_entry class_Cbor_FloatX_methods[] = {
 	ZEND_ME(Cbor_FloatX, __construct, arginfo_class_Cbor_FloatX___construct, ZEND_ACC_PUBLIC)
 	ZEND_ME(Cbor_FloatX, fromBinary, arginfo_class_Cbor_FloatX_fromBinary, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+	ZEND_ME(Cbor_FloatX, __set_state, arginfo_class_Cbor_FloatX___set_state, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+	ZEND_ME(Cbor_FloatX, __unserialize, arginfo_class_Cbor_FloatX___unserialize, ZEND_ACC_PUBLIC)
 	ZEND_ME(Cbor_FloatX, jsonSerialize, arginfo_class_Cbor_FloatX_jsonSerialize, ZEND_ACC_PUBLIC)
 	ZEND_FE_END
 };

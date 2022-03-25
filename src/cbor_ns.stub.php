@@ -55,6 +55,8 @@ abstract class FloatX implements \JsonSerializable
 
     public function __construct(float $value) {}
     public static function fromBinary(string $value): FloatX {}
+    public static function __set_state(array $properties): FloatX {}
+    public function __unserialize(array $data): void {}
     public function jsonSerialize(): mixed {}
 }
 
