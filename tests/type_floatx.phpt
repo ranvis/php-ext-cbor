@@ -45,6 +45,8 @@ run(function () {
     // string of the valid length is accepted
     $instance->value = 'abcd';
     // invalid type
+    throws(TypeError::class, fn () => new Cbor\Float32('abcd'));
+    throws(TypeError::class, fn () => Cbor\Float32::fromBinary([]));
     throws(TypeError::class, function () use ($instance) {
         $instance->value = false;
     });

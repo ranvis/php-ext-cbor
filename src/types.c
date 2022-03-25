@@ -210,13 +210,15 @@ static bool test_floatx_class(zend_class_entry *ce, zend_function *f)
 
 PHP_METHOD(Cbor_FloatX, __construct)
 {
-	zval *value;
+	zval value;
+	double num;
 	zend_object *obj = Z_OBJ_P(ZEND_THIS);
 	TEST_FLOATX_CLASS(obj->ce);
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &value) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "d", &num) == FAILURE) {
 		RETURN_THROWS();
 	}
-	if (!php_cbor_floatx_set_value(obj, value, NULL)) {
+	ZVAL_DOUBLE(&value, num);
+	if (!php_cbor_floatx_set_value(obj, &value, NULL)) {
 		RETURN_THROWS();
 	}
 }
@@ -225,8 +227,9 @@ PHP_METHOD(Cbor_FloatX, fromBinary)
 {
 	zend_class_entry *ctx_ce = zend_get_called_scope(execute_data);
 	zend_object *obj;
-	zval *value;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &value) == FAILURE) {
+	zend_string *str;
+	zval value;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S", &str) == FAILURE) {
 		RETURN_THROWS();
 	}
 	TEST_FLOATX_CLASS(ctx_ce);
@@ -235,7 +238,8 @@ PHP_METHOD(Cbor_FloatX, fromBinary)
 		php_cbor_throw_error(PHP_CBOR_ERROR_INTERNAL, false, 0);
 		RETURN_THROWS();
 	}
-	if (!php_cbor_floatx_set_value(obj, value, NULL)) {
+	ZVAL_STR(&value, str);
+	if (!php_cbor_floatx_set_value(obj, &value, NULL)) {
 		zend_objects_destroy_object(obj);
 		RETURN_THROWS();
 	}

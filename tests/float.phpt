@@ -30,10 +30,9 @@ run(function () {
 
     eq(1.5, (float)new Cbor\Float32(1.5));
     eq(1.5, (float)new Cbor\Float16(1.5));
-
     eq('0xf94248', cenc(3.140625, CBOR_FLOAT16 | CBOR_FLOAT32));
     eq('0xfa40490fdb', cenc(3.1415927410125732, CBOR_FLOAT16 | CBOR_FLOAT32));
-    eq('0xf97e01', cenc((double)new Cbor\Float32(hex2bin('7fc02000')), CBOR_FLOAT16 | CBOR_FLOAT32));
+    eq('0xf97e01', cenc((double)Cbor\Float32::fromBinary(hex2bin('7fc02000')), CBOR_FLOAT16 | CBOR_FLOAT32));
     eq('0xfb3ff0000010000000', cenc(hex2double('3ff0000010000000'), CBOR_FLOAT16 | CBOR_FLOAT32));
     eq('0xfa3f800001', cenc(hex2double('3ff0000020000000'), CBOR_FLOAT16 | CBOR_FLOAT32));
 });

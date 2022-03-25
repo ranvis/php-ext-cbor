@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 33c2bcca189eda71d1dcdde8bc69692065a12c1f */
+ * Stub hash: 5d3e0253d47d0bcb57d2d85ce357474bf4a0322a */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Serializable_cborSerialize, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
@@ -26,7 +26,7 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Cbor_FloatX___construct, 0, 0, 1)
 	ZEND_ARG_TYPE_INFO(0, value, IS_DOUBLE, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Cbor_FloatX_fromBinary, 0, 1, Cbor\\Float16, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Cbor_FloatX_fromBinary, 0, 1, Cbor\\FloatX, 0)
 	ZEND_ARG_TYPE_INFO(0, value, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
