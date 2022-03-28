@@ -83,8 +83,8 @@ But if the flags `CBOR_FLOAT32` and/or `CBOR_FLOAT16` is passed, they are treate
 
 CBOR has two types of strings: `byte string` (binary data) and `text string` (UTF-8 encoded string).
 PHP `string` type does not have this distinction.
-If you specify `CBOR_BYTE` flag (default) and/or `CBOR_TEXT` flag on decoding, those strings are decoded to PHP `string`. If the flag is not specified, it is decoded to `Cbor\Byte` and `Cbor\Text` object respectively.
-On encoding PHP `string`, you must specify either of the flag so that the extension knows to which you want your string to be encoded.
+If you specify `CBOR_BYTE` flag (default) and/or `CBOR_TEXT` flag on decoding, those strings are decoded to PHP `string`. If the flags are not specified, strings are decoded to `Cbor\Byte` and `Cbor\Text` object respectively.
+On encoding PHP `string`, you must specify either of the flag so that the extension knows to which you want your strings to be encoded.
 
 `CBOR_KEY_BYTE` and `CBOR_KEY_TEXT` are for strings of CBOR `map` keys.
 
@@ -104,7 +104,7 @@ CBOR map is translated to PHP `stdClass` object.
 If `CBOR_MAP_AS_ARRAY` flag is passed when decoding, it is translated to PHP `array` instead.
 
 Keys must be of CBOR `string` type.
-The extension may accept CBOR `integer` key if `CBOR_INT_KEY` flag is passed. Also the flag will encode PHP `int` key as CBOR `integer` key.
+The extension may accept CBOR `integer` key if `CBOR_INT_KEY` flag is passed. Also the flag will encode PHP `int` key (including integer `string` keys in the range of CBOR `integer`) as CBOR `integer` key.
 
 Number of properties in an object must be under 2**32.
 
@@ -144,7 +144,7 @@ Constants:
 
 Self-Described CBOR is CBOR data that has this tag for the data.
 This 3-byte binary string can be used to distinguish CBOR from other data including Unicode text encodings (so-called magic). This is useful if reader need to identify the format by data itself.
-```
+```php
 $isCbor = str_starts_with($data, CBOR_TAG_SELF_DESCRIBE_DATA);
 ```
 

@@ -398,6 +398,53 @@ static php_cbor_error enc_string_len(enc_context *ctx, const char *value, size_t
 	return 0;
 }
 
+static bool convert_string_to_int(zend_string *str, uint64_t *value, bool *is_negative)
+{
+	char buf[24];
+	char *ptr, *head_ptr, *end_ptr;
+	size_t len = ZSTR_LEN(str);
+	bool is_minus, fix = false;
+	head_ptr = ptr = ZSTR_VAL(str);
+	if (*head_ptr < '-' || *head_ptr > '9') {  /* "", etc. */
+		assert('-' < '0' && '0' < '9');
+		return false;
+	}
+	if (len > 1 + 20) {  /* sign = 1, ceil(log10(2)*64) = 20 */
+		return false;
+	}
+	if (*head_ptr == '0') {
+		*value = 0;
+		*is_negative = false;
+		return len == 1;  /* "0" or error */
+	}
+	is_minus = *head_ptr == '-';
+	if (is_minus) {
+		if ((fix = head_ptr[len - 1] == '6') != 0) {
+			assert(len + 1 < sizeof buf);
+			memcpy(buf, head_ptr, len + 1);
+			head_ptr = ptr = buf;
+			buf[len - 1] = '5';  /* (uint64_t)~0, "-18446744073709551616" => "...5" */
+		}
+		ptr++;
+		if (*ptr == '-' || *ptr == '0' || *ptr == '\0') {  /* "--...", "-0...", "-" */
+			return false;
+		}
+	}
+	errno = 0;
+#if ULLONG_MAX != UINT64_MAX
+#error "strtoull() may fail for uint64_t."
+#endif
+	*value = (uint64_t)strtoull(ptr, &end_ptr, 10);
+	if (end_ptr != head_ptr + len || errno) {  /* not well-formed or overflow */
+		return false;
+	}
+	if (is_minus && !fix) {
+		(*value)--;
+	}
+	*is_negative = is_minus;
+	return true;
+}
+
 static php_cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 {
 	php_cbor_error error = 0;
@@ -455,11 +502,15 @@ static php_cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 		ZEND_HASH_FOREACH_KEY_VAL_IND(ht, index, key, data) {
 			if (!is_list) {
 				if (key) {
+					uint64_t key_int;
+					bool is_negative;
 					/* check property visibility if it is object and not stdClass */
 					if (type == HASH_OBJ && *ZSTR_VAL(key) == '\0' && ZSTR_LEN(key) > 0) {
 						continue; /* skip if not a public property */
 					}
-					if (UNEXPECTED(key_flag_error)) {
+					if (use_int_key && convert_string_to_int(key, &key_int, &is_negative)) {
+						error = enc_xint(ctx, key_int, is_negative);
+					} else if (UNEXPECTED(key_flag_error)) {
 						error = PHP_CBOR_ERROR_INVALID_FLAGS;
 					} else {
 						error = enc_string(ctx, key, to_text);
