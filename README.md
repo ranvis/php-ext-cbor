@@ -104,7 +104,7 @@ CBOR map is translated to PHP `stdClass` object.
 If `CBOR_MAP_AS_ARRAY` flag is passed when decoding, it is translated to PHP `array` instead.
 
 Keys must be of CBOR `string` type.
-The extension may accept CBOR `unsigned integer` key if `CBOR_INT_KEY` flag is passed. Also the flag will encode PHP unsigned `int` key as CBOR `unsigned integer` key.
+The extension may accept CBOR `integer` key if `CBOR_INT_KEY` flag is passed. Also the flag will encode PHP `int` key as CBOR `integer` key.
 
 Number of properties in an object must be under 2**32.
 

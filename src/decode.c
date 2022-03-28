@@ -365,9 +365,6 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 			if (!(ctx->args.flags & PHP_CBOR_INT_KEY)) {
 				RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_KEY_TYPE);
 			}
-			if (Z_LVAL_P(value) < 0) {
-				RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_KEY_VALUE);
-			}
 			ZVAL_COPY_VALUE(&item->v.map.key, value);
 			break;
 		case IS_STRING:
@@ -400,9 +397,9 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 			zval_ptr_dtor(dest);
 			ZVAL_COPY_VALUE(dest, value);
 		}
-	} else {
+	} else {  /* IS_ARRAY */
 		if (Z_TYPE(item->v.map.key) == IS_LONG) {
-			assert(Z_LVAL(item->v.map.key) >= 0);
+			/* The argument accepts zend_ulong as underlying hash table does, but the actual index visible for PHP script is still zend_long. */
 			add_index_zval(&item->v.map.dest, (zend_ulong)Z_LVAL(item->v.map.key), value);
 		} else {
 			add_assoc_zval_ex(&item->v.map.dest, Z_STRVAL(item->v.map.key), Z_STRLEN(item->v.map.key), value);
