@@ -13,6 +13,16 @@ run(function () {
     eq('0xa3200100020103', cenc([-1 => 1, 0 => 2, 1 => 3], CBOR_KEY_BYTE | CBOR_INT_KEY));
     eq([-1 => 1, 0 => 2, 1 => 3], cdec('a3200100020103', CBOR_KEY_BYTE | CBOR_INT_KEY | CBOR_MAP_AS_ARRAY));
 
+    eq([
+        '2147483648' => 0,
+        '18446744073709551615' => 0,
+        '-18446744073709551616' => 0,
+    ], cdec('a31a80000000001bffffffffffffffff003bffffffffffffffff00', CBOR_KEY_BYTE | CBOR_INT_KEY | CBOR_MAP_AS_ARRAY));
+    eq((object)[
+        '18364758544493064720' => 0,
+        '-18364758544493064721' => 0,
+    ], cdec('a21bfedcba9876543210003bfedcba987654321000', CBOR_KEY_BYTE | CBOR_INT_KEY));
+
     eq('0xa1414b4156', cenc((object)['K' => 'V'], CBOR_BYTE | CBOR_KEY_BYTE));
     eq('0xa1614b4156', cenc((object)['K' => 'V'], CBOR_BYTE | CBOR_KEY_TEXT));
     eq('0xa1414b6156', cenc((object)['K' => 'V'], CBOR_TEXT | CBOR_KEY_BYTE));

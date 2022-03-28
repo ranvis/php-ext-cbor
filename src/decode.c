@@ -7,6 +7,7 @@
 #include "private.h"
 #include "utf8.h"
 #include "tags.h"
+#include "xzval.h"
 
 #define SIZE_INIT_LIMIT  4096
 
@@ -66,7 +67,7 @@ typedef enum {
 typedef bool (tag_handler_enter_t)(dec_context *ctx, stack_item *item);
 typedef void (tag_handler_data_t)(dec_context *ctx, stack_item *item, data_type_t type, zval *value);
 typedef void (tag_handler_child_t)(dec_context *ctx, stack_item *item, stack_item *self);
-typedef zval *(tag_handler_exit_t)(dec_context *ctx, zval *value, stack_item *item, zval *tmp_v);
+typedef xzval *(tag_handler_exit_t)(dec_context *ctx, xzval *value, stack_item *item, zval *tmp_v);
 typedef void (tag_handler_free_t)(stack_item *item);
 
 struct stack_item {
@@ -160,6 +161,7 @@ static void stack_free_item(stack_item *item)
 		smart_str_free(&item->v.str);
 	} else if (item->si_type == SI_TYPE_MAP) {
 		zval_ptr_dtor(&item->v.map.dest);
+		XZVAL_PURIFY(&item->v.map.key);
 		zval_ptr_dtor(&item->v.map.key);
 	} else if (item->si_type == SI_TYPE_TAG) {
 		/* nothing */
@@ -338,10 +340,37 @@ static php_cbor_error dec_zval(dec_context *ctx)
 	return 0;
 }
 
-static bool append_item(dec_context *ctx, zval *value);
-
-static bool append_item_to_array(dec_context *ctx, zval *value, stack_item *item)
+static bool convert_xz_xint_to_string(xzval *value)
 {
+	char buf[24];  /* ceil(log10(2)*64) = 20 */
+	size_t len;
+	assert(XZ_ISXXINT_P(value));
+	if (Z_TYPE_P(value) == IS_X_UINT) {
+		len = snprintf(buf, sizeof buf, "%" PRIu64, XZ_XINT_P(value));
+	} else {
+		uint64_t n_value = XZ_XINT_P(value);
+		bool fix;
+		n_value++;
+		if ((fix = !n_value) != 0) {
+			n_value--;
+		}
+		len = snprintf(buf, sizeof buf, "-%" PRIu64, n_value);
+		assert(len >= 1 && len < sizeof buf);
+		if (fix) {
+			buf[len - 1]++;  /* "-18446744073709551615" => "...6" */
+		}
+	}
+	ZVAL_STRINGL(value, buf, len);
+	return true;
+}
+
+static bool append_item(dec_context *ctx, xzval *value);
+
+static bool append_item_to_array(dec_context *ctx, xzval *value, stack_item *item)
+{
+	if (XZ_ISXXINT_P(value)) {
+		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+	}
 	if (add_next_index_zval(&item->v.value, value) != SUCCESS) {
 		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_INTERNAL);
 	}
@@ -357,11 +386,13 @@ static bool append_item_to_array(dec_context *ctx, zval *value, stack_item *item
 	return true;
 }
 
-static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
+static bool append_item_to_map(dec_context *ctx, xzval *value, stack_item *item)
 {
 	if (Z_ISUNDEF(item->v.map.key)) {
 		switch (Z_TYPE_P(value)) {
 		case IS_LONG:
+		case IS_X_UINT:
+		case IS_X_NINT:
 			if (!(ctx->args.flags & PHP_CBOR_INT_KEY)) {
 				RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_KEY_TYPE);
 			}
@@ -375,6 +406,14 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 			RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_KEY_TYPE);
 		}
 		return true;
+	}
+	if (XZ_ISXXINT_P(value)) {
+		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+	}
+	if (XZ_ISXXINT(item->v.map.key)) {
+		if (!convert_xz_xint_to_string(&item->v.map.key)) {
+			RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_KEY_TYPE);
+		}
 	}
 	if (Z_TYPE(item->v.map.dest) == IS_OBJECT) {
 		if (Z_TYPE(item->v.map.key) == IS_LONG) {
@@ -406,6 +445,7 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 		}
 		Z_TRY_ADDREF_P(value);
 	}
+	XZVAL_PURIFY(&item->v.map.key);
 	zval_ptr_dtor(&item->v.map.key);
 	ZVAL_UNDEF(&item->v.map.key);
 	if (item->count && --item->count == 0) {
@@ -419,10 +459,13 @@ static bool append_item_to_map(dec_context *ctx, zval *value, stack_item *item)
 	return true;
 }
 
-static bool append_item_to_tag(dec_context *ctx, zval *value, stack_item *item)
+static bool append_item_to_tag(dec_context *ctx, xzval *value, stack_item *item)
 {
 	zval container;
 	bool result;
+	if (XZ_ISXXINT_P(value)) {
+		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+	}
 	if (object_init_ex(&container, CBOR_CE(tag)) != SUCCESS) {
 		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_INTERNAL);
 	}
@@ -436,10 +479,10 @@ static bool append_item_to_tag(dec_context *ctx, zval *value, stack_item *item)
 	return result;
 }
 
-static bool append_item_to_tag_handled(dec_context *ctx, zval *value, stack_item *item)
+static bool append_item_to_tag_handled(dec_context *ctx, xzval *value, stack_item *item)
 {
 	zval tmp_v;
-	zval *orig_v = value;
+	xzval *orig_v = value;
 	bool result;
 	assert(ctx->stack_top == item);
 	stack_pop_item(ctx);
@@ -456,10 +499,13 @@ static bool append_item_to_tag_handled(dec_context *ctx, zval *value, stack_item
 	return result;
 }
 
-static bool append_item(dec_context *ctx, zval *value)
+static bool append_item(dec_context *ctx, xzval *value)
 {
 	stack_item *item = ctx->stack_top;
 	if (item == NULL) {
+		if (XZ_ISXXINT_P(value)) {
+			RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+		}
 		Z_TRY_ADDREF_P(value);
 		ZVAL_COPY_VALUE(&ctx->root, value);
 		return true;
@@ -506,22 +552,24 @@ static void cb_uint16(void *vp_ctx, uint16_t val)
 static void cb_uint32(void *vp_ctx, uint32_t val)
 {
 	dec_context *ctx = (dec_context *)vp_ctx;
-	zval value;
+	xzval value;
 	if (TEST_OVERFLOW_XINT32(val)) {
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+		XZVAL_UINT(&value, (uint64_t)val);
+	} else {
+		ZVAL_LONG(&value, val);
 	}
-	ZVAL_LONG(&value, val);
 	append_item(ctx, &value);
 }
 
 static void cb_uint64(void *vp_ctx, uint64_t val)
 {
 	dec_context *ctx = (dec_context *)vp_ctx;
-	zval value;
+	xzval value;
 	if (TEST_OVERFLOW_XINT64(val)) {
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+		XZVAL_UINT(&value, val);
+	} else {
+		ZVAL_LONG(&value, (zend_long)val);
 	}
-	ZVAL_LONG(&value, (zend_long)val);
 	append_item(ctx, &value);
 }
 
@@ -544,11 +592,12 @@ static void cb_negint16(void *vp_ctx, uint16_t val)
 static void cb_negint32(void *vp_ctx, uint32_t val)
 {
 	dec_context *ctx = (dec_context *)vp_ctx;
-	zval value;
+	xzval value;
 	if (TEST_OVERFLOW_XINT32(val)) {
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+		XZVAL_NINT(&value, (uint64_t)val);
+	} else {
+		ZVAL_LONG(&value, -(zend_long)val - 1);
 	}
-	ZVAL_LONG(&value, -(zend_long)val - 1);
 	append_item(ctx, &value);
 }
 
@@ -557,9 +606,10 @@ static void cb_negint64(void *vp_ctx, uint64_t val)
 	dec_context *ctx = (dec_context *)vp_ctx;
 	zval value;
 	if (TEST_OVERFLOW_XINT64(val)) {
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+		XZVAL_NINT(&value, val);
+	} else {
+		ZVAL_LONG(&value, -(zend_long)val - 1);
 	}
-	ZVAL_LONG(&value, -(zend_long)val - 1);
 	append_item(ctx, &value);
 }
 
@@ -886,7 +936,7 @@ static void tag_handler_str_ref_ns_child(dec_context *ctx, stack_item *item, sta
 	SI_SET_DATA_HANDLER(item, &tag_handler_str_ref_ns_data);
 }
 
-static zval *tag_handler_str_ref_ns_exit(dec_context *ctx, zval *value, stack_item *item, zval *tmp_v)
+static xzval *tag_handler_str_ref_ns_exit(dec_context *ctx, xzval *value, stack_item *item, zval *tmp_v)
 {
 	srns_item *srns = ctx->srns;
 	ctx->srns = srns->prev_item;
@@ -921,7 +971,7 @@ static bool tag_handler_str_ref_ns_enter(dec_context *ctx, stack_item *item)
 	return true;
 }
 
-static zval *tag_handler_str_ref_exit(dec_context *ctx, zval *value, stack_item *item, zval *tmp_v)
+static xzval *tag_handler_str_ref_exit(dec_context *ctx, xzval *value, stack_item *item, zval *tmp_v)
 {
 	zend_long index;
 	zval *str;
@@ -982,9 +1032,12 @@ static void tag_handler_shareable_child(dec_context *ctx, stack_item *item, stac
 	}
 }
 
-static zval *tag_handler_shareable_exit(dec_context *ctx, zval *value, stack_item *item, zval *tmp_v)
+static xzval *tag_handler_shareable_exit(dec_context *ctx, xzval *value, stack_item *item, zval *tmp_v)
 {
 	zval *real_v;
+	if (XZ_ISXXINT_P(value)) {
+		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+	}
 	if (Z_TYPE(item->v.tag_h.v.shareable.value) == IS_NULL) {
 		/* child handler is not called */
 		if (Z_TYPE_P(value) == IS_OBJECT || ctx->args.shared_ref == OPT_UNSAFE_REF) {
@@ -1042,7 +1095,7 @@ static bool tag_handler_shareable_enter(dec_context *ctx, stack_item *item)
 	return true;
 }
 
-static zval *tag_handler_shared_ref_exit(dec_context *ctx, zval *value, stack_item *item, zval *tmp_v)
+static xzval *tag_handler_shared_ref_exit(dec_context *ctx, zval *value, stack_item *item, zval *tmp_v)
 {
 	zend_long index;
 	zval *ref_v;
