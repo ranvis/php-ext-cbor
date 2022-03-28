@@ -464,7 +464,7 @@ static php_cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 					} else {
 						error = enc_string(ctx, key, to_text);
 					}
-				} else if (type != HASH_ARRAY || !use_int_key) {
+				} else if (!use_int_key) {
 					char num_str[ZEND_LTOA_BUF_LEN];
 					ZEND_LTOA((zend_long)index, num_str, sizeof num_str);
 					if (UNEXPECTED(key_flag_error)) {
