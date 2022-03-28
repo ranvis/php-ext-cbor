@@ -45,7 +45,9 @@ run(function () {
     // string of the valid length is accepted
     $instance->value = 'abcd';
     // serialization
-    eq($instance, unserialize(serialize($instance)));
+    eq('O:12:"Cbor\Float32":1:{i:0;s:4:"abcd";}', serialize($instance));
+    eq($instance, unserialize('O:12:"Cbor\Float32":1:{i:0;s:4:"abcd";}'));
+    throws(Error::class, fn () => unserialize('O:12:"Cbor\Float32":1:{i:1;s:4:"abcd";}'));
     // export/restore
     eq($instance, eval('return ' . var_export($instance, true) . ';'));
     // invalid type

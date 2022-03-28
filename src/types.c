@@ -246,8 +246,9 @@ static bool floatx_restore(zend_object *obj, HashTable *ht)
 {
 	zval *value;
 	value = zend_hash_index_find(ht, 0);
-	if (Z_TYPE_P(value) != IS_STRING
+	if (!value || Z_TYPE_P(value) != IS_STRING
 			|| !php_cbor_floatx_set_value(obj, value, NULL)) {
+		zend_throw_error(NULL, "Unable to restore %s.", ZSTR_VAL(obj->ce->name));
 		return false;
 	}
 	return true;
