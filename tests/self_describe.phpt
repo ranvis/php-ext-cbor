@@ -8,7 +8,7 @@ array
 require_once __DIR__ . '/common.php';
 
 run(function () {
-    $nullWithSd = bin2hex(CBOR_SELF_DESCRIBE_DATA . chr(0xf6));
+    $nullWithSd = 'd9d9f7' . bin2hex(chr(0xf6));
 
     eq(null, cdec('f6'));
     // skip self-describe tag

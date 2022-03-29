@@ -18,7 +18,6 @@ run(function () {
     eq(100, cdec('1864'));
     eq(1000, cdec('1903e8'));
     eq(1000000, cdec('1a000f4240'));
-
     if (PHP_INT_SIZE >= 8) {
         eq(1000000000000, cdec('1b000000e8d4a51000'));
     }
