@@ -13,13 +13,13 @@ run(function () {
 
     // singleton
     $instance = Cbor\Undefined::get();
-    eq($instance, Cbor\Undefined::get());
+    ok($instance === Cbor\Undefined::get());
 
     // clone is the same object
-    eq($instance, (clone $instance));
+    ok($instance === (clone $instance));
 
     // dumped value is the same object
-    eq($instance, eval('return ' . var_export($instance, true) . ';'));
+    ok($instance === eval('return ' . var_export($instance, true) . ';'));
 
     // evaluated as false
     assert($instance ? false : true);
@@ -39,6 +39,10 @@ run(function () {
     } catch (\Throwable $e) {
         eq(get_class($e), 'Error');
     }
+
+    // serialization
+    eq($instance, unserialize(serialize($instance)));
+    ok($instance !== unserialize(serialize($instance))); // XXX:
 
     // void context
     Cbor\Undefined::get();
