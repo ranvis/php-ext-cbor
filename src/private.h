@@ -42,7 +42,7 @@ enum {
 };
 
 typedef struct {
-	int flags;
+	uint32_t flags;
 	uint32_t max_depth;
 	uint8_t string_ref;
 	uint8_t shared_ref;
@@ -52,7 +52,7 @@ typedef struct {
 } php_cbor_encode_args;
 
 typedef struct {
-	int flags;
+	uint32_t flags;
 	uint32_t max_depth;
 	uint32_t max_size;
 	size_t error_arg;

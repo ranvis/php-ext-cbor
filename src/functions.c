@@ -20,7 +20,7 @@ PHP_FUNCTION(cbor_encode)
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z|lh", &value, &flags, &options) == FAILURE) {
 		RETURN_THROWS();
 	}
-	args.flags = (int)flags;
+	args.flags = (uint32_t)flags;
 	error = php_cbor_set_encode_options(&args, options);
 	if (!error) {
 		error = php_cbor_encode(value, &str, &args);
@@ -50,7 +50,7 @@ PHP_FUNCTION(cbor_decode)
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|lh", &data, &flags, &options) == FAILURE) {
 		RETURN_THROWS();
 	}
-	args.flags = (int)flags;
+	args.flags = (uint32_t)flags;
 	error = php_cbor_set_decode_options(&args, options);
 	if (!error) {
 		error = php_cbor_decode(data, &value, &args);
