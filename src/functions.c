@@ -5,7 +5,6 @@
 
 #include "cbor.h"
 #include "private.h"
-#include <Zend/zend_smart_string.h>
 
 /* {{{ proto string cbor_encode(mixed $value, int $flags = CBOR_BYTE, ?array $options = [...])
    Return a CBOR encoded string of a value. */
@@ -132,12 +131,7 @@ void php_cbor_throw_error(php_cbor_error error, bool has_arg, size_t arg)
 		break;
 	}
 	if (can_have_arg && has_arg) {
-		smart_string fmt_msg = {0};
-		smart_string_appendl(&fmt_msg, message, strlen(message) - 1);
-		smart_string_appends(&fmt_msg, " at offset %zu.");
-		smart_string_0(&fmt_msg);
-		zend_throw_exception_ex(CBOR_CE(exception), error, fmt_msg.c, arg);
-		smart_string_free(&fmt_msg);
+		zend_throw_exception_ex(CBOR_CE(exception), error, "%s at offset %zu.", message, arg);
 	} else {
 		zend_throw_exception(CBOR_CE(exception), message, error);
 	}
