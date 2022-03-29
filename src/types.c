@@ -24,54 +24,39 @@ static zend_object_handlers undef_handlers;
 static zend_object_handlers xstring_handlers;
 static zend_object_handlers floatx_handlers;
 
-static zend_object *undef_clone_handler(zend_object *obj);
-static int undef_cast_object_handler(zend_object *obj, zval *retval, int type);
-
-static zend_object *xstring_create_object_handler(zend_class_entry *ce);
-static int xstring_cast_object_handler(zend_object *obj, zval *retval, int type);
-
-static zend_object *floatx_clone_handler(zend_object *obj);
-static int floatx_cast_object_handler(zend_object *obj, zval *retval, int type);
-static zval *floatx_read_property(zend_object *obj, zend_string *member, int type, void **cache_slot, zval *rv);
-static zval *floatx_write_property(zend_object *obj, zend_string *member, zval *value, void **cache_slot);
-static zval *floatx_get_property_ptr_ptr(zend_object *obj, zend_string *member, int type, void **cache_slot);
-static int floatx_has_property(zend_object *obj, zend_string *member, int has_set_exists, void **cache_slot);
-static void floatx_unset_property(zend_object *obj, zend_string *member, void **cache_slot);
-
-static zend_array *floatx_get_properties_for(zend_object *obj, zend_prop_purpose purpose);
-
-void php_cbor_minit_types()
-{
-	memcpy(&undef_handlers, &std_object_handlers, sizeof(zend_object_handlers));
-	undef_handlers.clone_obj = &undef_clone_handler;
-	undef_handlers.cast_object = &undef_cast_object_handler;
-
-	/* Setting CBOR_CE(xstring)->create_object does not help. */
-	CBOR_CE(byte)->create_object = &xstring_create_object_handler;
-	CBOR_CE(text)->create_object = &xstring_create_object_handler;
-	memcpy(&xstring_handlers, &std_object_handlers, sizeof(zend_object_handlers));
-	xstring_handlers.cast_object = &xstring_cast_object_handler;
-
-	CBOR_CE(float16)->create_object = &php_cbor_floatx_create;
-	CBOR_CE(float32)->create_object = &php_cbor_floatx_create;
-	memcpy(&floatx_handlers, &std_object_handlers, sizeof(zend_object_handlers));
-	floatx_handlers.offset = XtOffsetOf(floatx_class, std);
-	floatx_handlers.clone_obj = &floatx_clone_handler;
-	floatx_handlers.read_property = &floatx_read_property;
-	floatx_handlers.write_property = &floatx_write_property;
-	floatx_handlers.get_property_ptr_ptr = &floatx_get_property_ptr_ptr;
-	floatx_handlers.has_property = &floatx_has_property;
-	floatx_handlers.unset_property = &floatx_unset_property;
-	floatx_handlers.cast_object = &floatx_cast_object_handler;
-	floatx_handlers.get_properties_for = &floatx_get_properties_for;
-}
-
 /* PHP has IS_UNDEF type, but it is semantically different from CBOR's "undefined" value. */
 
 static zend_object *undef_clone_handler(zend_object *obj)
 {
 	GC_ADDREF(obj);
 	return obj;
+}
+
+static zval *undef_read_property(zend_object *obj, zend_string *member, int type, void **cache_slot, zval *rv)
+{
+	zend_throw_error(NULL, "%s cannot read properties.", ZSTR_VAL(obj->ce->name));
+	return &EG(error_zval);
+}
+
+static zval *undef_write_property(zend_object *obj, zend_string *member, zval *value, void **cache_slot)
+{
+	zend_throw_error(NULL, "%s cannot write properties.", ZSTR_VAL(obj->ce->name));
+	return &EG(error_zval);
+}
+
+static zval *undef_get_property_ptr_ptr(zend_object *obj, zend_string *member, int type, void **cache_slot)
+{
+	return NULL;
+}
+
+static int undef_has_property(zend_object *obj, zend_string *member, int has_set_exists, void **cache_slot)
+{
+	return 0;
+}
+
+static void undef_unset_property(zend_object *obj, zend_string *member, void **cache_slot)
+{
+	zend_throw_error(NULL, "%s cannot unset properties.", ZSTR_VAL(obj->ce->name));
 }
 
 static int undef_cast_object_handler(zend_object *obj, zval *retval, int type)
@@ -552,3 +537,34 @@ PHP_METHOD(Cbor_Shareable, jsonSerialize)
 }
 
 #undef THIS_PROP
+
+void php_cbor_minit_types()
+{
+	memcpy(&undef_handlers, &std_object_handlers, sizeof(zend_object_handlers));
+	undef_handlers.clone_obj = &undef_clone_handler;
+	undef_handlers.read_property = &undef_read_property;
+	undef_handlers.write_property = &undef_write_property;
+	undef_handlers.get_property_ptr_ptr = &undef_get_property_ptr_ptr;
+	undef_handlers.has_property = &undef_has_property;
+	undef_handlers.unset_property = &undef_unset_property;
+	undef_handlers.cast_object = &undef_cast_object_handler;
+
+	/* Setting CBOR_CE(xstring)->create_object does not help. */
+	CBOR_CE(byte)->create_object = &xstring_create_object_handler;
+	CBOR_CE(text)->create_object = &xstring_create_object_handler;
+	memcpy(&xstring_handlers, &std_object_handlers, sizeof(zend_object_handlers));
+	xstring_handlers.cast_object = &xstring_cast_object_handler;
+
+	CBOR_CE(float16)->create_object = &php_cbor_floatx_create;
+	CBOR_CE(float32)->create_object = &php_cbor_floatx_create;
+	memcpy(&floatx_handlers, &std_object_handlers, sizeof(zend_object_handlers));
+	floatx_handlers.offset = XtOffsetOf(floatx_class, std);
+	floatx_handlers.clone_obj = &floatx_clone_handler;
+	floatx_handlers.read_property = &floatx_read_property;
+	floatx_handlers.write_property = &floatx_write_property;
+	floatx_handlers.get_property_ptr_ptr = &floatx_get_property_ptr_ptr;
+	floatx_handlers.has_property = &floatx_has_property;
+	floatx_handlers.unset_property = &floatx_unset_property;
+	floatx_handlers.cast_object = &floatx_cast_object_handler;
+	floatx_handlers.get_properties_for = &floatx_get_properties_for;
+}

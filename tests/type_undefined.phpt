@@ -32,13 +32,14 @@ run(function () {
     // not the null value
     assert($instance != null);
 
-    // cannot new
-    try {
-        new Cbor\Undefined();
-        assert(false);
-    } catch (\Throwable $e) {
-        eq(get_class($e), 'Error');
-    }
+    // prohibited actions
+    throws('Error', fn () => $instance->abc);
+    throws('Error', fn () => $instance->abc = true);
+    throws('Error', function () use ($instance) {
+        unset($instance->abc);
+    });
+    throws('Error', fn () => $x = &$instance->abc);
+    throws('Error', fn () => new Cbor\Undefined());
 
     // serialization
     eq($instance, unserialize(serialize($instance)));
