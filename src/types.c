@@ -85,30 +85,40 @@ static int undef_cast_object_handler(zend_object *obj, zval *retval, int type)
 
 PHP_METHOD(Cbor_Undefined, __construct)
 {
-	zend_throw_error(NULL, "You cannot instantiate Cbor\\Undefined.");
+	/* private constructor */
+	zend_throw_error(NULL, "You cannot instantiate %s.", ZSTR_VAL(Z_OBJ_P(ZEND_THIS)->ce->name));
 	RETURN_THROWS();
+}
+
+PHP_METHOD(Cbor_Undefined, __destruct)
+{
+	zend_object *obj = Z_OBJ_P(ZEND_THIS);
+	if (obj == CBOR_G(undef_ins)) {
+		CBOR_G(undef_ins) = NULL;
+	}
 }
 
 zend_object *php_cbor_get_undef()
 {
-	if (!CBOR_G(undef_ins)) {
-		zend_object *obj = zend_objects_new(CBOR_CE(undefined));
+	zend_object *obj = CBOR_G(undef_ins);
+	if (!obj) {
+		obj = zend_objects_new(CBOR_CE(undefined));
 		obj->handlers = &undef_handlers;
 		CBOR_G(undef_ins) = obj;
+	} else {
+		GC_ADDREF(obj);
 	}
-	return CBOR_G(undef_ins);
+	return obj;
 }
 
 PHP_METHOD(Cbor_Undefined, __set_state)
 {
 	RETVAL_OBJ(php_cbor_get_undef());
-	Z_ADDREF_P(return_value);
 }
 
 PHP_METHOD(Cbor_Undefined, get)
 {
 	RETVAL_OBJ(php_cbor_get_undef());
-	Z_ADDREF_P(return_value);
 }
 
 PHP_METHOD(Cbor_Undefined, jsonSerialize)

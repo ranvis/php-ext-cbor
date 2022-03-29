@@ -21,6 +21,7 @@ interface Serializable
 final class Undefined implements \JsonSerializable
 {
     private function __construct() {}
+    public function __destruct() {}
     public static function __set_state(array $properties): object {}
 
     public static function get(): Undefined {}

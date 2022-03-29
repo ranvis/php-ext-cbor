@@ -179,19 +179,15 @@ PHP_RINIT_FUNCTION(cbor)
 	return SUCCESS;
 }
 /* }}} */
-#endif
 
 /* {{{ PHP_RSHUTDOWN_FUNCTION
  */
 PHP_RSHUTDOWN_FUNCTION(cbor)
 {
-	if (CBOR_G(undef_ins)) {
-		OBJ_RELEASE(CBOR_G(undef_ins));
-		CBOR_G(undef_ins) = NULL;
-	}
 	return SUCCESS;
 }
 /* }}} */
+#endif
 
 /* {{{ PHP_MINFO_FUNCTION
  */
@@ -218,7 +214,7 @@ zend_module_entry cbor_module_entry = {
 	PHP_MINIT(cbor),
 	PHP_MSHUTDOWN(cbor),
 	NULL, /* PHP_RINIT(cbor), */
-	PHP_RSHUTDOWN(cbor),
+	NULL, /* PHP_RSHUTDOWN(cbor), */
 	PHP_MINFO(cbor),
 	PHP_CBOR_VERSION,
 	PHP_MODULE_GLOBALS(cbor),

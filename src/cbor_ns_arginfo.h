@@ -1,11 +1,13 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 257b1de16423fe867b023c4d32b20a6ec1adfabd */
+ * Stub hash: f628719cbb417602431719b933162af0c40ae0aa */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Serializable_cborSerialize, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Cbor_Undefined___construct, 0, 0, 0)
 ZEND_END_ARG_INFO()
+
+#define arginfo_class_Cbor_Undefined___destruct arginfo_class_Cbor_Undefined___construct
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Undefined___set_state, 0, 1, IS_OBJECT, 0)
 	ZEND_ARG_TYPE_INFO(0, properties, IS_ARRAY, 0)
@@ -53,6 +55,7 @@ ZEND_END_ARG_INFO()
 
 
 ZEND_METHOD(Cbor_Undefined, __construct);
+ZEND_METHOD(Cbor_Undefined, __destruct);
 ZEND_METHOD(Cbor_Undefined, __set_state);
 ZEND_METHOD(Cbor_Undefined, get);
 ZEND_METHOD(Cbor_Undefined, jsonSerialize);
@@ -81,6 +84,7 @@ static const zend_function_entry class_Cbor_Serializable_methods[] = {
 
 static const zend_function_entry class_Cbor_Undefined_methods[] = {
 	ZEND_ME(Cbor_Undefined, __construct, arginfo_class_Cbor_Undefined___construct, ZEND_ACC_PRIVATE)
+	ZEND_ME(Cbor_Undefined, __destruct, arginfo_class_Cbor_Undefined___destruct, ZEND_ACC_PUBLIC)
 	ZEND_ME(Cbor_Undefined, __set_state, arginfo_class_Cbor_Undefined___set_state, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	ZEND_ME(Cbor_Undefined, get, arginfo_class_Cbor_Undefined_get, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	ZEND_ME(Cbor_Undefined, jsonSerialize, arginfo_class_Cbor_Undefined_jsonSerialize, ZEND_ACC_PUBLIC)

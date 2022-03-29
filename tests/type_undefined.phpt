@@ -8,9 +8,11 @@
 require_once __DIR__ . '/common.php';
 
 run(function () {
-    $instance = Cbor\Undefined::get();
+    // void context
+    Cbor\Undefined::get();
 
     // singleton
+    $instance = Cbor\Undefined::get();
     eq($instance, Cbor\Undefined::get());
 
     // clone is the same object
@@ -37,6 +39,11 @@ run(function () {
     } catch (\Throwable $e) {
         eq(get_class($e), 'Error');
     }
+
+    // void context
+    Cbor\Undefined::get();
+    $instance = null;
+    Cbor\Undefined::get();
 });
 
 ?>
