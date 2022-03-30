@@ -30,6 +30,7 @@ run(function () {
 
     eq(1.5, (float)new Cbor\Float32(1.5));
     eq(1.5, (float)new Cbor\Float16(1.5));
+    eq('0xf90000', cenc(0.0, CBOR_FLOAT16 | CBOR_FLOAT32));
     eq('0xf94248', cenc(3.140625, CBOR_FLOAT16 | CBOR_FLOAT32));
     eq('0xfa40490fdb', cenc(3.1415927410125732, CBOR_FLOAT16 | CBOR_FLOAT32));
     eq('0xf97e01', cenc((double)Cbor\Float32::fromBinary(hex2bin('7fc02000')), CBOR_FLOAT16 | CBOR_FLOAT32));

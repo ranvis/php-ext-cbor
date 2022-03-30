@@ -316,7 +316,9 @@ static php_cbor_error enc_z_double(enc_context *ctx, zval *value, bool is_small)
 		unsigned exp = (bin64.i >> 52) & 0x7ff;  /* exp */
 		uint64_t frac = bin64.i & 0xfffffffffffff;  /* fraction */
 		bool is_inf_nan = exp == 0x7ff;
-		if ((is_inf_nan || (exp >= 1023 - 126 && exp <= 1023 + 127)) && !(frac & 0x1fffffff)) {  /* fraction: 52 to 23 */
+		if (bin64.i == 0) { /* 0.0 */
+			float_type = PHP_CBOR_FLOAT16;
+		} else if ((is_inf_nan || (exp >= 1023 - 126 && exp <= 1023 + 127)) && !(frac & 0x1fffffff)) {  /* fraction: 52 to 23 */
 			if ((is_inf_nan || (exp >= 1023 - 14 && exp <= 1023 + 15)) && !(frac & 0x3ffffffffff)) {  /* fraction: 52 to 10 */
 				float_type = PHP_CBOR_FLOAT16;
 			} else {
