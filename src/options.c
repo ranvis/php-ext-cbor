@@ -55,7 +55,6 @@ static php_cbor_error bool_n_option(uint8_t *opt_value, const char *name, size_t
 			other_values += other_len + 1;
 		}
 		return PHP_CBOR_ERROR_INVALID_OPTIONS;
-		break;
 	default:
 		return PHP_CBOR_ERROR_INVALID_OPTIONS;
 	}
