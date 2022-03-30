@@ -52,9 +52,10 @@ typedef struct {
 } dec_context;
 
 typedef enum {
-	SI_TYPE_BYTE = 1,
-	SI_TYPE_TEXT,
-	SI_TYPE_ARRAY,
+	SI_TYPE_STRING_MASK = 0x10,
+	SI_TYPE_BYTE = (0 | SI_TYPE_STRING_MASK),
+	SI_TYPE_TEXT = (1 | SI_TYPE_STRING_MASK),
+	SI_TYPE_ARRAY = 2,
 	SI_TYPE_MAP,
 	SI_TYPE_TAG,
 	SI_TYPE_TAG_HANDLED,
@@ -157,7 +158,7 @@ static void stack_free_item(stack_item *item)
 	if (item == NULL) {
 		return;
 	}
-	if (item->si_type == SI_TYPE_BYTE || item->si_type == SI_TYPE_TEXT) {
+	if (item->si_type & SI_TYPE_STRING_MASK) {
 		smart_str_free(&item->v.str);
 	} else if (item->si_type == SI_TYPE_MAP) {
 		zval_ptr_dtor(&item->v.map.dest);
@@ -666,20 +667,16 @@ static void do_xstring(dec_context *ctx, cbor_data val, uint64_t length, bool is
 			&& !is_utf8((uint8_t *)val, (size_t)length)) {
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_UTF8);
 	}
-	if (item != NULL) {
-		/* test indefinite-length string */
+	if (item != NULL && item->si_type & SI_TYPE_STRING_MASK) {
+		/* indefinite-length string */
 		si_type_t str_si_type = is_text ? SI_TYPE_TEXT : SI_TYPE_BYTE;
-		si_type_t inv_si_type = is_text ? SI_TYPE_BYTE : SI_TYPE_TEXT;
 		if (item->si_type == str_si_type) {
 			if (length) {
 				smart_str_appendl(&item->v.str, (const char *)val, (size_t)length);
 			}
 			return;
 		}
-		if (item->si_type == inv_si_type) {
-			RETURN_CB_ERROR(PHP_CBOR_ERROR_SYNTAX);
-		}
-		/* not inside indefinite-length string */
+		RETURN_CB_ERROR(PHP_CBOR_ERROR_SYNTAX);
 	}
 	ZVAL_STRINGL_FAST(&value, (const char *)val, (size_t)length);
 	append_string_item(ctx, &value, is_text, false);
@@ -870,7 +867,7 @@ static void cb_indef_break(void *vp_ctx)
 	if (UNEXPECTED(!item->si_type)) {
 		THROW_CB_ERROR(PHP_CBOR_ERROR_SYNTAX);
 	}
-	if (item->si_type == SI_TYPE_BYTE || item->si_type == SI_TYPE_TEXT) {
+	if (item->si_type & SI_TYPE_STRING_MASK) {
 		bool is_text = item->si_type == SI_TYPE_TEXT;
 		zval value;
 		ZVAL_STR(&value, smart_str_extract(&item->v.str));
@@ -928,7 +925,7 @@ static void tag_handler_str_ref_ns_data(dec_context *ctx, stack_item *item, data
 
 static void tag_handler_str_ref_ns_child(dec_context *ctx, stack_item *item, stack_item *self)
 {
-	if (item->si_type == SI_TYPE_BYTE || item->si_type == SI_TYPE_TEXT) {
+	if (item->si_type & SI_TYPE_STRING_MASK) {
 		/* chunks of indefinite length string */
 		return;
 	}
