@@ -672,6 +672,9 @@ static void do_xstring(dec_context *ctx, cbor_data val, uint64_t length, bool is
 		si_type_t str_si_type = is_text ? SI_TYPE_TEXT : SI_TYPE_BYTE;
 		if (item->si_type == str_si_type) {
 			if (length) {
+				if (UNEXPECTED(length > SIZE_MAX - smart_str_get_len(&item->v.str))) {
+					RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_SIZE);
+				}
 				smart_str_appendl(&item->v.str, (const char *)val, (size_t)length);
 			}
 			return;
