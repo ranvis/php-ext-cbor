@@ -254,6 +254,15 @@ static zend_array *xstring_get_properties_for(zend_object *obj, zend_prop_purpos
 	return props;
 }
 
+static HashTable *xstring_get_properties(zend_object *obj)
+{
+	if (obj->properties) {
+		zend_array_release(obj->properties);
+	}
+	obj->properties = xstring_get_properties_for(obj, ZEND_PROP_PURPOSE_ARRAY_CAST);
+	return obj->properties;
+}
+
 PHP_METHOD(Cbor_XString, __construct)
 {
 	xstring_class *base = CUSTOM_OBJ(xstring_class, Z_OBJ_P(ZEND_THIS));
@@ -614,6 +623,15 @@ static zend_array *floatx_get_properties_for(zend_object *obj, zend_prop_purpose
 	return props;
 }
 
+static HashTable *floatx_get_properties(zend_object *obj)
+{
+	if (obj->properties) {
+		zend_array_release(obj->properties);
+	}
+	obj->properties = floatx_get_properties_for(obj, ZEND_PROP_PURPOSE_ARRAY_CAST);
+	return obj->properties;
+}
+
 double php_cbor_from_float16(uint16_t value)
 {
 	/* Based on RFC 8949 code */
@@ -734,6 +752,7 @@ void php_cbor_minit_types()
 	xstring_handlers.has_property = &xstring_has_property;
 	xstring_handlers.unset_property = &xstring_unset_property;
 	xstring_handlers.cast_object = &xstring_cast_object_handler;
+	xstring_handlers.get_properties = &xstring_get_properties;
 	xstring_handlers.get_properties_for = &xstring_get_properties_for;
 
 	CBOR_CE(float16)->create_object = &php_cbor_floatx_create;
@@ -747,5 +766,6 @@ void php_cbor_minit_types()
 	floatx_handlers.has_property = &floatx_has_property;
 	floatx_handlers.unset_property = &floatx_unset_property;
 	floatx_handlers.cast_object = &floatx_cast_object_handler;
+	floatx_handlers.get_properties = &floatx_get_properties;
 	floatx_handlers.get_properties_for = &floatx_get_properties_for;
 }

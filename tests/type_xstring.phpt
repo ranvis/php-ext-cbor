@@ -18,7 +18,7 @@ run(function () {
     throws(Error::class, fn () => unserialize('O:9:"Cbor\\Text":1:{i:1;s:3:"abc";}'));
     // export/restore
     eq($instance, eval('return ' . var_export($instance, true) . ';'));
-    //var_dump(get_object_vars($instance));
+    eq(['value' => 'abc'], get_object_vars($instance));
     // cannot set to ref
     throws(Error::class, function () use ($instance) {
         $v = 'abc';
