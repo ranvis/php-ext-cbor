@@ -47,16 +47,15 @@ abstract class XString implements \JsonSerializable
     public static function __set_state(array $properties): XString {}
     public function __unserialize(array $data): void {}
     public function jsonSerialize(): mixed {}
+    //public function __toString(): string {}
 }
 
 final class Byte extends XString
 {
-    //public function __toString(): string {}
 }
 
 final class Text extends XString
 {
-    //public function __toString(): string {}
 }
 
 /** @internal */
@@ -83,17 +82,17 @@ final class Float32 extends FloatX
 
 final class Tag
 {
-    /* tag constants start /
-    public const CBOR_TAG_SELF_DESCRIBE = 55799;
-    public const CBOR_TAG_STRING_REF_NS = 256;
-    public const CBOR_TAG_STRING_REF = 25;
-    public const CBOR_TAG_SHAREABLE = 28;
-    public const CBOR_TAG_SHARED_REF = 29;
-    public const CBOR_TAG_DATETIME = 0;
-    public const CBOR_TAG_BIGNUM_U = 2;
-    public const CBOR_TAG_BIGNUM_N = 3;
-    public const CBOR_TAG_DECIMAL = 4;
-    / tag constants end */
+    /* tag constants start */
+    //public const SELF_DESCRIBE = 55799;
+    //public const STRING_REF_NS = 256;
+    //public const STRING_REF = 25;
+    //public const SHAREABLE = 28;
+    //public const SHARED_REF = 29;
+    //public const DATETIME = 0;
+    //public const BIGNUM_U = 2;
+    //public const BIGNUM_N = 3;
+    //public const DECIMAL = 4;
+    /* tag constants end */
 
     public int $tag;
     public mixed $content;
