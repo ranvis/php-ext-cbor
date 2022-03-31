@@ -107,6 +107,7 @@ static php_cbor_error enc_typed_floatx(enc_context *ctx, zval *ins, int bits);
 static php_cbor_error enc_tag(enc_context *ctx, zval *ins);
 static php_cbor_error enc_tag_bare(enc_context *ctx, zend_long tag_id);
 static php_cbor_error enc_serializable(enc_context *ctx, zval *value);
+static php_cbor_error enc_encodeparams(enc_context *ctx, zval *ins);
 
 static void init_srns_stack(enc_context *ctx);
 static void free_srns_stack(enc_context *ctx);
@@ -135,6 +136,16 @@ void php_cbor_minit_encode()
 		} \
 	} while (0);
 
+static php_cbor_error validate_flags(uint32_t flags)
+{
+	if ((flags & PHP_CBOR_BYTE && flags & PHP_CBOR_TEXT)
+			|| (flags & PHP_CBOR_KEY_BYTE && flags & PHP_CBOR_KEY_TEXT)
+	) {
+		return PHP_CBOR_ERROR_INVALID_FLAGS;
+	}
+	return 0;
+}
+
 php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_encode_args *args)
 {
 	php_cbor_error error;
@@ -145,10 +156,8 @@ php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_e
 	ctx.args = *args;
 	ctx.cur_depth = 0;
 	ctx.buf = &buf;
-	if ((ctx.args.flags & PHP_CBOR_BYTE && ctx.args.flags & PHP_CBOR_TEXT)
-			|| (ctx.args.flags & PHP_CBOR_KEY_BYTE && ctx.args.flags & PHP_CBOR_KEY_TEXT)
-	) {
-		return PHP_CBOR_ERROR_INVALID_FLAGS;
+	if ((error = validate_flags(ctx.args.flags)) != 0) {
+		return error;
 	}
 	if (ctx.args.flags & PHP_CBOR_SELF_DESCRIBE) {
 		ENC_CHECK(enc_tag_bare(&ctx, PHP_CBOR_TAG_SELF_DESCRIBE));
@@ -240,6 +249,8 @@ RETRY:
 				}
 			}
 			ENC_RESULT(enc_hash(ctx, value, HASH_STD_CLASS));
+		} else if (ce == CBOR_CE(encodeparams)) {
+			ENC_RESULT(enc_encodeparams(ctx, value));
 		} else if (instanceof_function(ce, CBOR_CE(serializable))) {
 			ENC_RESULT(enc_serializable(ctx, value));
 		} else {
@@ -671,6 +682,64 @@ static php_cbor_error enc_serializable(enc_context *ctx, zval *value)
 	error = enc_zval(ctx, &r_value);
 	Z_UNPROTECT_RECURSION_P(value);
 	zval_ptr_dtor(&r_value);
+	return error;
+}
+
+static php_cbor_error enc_encodeparams(enc_context *ctx, zval *ins)
+{
+	php_cbor_error error;
+	php_cbor_encode_args saved_args;
+	zval tmp_value, tmp_params;
+	zval *value, *params, *conf;
+	zend_long flags;
+	HashTable *ht;
+	saved_args = ctx->args;
+	if (Z_IS_RECURSIVE_P(ins)) {
+		ENC_RESULT(PHP_CBOR_ERROR_RECURSION);
+	}
+	value = zend_read_property(CBOR_CE(encodeparams), Z_OBJ_P(ins), PROP_L("value"), false, &tmp_value);
+	params = zend_read_property(CBOR_CE(encodeparams), Z_OBJ_P(ins), PROP_L("params"), false, &tmp_params);
+	if (!value || !params) {
+		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
+	}
+	ht = Z_ARR_P(params);
+	conf = zend_hash_str_find_deref(ht, ZEND_STRL("flags_clear"));
+	if (conf) {
+		if (Z_TYPE_P(conf) != IS_LONG) {
+			ENC_RESULT(PHP_CBOR_ERROR_INVALID_FLAGS);
+		}
+		flags = Z_LVAL_P(conf);
+		ctx->args.flags &= ~flags;
+	}
+	conf = zend_hash_str_find_deref(ht, ZEND_STRL("flags"));
+	if (conf) {
+		uint32_t mutex_flags = 0;
+		if (Z_TYPE_P(conf) != IS_LONG) {
+			ENC_RESULT(PHP_CBOR_ERROR_INVALID_FLAGS);
+		}
+		flags = Z_LVAL_P(conf);
+		if (flags & PHP_CBOR_BYTE) {
+			mutex_flags = PHP_CBOR_TEXT;
+		} else if (flags & PHP_CBOR_TEXT) {
+			mutex_flags = PHP_CBOR_BYTE;
+		}
+		if (flags & PHP_CBOR_KEY_BYTE) {
+			mutex_flags |= PHP_CBOR_KEY_TEXT;
+		} else if (flags & PHP_CBOR_KEY_TEXT) {
+			mutex_flags |= PHP_CBOR_KEY_BYTE;
+		}
+		ctx->args.flags &= ~mutex_flags;
+		ctx->args.flags |= flags;
+	}
+	if ((error = validate_flags(ctx->args.flags)) != 0) {
+		return error;
+	}
+	ENC_CHECK(php_cbor_override_encode_options(&ctx->args, ht));
+	Z_PROTECT_RECURSION_P(ins);
+	error = enc_zval(ctx, value);
+	Z_UNPROTECT_RECURSION_P(ins);
+ENCODED:
+	ctx->args = saved_args;
 	return error;
 }
 

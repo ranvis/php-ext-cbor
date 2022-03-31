@@ -85,6 +85,7 @@ typedef union binary64_alias {
 extern zend_class_entry
 	*CBOR_CE(exception),
 	*CBOR_CE(serializable),
+	*CBOR_CE(encodeparams),
 	*CBOR_CE(undefined),
 	*CBOR_CE(xstring),
 	*CBOR_CE(byte),
@@ -104,6 +105,7 @@ extern zend_object *php_cbor_get_undef();
 
 extern void php_cbor_throw_error(php_cbor_error error, bool has_arg, size_t arg);
 
+extern php_cbor_error php_cbor_override_encode_options(php_cbor_encode_args *args, HashTable *options);
 extern php_cbor_error php_cbor_set_encode_options(php_cbor_encode_args *args, HashTable *options);
 extern php_cbor_error php_cbor_set_decode_options(php_cbor_decode_args *args, HashTable *options);
 

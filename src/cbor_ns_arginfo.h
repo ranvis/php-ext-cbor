@@ -1,7 +1,12 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: c3686dd3bde0f5d8576b23eded7a4cf943c9a22a */
+ * Stub hash: b2114ae23900baa58a2a2becd4f4788ba6f3d9e3 */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Serializable_cborSerialize, 0, 0, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Cbor_EncodeParams___construct, 0, 0, 2)
+	ZEND_ARG_TYPE_INFO(0, value, IS_MIXED, 0)
+	ZEND_ARG_TYPE_INFO(0, params, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Cbor_Undefined___construct, 0, 0, 0)
@@ -60,6 +65,7 @@ ZEND_END_ARG_INFO()
 #define arginfo_class_Cbor_Shareable_jsonSerialize arginfo_class_Cbor_Serializable_cborSerialize
 
 
+ZEND_METHOD(Cbor_EncodeParams, __construct);
 ZEND_METHOD(Cbor_Undefined, __construct);
 ZEND_METHOD(Cbor_Undefined, __destruct);
 ZEND_METHOD(Cbor_Undefined, __set_state);
@@ -86,6 +92,12 @@ static const zend_function_entry class_Cbor_Exception_methods[] = {
 
 static const zend_function_entry class_Cbor_Serializable_methods[] = {
 	ZEND_ABSTRACT_ME_WITH_FLAGS(Cbor_Serializable, cborSerialize, arginfo_class_Cbor_Serializable_cborSerialize, ZEND_ACC_PUBLIC|ZEND_ACC_ABSTRACT)
+	ZEND_FE_END
+};
+
+
+static const zend_function_entry class_Cbor_EncodeParams_methods[] = {
+	ZEND_ME(Cbor_EncodeParams, __construct, arginfo_class_Cbor_EncodeParams___construct, ZEND_ACC_PUBLIC)
 	ZEND_FE_END
 };
 
@@ -167,6 +179,29 @@ static zend_class_entry *register_class_Cbor_Serializable(void)
 
 	INIT_NS_CLASS_ENTRY(ce, "Cbor", "Serializable", class_Cbor_Serializable_methods);
 	class_entry = zend_register_internal_interface(&ce);
+
+	return class_entry;
+}
+
+static zend_class_entry *register_class_Cbor_EncodeParams(void)
+{
+	zend_class_entry ce, *class_entry;
+
+	INIT_NS_CLASS_ENTRY(ce, "Cbor", "EncodeParams", class_Cbor_EncodeParams_methods);
+	class_entry = zend_register_internal_class_ex(&ce, NULL);
+	class_entry->ce_flags |= ZEND_ACC_FINAL;
+
+	zval property_value_default_value;
+	ZVAL_UNDEF(&property_value_default_value);
+	zend_string *property_value_name = zend_string_init("value", sizeof("value") - 1, 1);
+	zend_declare_typed_property(class_entry, property_value_name, &property_value_default_value, ZEND_ACC_PUBLIC, NULL, (zend_type) ZEND_TYPE_INIT_MASK(MAY_BE_ANY));
+	zend_string_release(property_value_name);
+
+	zval property_params_default_value;
+	ZVAL_UNDEF(&property_params_default_value);
+	zend_string *property_params_name = zend_string_init("params", sizeof("params") - 1, 1);
+	zend_declare_typed_property(class_entry, property_params_name, &property_params_default_value, ZEND_ACC_PUBLIC, NULL, (zend_type) ZEND_TYPE_INIT_MASK(MAY_BE_ARRAY));
+	zend_string_release(property_params_name);
 
 	return class_entry;
 }

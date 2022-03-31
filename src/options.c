@@ -83,6 +83,16 @@ static php_cbor_error uint32_option(uint32_t *opt_value, const char *name, size_
 	return 0;
 }
 
+php_cbor_error php_cbor_override_encode_options(php_cbor_encode_args *args, HashTable *options)
+{
+	php_cbor_error error = 0;
+	CHECK_ERROR(bool_option(&args->datetime, ZEND_STRL("datetime"), options));
+	CHECK_ERROR(bool_option(&args->bignum, ZEND_STRL("bignum"), options));
+	CHECK_ERROR(bool_option(&args->decimal, ZEND_STRL("decimal"), options));
+FINALLY:
+	return error;
+}
+
 php_cbor_error php_cbor_set_encode_options(php_cbor_encode_args *args, HashTable *options)
 {
 	php_cbor_error error = 0;
@@ -98,9 +108,7 @@ php_cbor_error php_cbor_set_encode_options(php_cbor_encode_args *args, HashTable
 	CHECK_ERROR(uint32_option(&args->max_depth, ZEND_STRL("max_depth"), 0, 10000, options));
 	CHECK_ERROR(bool_n_option(&args->string_ref, ZEND_STRL("string_ref"), "explicit\0", options));
 	CHECK_ERROR(bool_n_option(&args->shared_ref, ZEND_STRL("shared_ref"), "-\0unsafe_ref\0", options));
-	CHECK_ERROR(bool_option(&args->datetime, ZEND_STRL("datetime"), options));
-	CHECK_ERROR(bool_option(&args->bignum, ZEND_STRL("bignum"), options));
-	CHECK_ERROR(bool_option(&args->decimal, ZEND_STRL("decimal"), options));
+	CHECK_ERROR(php_cbor_override_encode_options(args, options));
 FINALLY:
 	return error;
 }

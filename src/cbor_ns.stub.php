@@ -18,6 +18,14 @@ interface Serializable
     public function cborSerialize(): mixed;
 }
 
+final class EncodeParams
+{
+    public mixed $value;
+    public array $params;
+
+    public function __construct(mixed $value, array $params) {}
+}
+
 final class Undefined implements \JsonSerializable
 {
     private function __construct() {}

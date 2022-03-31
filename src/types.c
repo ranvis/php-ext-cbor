@@ -28,6 +28,20 @@ static zend_object_handlers undef_handlers;
 static zend_object_handlers xstring_handlers;
 static zend_object_handlers floatx_handlers;
 
+#define THIS_PROP(prop_literal)  DEF_THIS_PROP(tag, prop_literal)
+
+PHP_METHOD(Cbor_EncodeParams, __construct)
+{
+	zval *value, *params;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "za", &value, &params) == FAILURE) {
+		RETURN_THROWS();
+	}
+	zend_update_property(THIS_PROP("value"), value);
+	zend_update_property(THIS_PROP("params"), params);
+}
+
+#undef THIS_PROP
+
 /* PHP has IS_UNDEF type, but it is semantically different from CBOR's "undefined" value. */
 
 static zend_object *undef_clone_handler(zend_object *obj)
