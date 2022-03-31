@@ -70,7 +70,8 @@ See "Supported Tags" below for the following options:
 #### Integers
 
 CBOR `unsigned integer` and `negative integer` are translated to PHP `int`.
-The value must be within the range PHP can handle.
+The value must be within the range PHP can handle (`PHP_INT_MIN`..`PHP_INT_MAX`).
+This is -2**63..2**63-1 on 64-bit PHP, which is narrower than CBOR's -2**64..2**64-1.
 
 #### Floating-Point Numbers
 
@@ -104,7 +105,7 @@ CBOR map is translated to PHP `stdClass` object.
 If `CBOR_MAP_AS_ARRAY` flag is passed when decoding, it is translated to PHP `array` instead.
 
 Keys must be of CBOR `string` type.
-The extension may accept CBOR `integer` key if `CBOR_INT_KEY` flag is passed. Also the flag will encode PHP `int` key (including integer `string` keys in the range of CBOR `integer`) as CBOR `integer` key.
+The extension may accept CBOR `integer` key if `CBOR_INT_KEY` flag is passed. Also the flag will encode PHP `int` key (including integer numeric `string` keys in the range of CBOR `integer`) as CBOR `integer` key.
 
 Number of properties in an object must be under 2**32.
 
@@ -143,7 +144,7 @@ Constants:
 - `CBOR_TAG_SELF_DESCRIBE_DATA`
 
 Self-Described CBOR is CBOR data that has this tag for the data.
-This 3-byte binary string can be used to distinguish CBOR from other data including Unicode text encodings (so-called magic). This is useful if reader need to identify the format by data itself.
+This 3-byte binary string can be used to distinguish CBOR from other data including Unicode text encodings (so-called magic). This is useful if data loader need to identify the format by data itself.
 ```php
 $isCbor = str_starts_with($data, CBOR_TAG_SELF_DESCRIBE_DATA);
 ```
