@@ -44,7 +44,7 @@ PHP_METHOD(Cbor_EncodeParams, __construct)
 
 /* PHP has IS_UNDEF type, but it is semantically different from CBOR's "undefined" value. */
 
-static zend_object *undef_clone_handler(zend_object *obj)
+static zend_object *undef_clone(zend_object *obj)
 {
 	GC_ADDREF(obj);
 	return obj;
@@ -77,7 +77,7 @@ static void undef_unset_property(zend_object *obj, zend_string *member, void **c
 	zend_throw_error(NULL, "%s cannot unset properties.", ZSTR_VAL(obj->ce->name));
 }
 
-static int undef_cast_object_handler(zend_object *obj, zval *retval, int type)
+static int undef_cast(zend_object *obj, zval *retval, int type)
 {
 	if (type != _IS_BOOL) {
 		return FAILURE;
@@ -148,14 +148,14 @@ void php_cbor_xstring_set_value(zend_object *obj, zend_string *value)
 	zend_string_addref(base->str);
 }
 
-static void xstring_free_obj(zend_object *obj)
+static void xstring_free(zend_object *obj)
 {
 	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
 	zend_string_release(base->str);
 	zend_object_std_dtor(obj);
 }
 
-static zend_object *xstring_clone_handler(zend_object *obj)
+static zend_object *xstring_clone(zend_object *obj)
 {
 	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
 	zend_object *new_obj = php_cbor_xstring_create(obj->ce);
@@ -217,7 +217,7 @@ static void xstring_unset_property(zend_object *obj, zend_string *member, void *
 	zend_throw_error(NULL, "The property cannot be unset.");
 }
 
-static int xstring_cast_object_handler(zend_object *obj, zval *retval, int type)
+static int xstring_cast(zend_object *obj, zval *retval, int type)
 {
 	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
 	if (type != IS_STRING) {
@@ -347,7 +347,7 @@ zend_object *php_cbor_floatx_create(zend_class_entry *ce)
 
 #define THIS_PROP(prop_literal)  DEF_THIS_PROP(floatx, prop_literal)
 
-static double floatx_read_p_value(zend_object *obj)
+static double floatx_to_double(zend_object *obj)
 {
 	floatx_class *base = CUSTOM_OBJ(floatx_class, obj);
 	double value;
@@ -359,13 +359,13 @@ static double floatx_read_p_value(zend_object *obj)
 	return value;
 }
 
-static int floatx_cast_object_handler(zend_object *obj, zval *retval, int type)
+static int floatx_cast(zend_object *obj, zval *retval, int type)
 {
 	if (type != IS_DOUBLE) {
 		/* IS_STRING cast may not be necessarily desirable. */
 		return FAILURE;
 	}
-	ZVAL_DOUBLE(retval, floatx_read_p_value(obj));
+	ZVAL_DOUBLE(retval, floatx_to_double(obj));
 	return SUCCESS;
 }
 
@@ -465,7 +465,7 @@ PHP_METHOD(Cbor_FloatX, jsonSerialize)
 {
 	zend_object *obj = Z_OBJ_P(ZEND_THIS);
 	TEST_FLOATX_CLASS(obj->ce);
-	RETURN_DOUBLE(floatx_read_p_value(obj));
+	RETURN_DOUBLE(floatx_to_double(obj));
 }
 
 bool php_cbor_floatx_set_value(zend_object *obj, zval *value, const char *raw)
@@ -511,7 +511,7 @@ bool php_cbor_floatx_set_value(zend_object *obj, zval *value, const char *raw)
 	return true;
 }
 
-static zend_object *floatx_clone_handler(zend_object *obj)
+static zend_object *floatx_clone(zend_object *obj)
 {
 	floatx_class *base = CUSTOM_OBJ(floatx_class, obj);
 	zend_object *new_obj = php_cbor_floatx_create(obj->ce);
@@ -524,7 +524,7 @@ static zend_object *floatx_clone_handler(zend_object *obj)
 static zval *floatx_read_property(zend_object *obj, zend_string *member, int type, void **cache_slot, zval *rv)
 {
 	if (zend_string_equals_literal(member, "value")) {
-		ZVAL_DOUBLE(rv, floatx_read_p_value(obj));
+		ZVAL_DOUBLE(rv, floatx_to_double(obj));
 	} else {
 		rv = zend_std_read_property(obj, member, type, cache_slot, rv);
 	}
@@ -731,27 +731,27 @@ PHP_METHOD(Cbor_Shareable, jsonSerialize)
 void php_cbor_minit_types()
 {
 	memcpy(&undef_handlers, &std_object_handlers, sizeof(zend_object_handlers));
-	undef_handlers.clone_obj = &undef_clone_handler;
+	undef_handlers.clone_obj = &undef_clone;
 	undef_handlers.read_property = &undef_read_property;
 	undef_handlers.write_property = &undef_write_property;
 	undef_handlers.get_property_ptr_ptr = &undef_get_property_ptr_ptr;
 	undef_handlers.has_property = &undef_has_property;
 	undef_handlers.unset_property = &undef_unset_property;
-	undef_handlers.cast_object = &undef_cast_object_handler;
+	undef_handlers.cast_object = &undef_cast;
 
 	CBOR_CE(xstring)->create_object = &php_cbor_xstring_create;
 	CBOR_CE(byte)->create_object = &php_cbor_xstring_create;
 	CBOR_CE(text)->create_object = &php_cbor_xstring_create;
 	memcpy(&xstring_handlers, &std_object_handlers, sizeof(zend_object_handlers));
 	xstring_handlers.offset = XtOffsetOf(xstring_class, std);
-	xstring_handlers.free_obj = &xstring_free_obj;
-	xstring_handlers.clone_obj = &xstring_clone_handler;
+	xstring_handlers.free_obj = &xstring_free;
+	xstring_handlers.clone_obj = &xstring_clone;
 	xstring_handlers.read_property = &xstring_read_property;
 	xstring_handlers.write_property = &xstring_write_property;
 	xstring_handlers.get_property_ptr_ptr = &xstring_get_property_ptr_ptr;
 	xstring_handlers.has_property = &xstring_has_property;
 	xstring_handlers.unset_property = &xstring_unset_property;
-	xstring_handlers.cast_object = &xstring_cast_object_handler;
+	xstring_handlers.cast_object = &xstring_cast;
 	xstring_handlers.get_properties = &xstring_get_properties;
 	xstring_handlers.get_properties_for = &xstring_get_properties_for;
 
@@ -759,13 +759,13 @@ void php_cbor_minit_types()
 	CBOR_CE(float32)->create_object = &php_cbor_floatx_create;
 	memcpy(&floatx_handlers, &std_object_handlers, sizeof(zend_object_handlers));
 	floatx_handlers.offset = XtOffsetOf(floatx_class, std);
-	floatx_handlers.clone_obj = &floatx_clone_handler;
+	floatx_handlers.clone_obj = &floatx_clone;
 	floatx_handlers.read_property = &floatx_read_property;
 	floatx_handlers.write_property = &floatx_write_property;
 	floatx_handlers.get_property_ptr_ptr = &floatx_get_property_ptr_ptr;
 	floatx_handlers.has_property = &floatx_has_property;
 	floatx_handlers.unset_property = &floatx_unset_property;
-	floatx_handlers.cast_object = &floatx_cast_object_handler;
+	floatx_handlers.cast_object = &floatx_cast;
 	floatx_handlers.get_properties = &floatx_get_properties;
 	floatx_handlers.get_properties_for = &floatx_get_properties_for;
 }
