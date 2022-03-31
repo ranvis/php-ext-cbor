@@ -562,22 +562,14 @@ static php_cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 
 static php_cbor_error enc_typed_byte(enc_context *ctx, zval *ins)
 {
-	zval tmp_v, *value;
-	value = zend_read_property(CBOR_CE(byte), Z_OBJ_P(ins), PROP_L("value"), false, &tmp_v);
-	if (!value) {
-		return PHP_CBOR_ERROR_INTERNAL;
-	}
-	return enc_string(ctx, Z_STR_P(value), false);
+	zend_string *str = php_cbor_get_xstring_value(ins);
+	return enc_string(ctx, str, false);
 }
 
 static php_cbor_error enc_typed_text(enc_context *ctx, zval *ins)
 {
-	zval tmp_v, *value;
-	value = zend_read_property(CBOR_CE(text), Z_OBJ_P(ins), PROP_L("value"), false, &tmp_v);
-	if (!value) {
-		return PHP_CBOR_ERROR_INTERNAL;
-	}
-	return enc_string(ctx, Z_STR_P(value), true);
+	zend_string *str = php_cbor_get_xstring_value(ins);
+	return enc_string(ctx, str, true);
 }
 
 static php_cbor_error enc_typed_floatx(enc_context *ctx, zval *ins, int bits)

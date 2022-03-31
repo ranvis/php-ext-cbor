@@ -50,6 +50,7 @@ run(function () {
     throws(Error::class, fn () => unserialize('O:12:"Cbor\Float32":1:{i:1;s:4:"abcd";}'));
     // export/restore
     eq($instance, eval('return ' . var_export($instance, true) . ';'));
+    //var_dump(get_object_vars($instance));
     // invalid type
     throws(TypeError::class, fn () => new Cbor\Float32('abcd'));
     throws(TypeError::class, fn () => Cbor\Float32::fromBinary([]));

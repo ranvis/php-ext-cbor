@@ -110,10 +110,12 @@ extern php_cbor_error php_cbor_set_decode_options(php_cbor_decode_args *args, Ha
 extern php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_encode_args *args);
 extern php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_args *args);
 
+extern zend_object *php_cbor_xstring_create(zend_class_entry *ce);
+extern void php_cbor_xstring_set_value(zend_object *obj, zend_string *value);
 extern zend_string *php_cbor_get_xstring_value(zval *value);
 extern zend_object *php_cbor_floatx_create(zend_class_entry *ce);
-extern bool php_cbor_floatx_set_value(zend_object *self, zval *value, const char *raw);
-extern size_t php_cbor_floatx_get_value(zend_object *self, char *out);
+extern bool php_cbor_floatx_set_value(zend_object *obj, zval *value, const char *raw);
+extern size_t php_cbor_floatx_get_value(zend_object *obj, char *out);
 extern double php_cbor_from_float16(uint16_t value);
 extern uint16_t php_cbor_to_float16(float value);
 

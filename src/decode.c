@@ -639,9 +639,9 @@ static bool append_string_item(dec_context *ctx, zval *value, bool is_text, bool
 	} else if (ctx->args.flags & type_flag) {  /* to PHP string */
 		/* do nothing*/
 	} else {
-		if (!create_value_object(&container, value, string_ce)) {
-			RETURN_CB_ERROR_B(PHP_CBOR_ERROR_INTERNAL);
-		}
+		zend_object *obj = php_cbor_xstring_create(string_ce);
+		php_cbor_xstring_set_value(obj, Z_STR_P(value));
+		ZVAL_OBJ(&container, obj);
 		value = &container;
 	}
 	if (!is_indef && item && item->tag_handler_data) {

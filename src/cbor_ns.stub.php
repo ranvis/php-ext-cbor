@@ -33,9 +33,11 @@ final class Undefined implements \JsonSerializable
 /** @internal */
 abstract class XString implements \JsonSerializable
 {
-    public string $value;
+    //public string $value;
 
     public function __construct(string $value) {}
+    public static function __set_state(array $properties): XString {}
+    public function __unserialize(array $data): void {}
     public function jsonSerialize(): mixed {}
 }
 

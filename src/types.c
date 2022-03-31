@@ -6,8 +6,12 @@
 #include "cbor.h"
 #include "private.h"
 
-#define LIT_PROP(prop_literal)  prop_literal, sizeof prop_literal - 1
-#define DEF_THIS_PROP(name, prop_literal)  CBOR_CE(name), Z_OBJ_P(ZEND_THIS), LIT_PROP(prop_literal)
+#define DEF_THIS_PROP(name, prop_literal)  CBOR_CE(name), Z_OBJ_P(ZEND_THIS), ZEND_STRL(prop_literal)
+
+typedef struct {
+	zend_string *str;
+	zend_object std;
+} xstring_class;
 
 typedef struct {
 	union floatx_class_v {
@@ -111,42 +115,196 @@ PHP_METHOD(Cbor_Undefined, jsonSerialize)
 	RETURN_NULL();
 }
 
-static zend_object *xstring_create_object_handler(zend_class_entry *ce)
+#define THIS_PROP(prop_literal)  DEF_THIS_PROP(xstring, prop_literal)
+
+zend_object *php_cbor_xstring_create(zend_class_entry *ce)
 {
-	zend_object *obj = zend_objects_new(ce);
-	object_properties_init(obj, ce);
-	obj->handlers = &xstring_handlers;
-	return obj;
+	xstring_class *base = zend_object_alloc(sizeof(xstring_class), ce);
+	zend_object_std_init(&base->std, ce);
+	base->str = zend_empty_string;
+	base->std.handlers = &xstring_handlers;
+	return &base->std;
 }
 
-#define THIS_PROP(prop_literal)  DEF_THIS_PROP(xstring, prop_literal)
+void php_cbor_xstring_set_value(zend_object *obj, zend_string *value)
+{
+	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
+	zend_string_release(base->str);
+	base->str = value;
+	zend_string_addref(base->str);
+}
+
+static void xstring_free_obj(zend_object *obj)
+{
+	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
+	zend_string_release(base->str);
+	zend_object_std_dtor(obj);
+}
+
+static zend_object *xstring_clone_handler(zend_object *obj)
+{
+	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
+	zend_object *new_obj = php_cbor_xstring_create(obj->ce);
+	xstring_class *new_base = CUSTOM_OBJ(xstring_class, new_obj);
+	new_base->str = base->str;
+	zend_string_addref(new_base->str);
+	return new_obj;
+}
+
+static zval *xstring_read_property(zend_object *obj, zend_string *member, int type, void **cache_slot, zval *rv)
+{
+	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
+	if (zend_string_equals_literal(member, "value")) {
+		ZVAL_STR(rv, base->str);
+	} else {
+		zend_throw_error(NULL, "The custom property cannot be used.");
+		ZVAL_ERROR(rv);
+	}
+	return rv;
+}
+
+static zval *xstring_write_property(zend_object *obj, zend_string *member, zval *value, void **cache_slot)
+{
+	if (zend_string_equals_literal(member, "value")) {
+		if (Z_TYPE_P(value) != IS_STRING) {
+			zend_throw_error(NULL, "The value property only accepts string.");
+			ZVAL_ERROR(value);
+		} else {
+			php_cbor_xstring_set_value(obj, Z_STR_P(value));
+		}
+	} else {
+		zend_throw_error(NULL, "The custom property cannot be used.");
+		ZVAL_ERROR(value);
+	}
+	return value;
+}
+
+static zval *xstring_get_property_ptr_ptr(zend_object *obj, zend_string *member, int type, void **cache_slot)
+{
+	return NULL;
+}
+
+static int xstring_has_property(zend_object *obj, zend_string *member, int has_set_exists, void **cache_slot)
+{
+	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
+	if (zend_string_equals_literal(member, "value")) {
+		if (has_set_exists == ZEND_PROPERTY_NOT_EMPTY) {
+			zval value;
+			ZVAL_STR(&value, base->str);
+			return zend_is_true(&value);
+		}
+		return 1; /* ZEND_PROPERTY_ISSET, ZEND_PROPERTY_EXISTS */
+	}
+	return 0;
+}
+
+static void xstring_unset_property(zend_object *obj, zend_string *member, void **cache_slot)
+{
+	zend_throw_error(NULL, "The property cannot be unset.");
+}
 
 static int xstring_cast_object_handler(zend_object *obj, zval *retval, int type)
 {
-	zval *value, zv;
+	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
 	if (type != IS_STRING) {
 		return FAILURE;
 	}
-	value = zend_read_property(obj->ce, obj, LIT_PROP("value"), false, &zv);
-	ZVAL_COPY(retval, value);
+	ZVAL_STR(retval, base->str);
 	return SUCCESS;
+}
+
+static zend_array *xstring_get_properties_for(zend_object *obj, zend_prop_purpose purpose)
+{
+	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
+	zend_array *props;
+	zval value;
+	bool view = false;
+	switch (purpose) {
+	case ZEND_PROP_PURPOSE_DEBUG:
+	case ZEND_PROP_PURPOSE_ARRAY_CAST:
+		view = true;
+		break;
+	case ZEND_PROP_PURPOSE_SERIALIZE:
+	case ZEND_PROP_PURPOSE_VAR_EXPORT:
+		break;
+	default:
+		return NULL;
+	}
+	props = zend_new_array(1);
+	ZVAL_STR_COPY(&value, base->str);
+	if (view) {
+		zend_hash_str_add_new(props, ZEND_STRL("value"), &value);
+	} else {
+		zend_hash_next_index_insert(props, &value);
+	}
+	return props;
 }
 
 PHP_METHOD(Cbor_XString, __construct)
 {
+	xstring_class *base = CUSTOM_OBJ(xstring_class, Z_OBJ_P(ZEND_THIS));
 	zend_string *value;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S", &value) == FAILURE) {
 		RETURN_THROWS();
 	}
-	zend_update_property_str(THIS_PROP("value"), value);
+	zend_string_addref(value);
+	base->str = value;
+}
+
+static bool xstring_restore(zend_object *obj, HashTable *ht)
+{
+	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
+	zval *value;
+	value = zend_hash_index_find(ht, 0);
+	if (!value || Z_TYPE_P(value) != IS_STRING) {
+		zend_throw_error(NULL, "Unable to restore %s.", ZSTR_VAL(obj->ce->name));
+		return false;
+	}
+	zend_string_release(base->str);
+	base->str = Z_STR_P(value);
+	zend_string_addref(base->str);
+	return true;
+}
+
+PHP_METHOD(Cbor_XString, __set_state)
+{
+	zend_class_entry *ctx_ce = zend_get_called_scope(execute_data);
+	HashTable *ht;
+	zval value;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "h", &ht) == FAILURE) {
+		RETURN_THROWS();
+	}
+	if (object_init_ex(&value, ctx_ce) == FAILURE) {
+		if (!EG(exception)) {
+			zend_throw_error(NULL, "Unable to create an object.");
+		}
+		RETURN_THROWS();
+	}
+	if (!xstring_restore(Z_OBJ(value), ht)) {
+		RETURN_THROWS();
+	}
+	RETURN_COPY_VALUE(&value);
+}
+
+PHP_METHOD(Cbor_XString, __unserialize)
+{
+	zend_object *obj = Z_OBJ_P(ZEND_THIS);
+	HashTable *ht;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "h", &ht) == FAILURE) {
+		RETURN_THROWS();
+	}
+	if (!xstring_restore(obj, ht)) {
+		RETURN_THROWS();
+	}
 }
 
 zend_string *php_cbor_get_xstring_value(zval *ins)
 {
-	zval *value, zv;
-	value = zend_read_property(Z_OBJ_P(ins)->ce, Z_OBJ_P(ins), LIT_PROP("value"), false, &zv);
-	Z_TRY_ADDREF_P(value);
-	return Z_STR_P(value);
+	zend_object *obj = Z_OBJ_P(ins);
+	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
+	zval value;
+	ZVAL_STR_COPY(&value, base->str);
+	return Z_STR(value);
 }
 
 PHP_METHOD(Cbor_XString, jsonSerialize)
@@ -532,7 +690,7 @@ PHP_METHOD(Cbor_Shareable, jsonSerialize)
 {
 	zend_object *obj = Z_OBJ_P(ZEND_THIS);
 	zval *value, zv;
-	value = zend_read_property(obj->ce, obj, LIT_PROP("value"), false, &zv);
+	value = zend_read_property(obj->ce, obj, ZEND_STRL("value"), false, &zv);
 	RETURN_COPY(value);
 }
 
@@ -549,11 +707,20 @@ void php_cbor_minit_types()
 	undef_handlers.unset_property = &undef_unset_property;
 	undef_handlers.cast_object = &undef_cast_object_handler;
 
-	/* Setting CBOR_CE(xstring)->create_object does not help. */
-	CBOR_CE(byte)->create_object = &xstring_create_object_handler;
-	CBOR_CE(text)->create_object = &xstring_create_object_handler;
+	CBOR_CE(xstring)->create_object = &php_cbor_xstring_create;
+	CBOR_CE(byte)->create_object = &php_cbor_xstring_create;
+	CBOR_CE(text)->create_object = &php_cbor_xstring_create;
 	memcpy(&xstring_handlers, &std_object_handlers, sizeof(zend_object_handlers));
+	xstring_handlers.offset = XtOffsetOf(xstring_class, std);
+	xstring_handlers.free_obj = &xstring_free_obj;
+	xstring_handlers.clone_obj = &xstring_clone_handler;
+	xstring_handlers.read_property = &xstring_read_property;
+	xstring_handlers.write_property = &xstring_write_property;
+	xstring_handlers.get_property_ptr_ptr = &xstring_get_property_ptr_ptr;
+	xstring_handlers.has_property = &xstring_has_property;
+	xstring_handlers.unset_property = &xstring_unset_property;
 	xstring_handlers.cast_object = &xstring_cast_object_handler;
+	xstring_handlers.get_properties_for = &xstring_get_properties_for;
 
 	CBOR_CE(float16)->create_object = &php_cbor_floatx_create;
 	CBOR_CE(float32)->create_object = &php_cbor_floatx_create;

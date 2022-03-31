@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: f628719cbb417602431719b933162af0c40ae0aa */
+ * Stub hash: c3686dd3bde0f5d8576b23eded7a4cf943c9a22a */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Serializable_cborSerialize, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
@@ -22,6 +22,14 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Cbor_XString___construct, 0, 0, 1)
 	ZEND_ARG_TYPE_INFO(0, value, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Cbor_XString___set_state, 0, 1, Cbor\\XString, 0)
+	ZEND_ARG_TYPE_INFO(0, properties, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_XString___unserialize, 0, 1, IS_VOID, 0)
+	ZEND_ARG_TYPE_INFO(0, data, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
 #define arginfo_class_Cbor_XString_jsonSerialize arginfo_class_Cbor_Serializable_cborSerialize
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Cbor_FloatX___construct, 0, 0, 1)
@@ -36,9 +44,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_Cbor_FloatX___set_state, 0,
 	ZEND_ARG_TYPE_INFO(0, properties, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_FloatX___unserialize, 0, 1, IS_VOID, 0)
-	ZEND_ARG_TYPE_INFO(0, data, IS_ARRAY, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Cbor_FloatX___unserialize arginfo_class_Cbor_XString___unserialize
 
 #define arginfo_class_Cbor_FloatX_jsonSerialize arginfo_class_Cbor_Serializable_cborSerialize
 
@@ -60,6 +66,8 @@ ZEND_METHOD(Cbor_Undefined, __set_state);
 ZEND_METHOD(Cbor_Undefined, get);
 ZEND_METHOD(Cbor_Undefined, jsonSerialize);
 ZEND_METHOD(Cbor_XString, __construct);
+ZEND_METHOD(Cbor_XString, __set_state);
+ZEND_METHOD(Cbor_XString, __unserialize);
 ZEND_METHOD(Cbor_XString, jsonSerialize);
 ZEND_METHOD(Cbor_FloatX, __construct);
 ZEND_METHOD(Cbor_FloatX, fromBinary);
@@ -94,6 +102,8 @@ static const zend_function_entry class_Cbor_Undefined_methods[] = {
 
 static const zend_function_entry class_Cbor_XString_methods[] = {
 	ZEND_ME(Cbor_XString, __construct, arginfo_class_Cbor_XString___construct, ZEND_ACC_PUBLIC)
+	ZEND_ME(Cbor_XString, __set_state, arginfo_class_Cbor_XString___set_state, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+	ZEND_ME(Cbor_XString, __unserialize, arginfo_class_Cbor_XString___unserialize, ZEND_ACC_PUBLIC)
 	ZEND_ME(Cbor_XString, jsonSerialize, arginfo_class_Cbor_XString_jsonSerialize, ZEND_ACC_PUBLIC)
 	ZEND_FE_END
 };
@@ -181,12 +191,6 @@ static zend_class_entry *register_class_Cbor_XString(zend_class_entry *class_ent
 	class_entry = zend_register_internal_class_ex(&ce, NULL);
 	class_entry->ce_flags |= ZEND_ACC_ABSTRACT;
 	zend_class_implements(class_entry, 1, class_entry_JsonSerializable);
-
-	zval property_value_default_value;
-	ZVAL_UNDEF(&property_value_default_value);
-	zend_string *property_value_name = zend_string_init("value", sizeof("value") - 1, 1);
-	zend_declare_typed_property(class_entry, property_value_name, &property_value_default_value, ZEND_ACC_PUBLIC, NULL, (zend_type) ZEND_TYPE_INIT_MASK(MAY_BE_STRING));
-	zend_string_release(property_value_name);
 
 	return class_entry;
 }
