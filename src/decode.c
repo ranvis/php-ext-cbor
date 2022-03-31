@@ -524,6 +524,9 @@ static bool append_item(dec_context *ctx, xzval *value)
 	RETURN_CB_ERROR_B(PHP_CBOR_ERROR_SYNTAX);
 }
 
+#if -(ZEND_LONG_MIN + 1) != ZEND_LONG_MAX
+#error "abs(ZEND_LONG_MIN) must be (ZEND_LONG_MAX + 1)"
+#endif
 #if SIZEOF_ZEND_LONG == 4
 #define TEST_OVERFLOW_XINT32(val)  ((val) > ZEND_LONG_MAX)
 #define TEST_OVERFLOW_XINT64(val)  true
