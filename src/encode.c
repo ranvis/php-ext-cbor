@@ -3,6 +3,7 @@
  * @license BSD-2-Clause
  */
 
+#define USE_LIBCBOR
 #include "cbor.h"
 #include <ext/date/php_date.h>
 #include "private.h"

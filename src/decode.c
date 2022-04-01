@@ -5,6 +5,7 @@
 
 #include "cbor.h"
 #include "private.h"
+#include "di_decoder.h"
 #include "utf8.h"
 #include "tags.h"
 #include "xzval.h"
@@ -32,8 +33,6 @@
 	} while (false)
 #define ASSERT_ERROR_SET()  assert(ctx->cb_error)
 
-static struct cbor_callbacks callbacks;
-
 typedef struct stack_item stack_item;
 typedef struct srns_item srns_item;
 
@@ -43,7 +42,7 @@ typedef struct {
 	size_t length;
 	size_t offset;
 	size_t limit;  /* 0:unknown */
-	cbor_data data;
+	const uint8_t *data;
 	zval root;
 	stack_item *stack_top;
 	uint32_t stack_depth;
@@ -106,12 +105,11 @@ struct srns_item {  /* srns: string ref namespace */
 };
 
 static php_cbor_error dec_zval(dec_context *ctx);
-static void set_callbacks();
+static php_cbor_error decode_cbor_data_item(const uint8_t *data, size_t len, cbor_di_decoded *out, dec_context *ctx);
 static void free_srns_item(srns_item *srns);
 
 void php_cbor_minit_decode()
 {
-	set_callbacks();
 }
 
 /* just in case, defined as a macro, as function pointer is theoretically incompatible with data pointer */
@@ -270,7 +268,7 @@ php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_a
 {
 	php_cbor_error error;
 	dec_context ctx;
-	cbor_data ptr = (cbor_data)ZSTR_VAL(data);
+	const uint8_t *ptr = (const uint8_t *)ZSTR_VAL(data);
 	size_t length = ZSTR_LEN(data);
 	if ((args->flags & PHP_CBOR_FLOAT16 && args->flags & PHP_CBOR_FLOAT32)) {
 		return PHP_CBOR_ERROR_INVALID_FLAGS;
@@ -314,24 +312,19 @@ php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_a
 
 static php_cbor_error dec_zval(dec_context *ctx)
 {
-	struct cbor_decoder_result result;
+	php_cbor_error error;
+	cbor_di_decoded out_data;
 	ctx->cb_error = 0;
 	do {
 		if (ctx->offset >= ctx->length) {
 			ctx->args.error_arg = ctx->offset;
 			return PHP_CBOR_ERROR_TRUNCATED_DATA;
 		}
-		result = cbor_stream_decode(ctx->data + ctx->offset, ctx->length - ctx->offset, &callbacks, ctx);
-		switch (result.status) {
-		case CBOR_DECODER_FINISHED:
-			ctx->offset += result.read;
-			break;
-		case CBOR_DECODER_NEDATA:
+		error = decode_cbor_data_item(ctx->data + ctx->offset, ctx->length - ctx->offset, &out_data, ctx);
+		ctx->offset += out_data.read_len;
+		if (error) {
 			ctx->args.error_arg = ctx->offset;
-			return PHP_CBOR_ERROR_TRUNCATED_DATA;
-		case CBOR_DECODER_ERROR:
-			ctx->args.error_arg = ctx->offset;
-			return PHP_CBOR_ERROR_MALFORMED_DATA;
+			return error;
 		}
 		if (ctx->cb_error) {
 			ctx->args.error_arg = ctx->offset;
@@ -537,25 +530,8 @@ static bool append_item(dec_context *ctx, xzval *value)
 #error unimplemented
 #endif
 
-static void cb_uint8(void *vp_ctx, uint8_t val)
+static void proc_uint32(dec_context *ctx, uint32_t val)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
-	zval value;
-	ZVAL_LONG(&value, val);
-	append_item(ctx, &value);
-}
-
-static void cb_uint16(void *vp_ctx, uint16_t val)
-{
-	dec_context *ctx = (dec_context *)vp_ctx;
-	zval value;
-	ZVAL_LONG(&value, val);
-	append_item(ctx, &value);
-}
-
-static void cb_uint32(void *vp_ctx, uint32_t val)
-{
-	dec_context *ctx = (dec_context *)vp_ctx;
 	xzval value;
 	if (TEST_OVERFLOW_XINT32(val)) {
 		XZVAL_UINT(&value, (uint64_t)val);
@@ -565,9 +541,8 @@ static void cb_uint32(void *vp_ctx, uint32_t val)
 	append_item(ctx, &value);
 }
 
-static void cb_uint64(void *vp_ctx, uint64_t val)
+static void proc_uint64(dec_context *ctx, uint64_t val)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
 	xzval value;
 	if (TEST_OVERFLOW_XINT64(val)) {
 		XZVAL_UINT(&value, val);
@@ -577,25 +552,8 @@ static void cb_uint64(void *vp_ctx, uint64_t val)
 	append_item(ctx, &value);
 }
 
-static void cb_negint8(void *vp_ctx, uint8_t val)
+static void proc_nint32(dec_context *ctx, uint32_t val)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
-	zval value;
-	ZVAL_LONG(&value, -(zend_long)val - 1);
-	append_item(ctx, &value);
-}
-
-static void cb_negint16(void *vp_ctx, uint16_t val)
-{
-	dec_context *ctx = (dec_context *)vp_ctx;
-	zval value;
-	ZVAL_LONG(&value, -(zend_long)val - 1);
-	append_item(ctx, &value);
-}
-
-static void cb_negint32(void *vp_ctx, uint32_t val)
-{
-	dec_context *ctx = (dec_context *)vp_ctx;
 	xzval value;
 	if (TEST_OVERFLOW_XINT32(val)) {
 		XZVAL_NINT(&value, (uint64_t)val);
@@ -605,9 +563,8 @@ static void cb_negint32(void *vp_ctx, uint32_t val)
 	append_item(ctx, &value);
 }
 
-static void cb_negint64(void *vp_ctx, uint64_t val)
+static void proc_nint64(dec_context *ctx, uint64_t val)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
 	zval value;
 	if (TEST_OVERFLOW_XINT64(val)) {
 		XZVAL_NINT(&value, val);
@@ -657,7 +614,7 @@ static bool append_string_item(dec_context *ctx, zval *value, bool is_text, bool
 	return result;
 }
 
-static void do_xstring(dec_context *ctx, cbor_data val, uint64_t length, bool is_text)
+static void do_xstring(dec_context *ctx, const char *val, uint64_t length, bool is_text)
 {
 	zval value;
 	stack_item *item = ctx->stack_top;
@@ -689,33 +646,28 @@ static void do_xstring(dec_context *ctx, cbor_data val, uint64_t length, bool is
 	zval_ptr_dtor(&value);
 }
 
-static void cb_text_string(void *vp_ctx, cbor_data val, uint64_t length)
+static void proc_text_string(dec_context *ctx, const char *val, uint64_t length)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
 	do_xstring(ctx, val, length, true);
 }
 
-static void cb_text_string_start(void *vp_ctx)
+static void proc_text_string_start(dec_context *ctx)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
 	stack_push_xstring(ctx, SI_TYPE_TEXT);
 }
 
-static void cb_byte_string(void *vp_ctx, cbor_data val, uint64_t length)
+static void proc_byte_string(dec_context *ctx, const char *val, uint64_t length)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
 	do_xstring(ctx, val, length, false);
 }
 
-static void cb_byte_string_start(void *vp_ctx)
+static void proc_byte_string_start(dec_context *ctx)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
 	stack_push_xstring(ctx, SI_TYPE_BYTE);
 }
 
-static void cb_array_start(void *vp_ctx, uint64_t count)
+static void proc_array_start(dec_context *ctx, uint32_t count)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
 	zval value;
 	if (count > ctx->args.max_size) {
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_SIZE);
@@ -732,17 +684,15 @@ static void cb_array_start(void *vp_ctx, uint64_t count)
 	}
 }
 
-static void cb_indef_array_start(void *vp_ctx)
+static void proc_indef_array_start(dec_context *ctx)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
 	zval value;
 	array_init(&value);
 	stack_push_counted(ctx, SI_TYPE_ARRAY, &value, 0);
 }
 
-static void cb_map_start(void *vp_ctx, uint64_t count)
+static void proc_map_start(dec_context *ctx, uint32_t count)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
 	zval value;
 	if (count > ctx->args.max_size) {
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_SIZE);
@@ -763,9 +713,8 @@ static void cb_map_start(void *vp_ctx, uint64_t count)
 	}
 }
 
-static void cb_indef_map_start(void *vp_ctx)
+static void proc_indef_map_start(dec_context *ctx)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
 	zval value;
 	if (ctx->args.flags & PHP_CBOR_MAP_AS_ARRAY) {
 		array_init(&value);
@@ -775,16 +724,15 @@ static void cb_indef_map_start(void *vp_ctx)
 	stack_push_map(ctx, SI_TYPE_MAP, &value, 0);
 }
 
-static void cb_tag(void *vp_ctx, uint64_t val)
+static void proc_tag(dec_context *ctx, uint64_t val)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
 	if (val > ZEND_LONG_MAX) {
 		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
 	}
 	stack_push_tag(ctx, (zend_long)val);
 }
 
-static void do_floatx(dec_context *ctx, const char *raw, int bits)
+static void do_floatx(dec_context *ctx, uint32_t raw, int bits)
 {
 	zval container, value;
 	zend_object *obj;
@@ -793,14 +741,10 @@ static void do_floatx(dec_context *ctx, const char *raw, int bits)
 	if (ctx->args.flags & type_flag) {
 		if (bits == 32) {
 			binary32_alias binary32;
-			binary32.c.c0 = raw[0];
-			binary32.c.c1 = raw[1];
-			binary32.c.c2 = raw[2];
-			binary32.c.c3 = raw[3];
+			binary32.i = raw;
 			ZVAL_DOUBLE(&value, (double)binary32.f);
 		} else {
-			uint8_t *u8 = (uint8_t *)raw;
-			ZVAL_DOUBLE(&value, php_cbor_from_float16((u8[0] << 8) | u8[1]));
+			ZVAL_DOUBLE(&value, php_cbor_from_float16((uint16_t)raw));
 		}
 		append_item(ctx, &value);
 		return;
@@ -812,60 +756,47 @@ static void do_floatx(dec_context *ctx, const char *raw, int bits)
 	zval_ptr_dtor(&container);
 }
 
-static void cb_float2(void *vp_ctx, float val)
+static void proc_float16(dec_context *ctx, uint16_t val)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
-	if (UNEXPECTED(ctx->data[ctx->offset] != 0xf9)) {  /* CBOR half-precision float */
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_INTERNAL);
-	}
-	do_floatx(ctx, (char *)&ctx->data[ctx->offset + 1], 16);
+	do_floatx(ctx, val, 16);
 }
 
-static void cb_float4(void *vp_ctx, float val)
+static void proc_float32(dec_context *ctx, uint32_t val)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
-	if (UNEXPECTED(ctx->data[ctx->offset] != 0xfa)) {  /* CBOR single-precision float */
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_INTERNAL);
-	}
-	do_floatx(ctx, (char *)&ctx->data[ctx->offset + 1], 32);
+	do_floatx(ctx, val, 32);
 }
 
-static void cb_float8(void *vp_ctx, double val)
+static void proc_float64(dec_context *ctx, double val)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
 	zval value;
 	ZVAL_DOUBLE(&value, val);
 	append_item(ctx, &value);
 }
 
-static void cb_null(void *vp_ctx)
+static void proc_null(dec_context *ctx)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
 	zval value;
 	ZVAL_NULL(&value);
 	append_item(ctx, &value);
 }
 
-static void cb_undefined(void *vp_ctx)
+static void proc_undefined(dec_context *ctx)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
 	zval value;
 	ZVAL_OBJ(&value, php_cbor_get_undef());
 	Z_ADDREF(value);
 	append_item(ctx, &value);
 }
 
-static void cb_boolean(void *vp_ctx, bool val)
+static void proc_boolean(dec_context *ctx, bool val)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
 	zval value;
 	ZVAL_BOOL(&value, val);
 	append_item(ctx, &value);
 }
 
-static void cb_indef_break(void *vp_ctx)
+static void proc_indef_break(dec_context *ctx)
 {
-	dec_context *ctx = (dec_context *)vp_ctx;
 	stack_item *item = stack_pop_item(ctx);
 	if (UNEXPECTED(item == NULL)) {
 		THROW_CB_ERROR(PHP_CBOR_ERROR_SYNTAX);
@@ -1151,38 +1082,110 @@ static bool do_tag_enter(dec_context *ctx, zend_long tag_id)
 	return false;
 }
 
-static void set_callbacks()
+#define SET_READ_ERROR(result)  do { \
+		if (!result) { \
+			error = out->req_len ? PHP_CBOR_ERROR_TRUNCATED_DATA \
+				: PHP_CBOR_ERROR_MALFORMED_DATA; \
+			goto FINALLY; \
+		} \
+	} while (0)
+
+static php_cbor_error decode_cbor_data_item(const uint8_t *data, size_t len, cbor_di_decoded *out, dec_context *ctx)
 {
-	callbacks.uint8 = &cb_uint8;
-	callbacks.uint16 = &cb_uint16;
-	callbacks.uint32 = &cb_uint32;
-	callbacks.uint64 = &cb_uint64;
-
-	callbacks.negint64 = &cb_negint64;
-	callbacks.negint32 = &cb_negint32;
-	callbacks.negint16 = &cb_negint16;
-	callbacks.negint8 = &cb_negint8;
-
-	callbacks.byte_string_start = &cb_byte_string_start;
-	callbacks.byte_string = &cb_byte_string;
-
-	callbacks.string = &cb_text_string;
-	callbacks.string_start = &cb_text_string_start;
-
-	callbacks.indef_array_start = &cb_indef_array_start;
-	callbacks.array_start = &cb_array_start;
-
-	callbacks.indef_map_start = &cb_indef_map_start;
-	callbacks.map_start = &cb_map_start;
-
-	callbacks.tag = &cb_tag;
-
-	callbacks.float2 = &cb_float2;
-	callbacks.float4 = &cb_float4;
-	callbacks.float8 = &cb_float8;
-	callbacks.undefined = &cb_undefined;
-	callbacks.null = &cb_null;
-	callbacks.boolean = &cb_boolean;
-
-	callbacks.indef_break = &cb_indef_break;
+	php_cbor_error error = 0;
+	uint8_t type = cbor_di_get_type(data, len);
+	out->read_len = 1;
+	out->req_len = 0;
+	switch (type) {
+	case DI_UINT:
+		SET_READ_ERROR(cbor_di_read_int(data, len, out));
+		if (!DI_IS_DOUBLE(*out)) {
+			proc_uint32(ctx, out->v.i32);
+		} else {
+			proc_uint64(ctx, out->v.i64);
+		}
+		break;
+	case DI_NINT:
+		SET_READ_ERROR(cbor_di_read_int(data, len, out));
+		if (!DI_IS_DOUBLE(*out)) {
+			proc_nint32(ctx, out->v.i32);
+		} else {
+			proc_nint64(ctx, out->v.i64);
+		}
+		break;
+	case DI_BSTR:
+		SET_READ_ERROR(cbor_di_read_str(data, len, out));
+		if (out->v.str.val) {
+			proc_byte_string(ctx, out->v.str.val, out->v.str.len);
+		} else {
+			proc_byte_string_start(ctx);
+		}
+		break;
+	case DI_TSTR:
+		SET_READ_ERROR(cbor_di_read_str(data, len, out));
+		if (out->v.str.val) {
+			proc_text_string(ctx, out->v.str.val, out->v.str.len);
+		} else {
+			proc_text_string_start(ctx);
+		}
+		break;
+	case DI_ARRAY:
+		SET_READ_ERROR(cbor_di_read_list(data, len, out));
+		if (!out->v.ext.is_indef) {
+			if (out->v.i64 > 0xffffffff) {
+				return PHP_CBOR_ERROR_UNSUPPORTED_SIZE;
+			}
+			proc_array_start(ctx, (uint32_t)out->v.i64);
+		} else {
+			proc_indef_array_start(ctx);
+		}
+		break;
+	case DI_MAP:
+		SET_READ_ERROR(cbor_di_read_list(data, len, out));
+		if (!out->v.ext.is_indef) {
+			if (out->v.i64 > 0xffffffff) {
+				return PHP_CBOR_ERROR_UNSUPPORTED_SIZE;
+			}
+			proc_map_start(ctx, (uint32_t)out->v.i64);
+		} else {
+			proc_indef_map_start(ctx);
+		}
+		break;
+	case DI_TAG:
+		SET_READ_ERROR(cbor_di_read_int(data, len, out));
+		proc_tag(ctx, !DI_IS_DOUBLE(*out) ? out->v.i32 : out->v.i64);
+		break;
+	case DI_FALSE:
+	case DI_TRUE:
+		proc_boolean(ctx, type == DI_TRUE);
+		break;
+	case DI_NULL:
+		proc_null(ctx);
+		break;
+	case DI_UNDEF:
+		proc_undefined(ctx);
+		break;
+	case DI_SIMPLE:
+		return PHP_CBOR_ERROR_MALFORMED_DATA;
+	case DI_FLOAT16:
+		SET_READ_ERROR(cbor_di_read_float(data, len, out));
+		proc_float16(ctx, out->v.f16);
+		break;
+	case DI_FLOAT32:
+		SET_READ_ERROR(cbor_di_read_float(data, len, out));
+		proc_float32(ctx, out->v.i32);
+		break;
+	case DI_FLOAT64:
+		SET_READ_ERROR(cbor_di_read_float(data, len, out));
+		proc_float64(ctx, out->v.f64);
+		break;
+	case DI_BREAK:
+		proc_indef_break(ctx);
+		break;
+	default:
+		out->read_len = 0;
+		return PHP_CBOR_ERROR_MALFORMED_DATA;
+	}
+FINALLY:
+	return error;
 }

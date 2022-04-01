@@ -3,6 +3,7 @@
  * @license BSD-2-Clause
  */
 
+#define USE_LIBCBOR
 #include "cbor.h"
 #include <ext/json/php_json.h>
 #include "private.h"

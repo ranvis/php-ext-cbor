@@ -394,7 +394,7 @@ PHP_METHOD(Cbor_FloatX, __construct)
 		RETURN_THROWS();
 	}
 	ZVAL_DOUBLE(&value, num);
-	if (!php_cbor_floatx_set_value(obj, &value, NULL)) {
+	if (!php_cbor_floatx_set_value(obj, &value, 0)) {
 		RETURN_THROWS();
 	}
 }
@@ -411,7 +411,7 @@ PHP_METHOD(Cbor_FloatX, fromBinary)
 	TEST_FLOATX_CLASS(ctx_ce);
 	obj = php_cbor_floatx_create(ctx_ce);
 	ZVAL_STR(&value, str);
-	if (!php_cbor_floatx_set_value(obj, &value, NULL)) {
+	if (!php_cbor_floatx_set_value(obj, &value, 0)) {
 		zend_objects_destroy_object(obj);
 		RETURN_THROWS();
 	}
@@ -423,7 +423,7 @@ static bool floatx_restore(zend_object *obj, HashTable *ht)
 	zval *value;
 	value = zend_hash_index_find(ht, 0);
 	if (!value || Z_TYPE_P(value) != IS_STRING
-			|| !php_cbor_floatx_set_value(obj, value, NULL)) {
+			|| !php_cbor_floatx_set_value(obj, value, 0)) {
 		zend_throw_error(NULL, "Unable to restore %s.", ZSTR_VAL(obj->ce->name));
 		return false;
 	}
@@ -468,7 +468,7 @@ PHP_METHOD(Cbor_FloatX, jsonSerialize)
 	RETURN_DOUBLE(floatx_to_double(obj));
 }
 
-bool php_cbor_floatx_set_value(zend_object *obj, zval *value, const char *raw)
+bool php_cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw)
 {
 	floatx_class *base = CUSTOM_OBJ(floatx_class, obj);
 	if (value) {
@@ -487,12 +487,17 @@ bool php_cbor_floatx_set_value(zend_object *obj, zval *value, const char *raw)
 			}
 			return true;
 		} else if (type == IS_STRING) {
-			raw = Z_STRVAL_P(value);
 			size_t req_len;
+			const uint8_t *ptr = (const uint8_t *)Z_STRVAL_P(value);
 			req_len = (base->std.ce == CBOR_CE(float32)) ? 4 : 2;
 			if (Z_STRLEN_P(value) != req_len) {
 				zend_value_error("Unexpected value length.");
 				return false;
+			}
+			if (base->std.ce == CBOR_CE(float32)) {
+				raw = ((uint32_t)ptr[0] << 24) | ((uint32_t)ptr[1] << 16) | ((uint32_t)ptr[2] << 8) | ptr[3];
+			} else {
+				raw = ((uint16_t)ptr[0] << 8) | ptr[1];
 			}
 		} else {
 			zend_type_error("Unexpected value type.");
@@ -500,13 +505,9 @@ bool php_cbor_floatx_set_value(zend_object *obj, zval *value, const char *raw)
 		}
 	}
 	if (base->std.ce == CBOR_CE(float32)) {
-		base->v.binary32.c.c0 = raw[0];
-		base->v.binary32.c.c1 = raw[1];
-		base->v.binary32.c.c2 = raw[2];
-		base->v.binary32.c.c3 = raw[3];
+		base->v.binary32.i = raw;
 	} else {
-		uint8_t *ptr = (uint8_t *)raw;
-		base->v.binary16 = (ptr[0] << 8) | ptr[1];
+		base->v.binary16 = (uint16_t)raw;
 	}
 	return true;
 }
@@ -534,7 +535,7 @@ static zval *floatx_read_property(zend_object *obj, zend_string *member, int typ
 static zval *floatx_write_property(zend_object *obj, zend_string *member, zval *value, void **cache_slot)
 {
 	if (zend_string_equals_literal(member, "value")) {
-		php_cbor_floatx_set_value(obj, value, NULL);
+		php_cbor_floatx_set_value(obj, value, 0);
 	} else {
 		value = zend_std_write_property(obj, member, value, cache_slot);
 	}
