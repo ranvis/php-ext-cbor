@@ -8,7 +8,7 @@ ARG_WITH("cbor", "for CBOR support", "no");
 		return;
 	}
 
-	var src = 'src/cbor.c src/compatibility.c src/decode.c src/di_decoder.c src/encode.c src/functions.c src/options.c src/types.c src/utf8.c'.replace(/\//g, '\\'); /* path sep must be \ */
+	var src = 'src/cbor.c src/compatibility.c src/decode.c src/di_encoder.c src/di_decoder.c src/encode.c src/functions.c src/options.c src/types.c src/utf8.c'.replace(/\//g, '\\'); /* path sep must be \ */
 	if (!CHECK_LIB("cbor.lib", "cbor", PHP_CBOR)) {
 		ERROR("Unable to locate cbor library");
 	}
