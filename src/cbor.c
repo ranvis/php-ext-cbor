@@ -3,7 +3,6 @@
  * @license BSD-2-Clause
  */
 
-#define USE_LIBCBOR
 #include "cbor.h"
 #include <ext/json/php_json.h>
 #include "private.h"
@@ -11,10 +10,6 @@
 #include "cbor_ns_arginfo.h"
 #include "compatibility.h"
 #include "tags.h"
-
-#if CBOR_MAJOR_VERSION == 0 && CBOR_MINOR_VERSION < 9
-#error "libcbor version must be 0.9 or later."
-#endif
 
 #define PHP_CBOR_VERSION "0.2.2a2"
 
@@ -197,9 +192,8 @@ PHP_RSHUTDOWN_FUNCTION(cbor)
 PHP_MINFO_FUNCTION(cbor)
 {
 	php_info_print_table_start();
-	php_info_print_table_header(2, "cbor support", "enabled");
+	php_info_print_table_header(2, "CBOR support", "enabled");
 	php_info_print_table_row(2, "Module version", PHP_CBOR_VERSION);
-	php_info_print_table_row(2, "libcbor version", CBOR_VERSION);
 	php_info_print_table_end();
 
 	/* Remove comments if you have entries in php.ini

@@ -20,10 +20,6 @@
 #include <Zend/zend_exceptions.h>
 #include <Zend/zend_smart_str.h>
 
-#ifdef USE_LIBCBOR
-#include <cbor.h>
-#endif
-
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #elif defined(_MSC_VER)

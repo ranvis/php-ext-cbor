@@ -1,6 +1,6 @@
 // vim:ft=javascript
 
-ARG_WITH("cbor", "for CBOR support", "no");
+ARG_ENABLE("cbor", "enable cbor support", "no");
 
 (function () {
 
@@ -9,20 +9,6 @@ ARG_WITH("cbor", "for CBOR support", "no");
 	}
 
 	var src = 'src/cbor.c src/compatibility.c src/decode.c src/di_encoder.c src/di_decoder.c src/encode.c src/functions.c src/options.c src/types.c src/utf8.c'.replace(/\//g, '\\'); /* path sep must be \ */
-	if (!CHECK_LIB("cbor.lib", "cbor", PHP_CBOR)) {
-		ERROR("Unable to locate cbor library");
-	}
-	header_add_include("cbor.h", "CFLAGS_CBOR", PHP_CBOR + "/include");
-	header_add_include("cbor/cbor_export.h", "CFLAGS_CBOR", PHP_CBOR + "/include");
-	header_add_include("cbor/configuration.h", "CFLAGS_CBOR", PHP_CBOR + "/include");
 	EXTENSION("cbor", src, PHP_CBOR_SHARED, "/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 /W4 /wd4100");
-
-	function header_add_include(hn, fn, p, ue, adp, afo) {
-		var result = CHECK_HEADER_ADD_INCLUDE(hn, fn, p, ue, adp, afo);
-		if (!result) {
-			ERROR("Unable to locate " + hn);
-		}
-		return result;
-	}
 
 })();

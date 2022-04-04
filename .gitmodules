@@ -1,3 +1,0 @@
-[submodule "libcbor"]
-	path = libcbor
-	url = git@github.com:PJK/libcbor.git

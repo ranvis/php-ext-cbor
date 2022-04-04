@@ -23,9 +23,6 @@ phpize
 make install
 ```
 
-This extension requires [libcbor](https://github.com/PJK/libcbor/) for low-level processing of CBOR data.
-
-
 ## Quick Guide
 
 ### Interface
