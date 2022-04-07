@@ -288,7 +288,7 @@ static void enc_z_double(enc_context *ctx, zval *value, bool is_small)
 	}
 	if (float_type == CBOR_FLOAT16) {
 		/* XXX: Reusing float-to-half. For precise rounding, double may have to be used. */
-		uint16_t binary16 = php_cbor_to_float16((float)Z_DVAL_P(value));
+		uint16_t binary16 = cbor_to_float16((float)Z_DVAL_P(value));
 		cbor_di_write_float16(ctx->buf, binary16);
 	} else if (float_type == CBOR_FLOAT32) {
 		cbor_di_write_float32(ctx->buf, (float)Z_DVAL_P(value));
@@ -492,13 +492,13 @@ static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 
 static cbor_error enc_typed_byte(enc_context *ctx, zval *ins)
 {
-	zend_string *str = php_cbor_get_xstring_value(ins);
+	zend_string *str = cbor_get_xstring_value(ins);
 	return enc_string(ctx, str, false);
 }
 
 static cbor_error enc_typed_text(enc_context *ctx, zval *ins)
 {
-	zend_string *str = php_cbor_get_xstring_value(ins);
+	zend_string *str = cbor_get_xstring_value(ins);
 	return enc_string(ctx, str, true);
 }
 
@@ -506,7 +506,7 @@ static void enc_typed_floatx(enc_context *ctx, zval *ins, int bits)
 {
 	assert(Z_TYPE_P(ins) == IS_OBJECT);
 	uint8_t *ptr = cbor_di_write_float_head(ctx->buf, bits);
-	php_cbor_floatx_get_value(Z_OBJ_P(ins), (char *)ptr);
+	cbor_floatx_get_value(Z_OBJ_P(ins), (char *)ptr);
 }
 
 static void enc_tag_bare(enc_context *ctx, zend_long tag_id)
@@ -678,7 +678,7 @@ static cbor_error enc_string_ref(enc_context *ctx, const char *value, size_t len
 		enc_long(ctx, Z_LVAL_P(str_index));
 		goto ENCODED;
 	}
-	if (!php_cbor_is_len_string_ref(length, srns->next_index)) {
+	if (!cbor_is_len_string_ref(length, srns->next_index)) {
 		ENC_RESULT(CBOR_STATUS_VALUE_FOLLOWS);
 	}
 	if (srns->next_index == ZEND_LONG_MAX) {  /* until max - 1 for simplicity */

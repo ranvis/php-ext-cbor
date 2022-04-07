@@ -101,7 +101,7 @@ PHP_METHOD(Cbor_Undefined, __destruct)
 	}
 }
 
-zend_object *php_cbor_get_undef()
+zend_object *cbor_get_undef()
 {
 	zend_object *obj = CBOR_G(undef_ins);
 	if (!obj) {
@@ -116,12 +116,12 @@ zend_object *php_cbor_get_undef()
 
 PHP_METHOD(Cbor_Undefined, __set_state)
 {
-	RETVAL_OBJ(php_cbor_get_undef());
+	RETVAL_OBJ(cbor_get_undef());
 }
 
 PHP_METHOD(Cbor_Undefined, get)
 {
-	RETVAL_OBJ(php_cbor_get_undef());
+	RETVAL_OBJ(cbor_get_undef());
 }
 
 PHP_METHOD(Cbor_Undefined, jsonSerialize)
@@ -131,7 +131,7 @@ PHP_METHOD(Cbor_Undefined, jsonSerialize)
 
 #define THIS_PROP(prop_literal)  DEF_THIS_PROP(xstring, prop_literal)
 
-zend_object *php_cbor_xstring_create(zend_class_entry *ce)
+zend_object *cbor_xstring_create(zend_class_entry *ce)
 {
 	xstring_class *base = zend_object_alloc(sizeof(xstring_class), ce);
 	zend_object_std_init(&base->std, ce);
@@ -140,7 +140,7 @@ zend_object *php_cbor_xstring_create(zend_class_entry *ce)
 	return &base->std;
 }
 
-void php_cbor_xstring_set_value(zend_object *obj, zend_string *value)
+void cbor_xstring_set_value(zend_object *obj, zend_string *value)
 {
 	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
 	zend_string_release(base->str);
@@ -158,7 +158,7 @@ static void xstring_free(zend_object *obj)
 static zend_object *xstring_clone(zend_object *obj)
 {
 	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
-	zend_object *new_obj = php_cbor_xstring_create(obj->ce);
+	zend_object *new_obj = cbor_xstring_create(obj->ce);
 	xstring_class *new_base = CUSTOM_OBJ(xstring_class, new_obj);
 	new_base->str = base->str;
 	zend_string_addref(new_base->str);
@@ -184,7 +184,7 @@ static zval *xstring_write_property(zend_object *obj, zend_string *member, zval 
 			zend_throw_error(NULL, "The value property only accepts string.");
 			ZVAL_ERROR(value);
 		} else {
-			php_cbor_xstring_set_value(obj, Z_STR_P(value));
+			cbor_xstring_set_value(obj, Z_STR_P(value));
 		}
 	} else {
 		zend_throw_error(NULL, "The custom property cannot be used.");
@@ -321,7 +321,7 @@ PHP_METHOD(Cbor_XString, __unserialize)
 	}
 }
 
-zend_string *php_cbor_get_xstring_value(zval *ins)
+zend_string *cbor_get_xstring_value(zval *ins)
 {
 	zend_object *obj = Z_OBJ_P(ins);
 	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
@@ -332,12 +332,12 @@ zend_string *php_cbor_get_xstring_value(zval *ins)
 
 PHP_METHOD(Cbor_XString, jsonSerialize)
 {
-	RETURN_STR(php_cbor_get_xstring_value(ZEND_THIS));
+	RETURN_STR(cbor_get_xstring_value(ZEND_THIS));
 }
 
 #undef THIS_PROP
 
-zend_object *php_cbor_floatx_create(zend_class_entry *ce)
+zend_object *cbor_floatx_create(zend_class_entry *ce)
 {
 	floatx_class *base = zend_object_alloc(sizeof(floatx_class), ce);
 	zend_object_std_init(&base->std, ce);
@@ -354,7 +354,7 @@ static double floatx_to_double(zend_object *obj)
 	if (obj->ce == CBOR_CE(float32)) {
 		value = (double)base->v.binary32.f;
 	} else {
-		value = php_cbor_from_float16(base->v.binary16);
+		value = cbor_from_float16(base->v.binary16);
 	}
 	return value;
 }
@@ -394,7 +394,7 @@ PHP_METHOD(Cbor_FloatX, __construct)
 		RETURN_THROWS();
 	}
 	ZVAL_DOUBLE(&value, num);
-	if (!php_cbor_floatx_set_value(obj, &value, 0)) {
+	if (!cbor_floatx_set_value(obj, &value, 0)) {
 		RETURN_THROWS();
 	}
 }
@@ -409,9 +409,9 @@ PHP_METHOD(Cbor_FloatX, fromBinary)
 		RETURN_THROWS();
 	}
 	TEST_FLOATX_CLASS(ctx_ce);
-	obj = php_cbor_floatx_create(ctx_ce);
+	obj = cbor_floatx_create(ctx_ce);
 	ZVAL_STR(&value, str);
-	if (!php_cbor_floatx_set_value(obj, &value, 0)) {
+	if (!cbor_floatx_set_value(obj, &value, 0)) {
 		zend_objects_destroy_object(obj);
 		RETURN_THROWS();
 	}
@@ -423,7 +423,7 @@ static bool floatx_restore(zend_object *obj, HashTable *ht)
 	zval *value;
 	value = zend_hash_index_find(ht, 0);
 	if (!value || Z_TYPE_P(value) != IS_STRING
-			|| !php_cbor_floatx_set_value(obj, value, 0)) {
+			|| !cbor_floatx_set_value(obj, value, 0)) {
 		zend_throw_error(NULL, "Unable to restore %s.", ZSTR_VAL(obj->ce->name));
 		return false;
 	}
@@ -439,7 +439,7 @@ PHP_METHOD(Cbor_FloatX, __set_state)
 		RETURN_THROWS();
 	}
 	TEST_FLOATX_CLASS(ctx_ce);
-	obj = php_cbor_floatx_create(ctx_ce);
+	obj = cbor_floatx_create(ctx_ce);
 	if (!floatx_restore(obj, ht)) {
 		zend_objects_destroy_object(obj);
 		RETURN_THROWS();
@@ -468,7 +468,7 @@ PHP_METHOD(Cbor_FloatX, jsonSerialize)
 	RETURN_DOUBLE(floatx_to_double(obj));
 }
 
-bool php_cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw)
+bool cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw)
 {
 	floatx_class *base = CUSTOM_OBJ(floatx_class, obj);
 	if (value) {
@@ -483,7 +483,7 @@ bool php_cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw)
 			if (base->std.ce == CBOR_CE(float32)) {
 				base->v.binary32.f = f_value;
 			} else {
-				base->v.binary16 = php_cbor_to_float16(f_value);
+				base->v.binary16 = cbor_to_float16(f_value);
 			}
 			return true;
 		} else if (type == IS_STRING) {
@@ -515,7 +515,7 @@ bool php_cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw)
 static zend_object *floatx_clone(zend_object *obj)
 {
 	floatx_class *base = CUSTOM_OBJ(floatx_class, obj);
-	zend_object *new_obj = php_cbor_floatx_create(obj->ce);
+	zend_object *new_obj = cbor_floatx_create(obj->ce);
 	floatx_class *new_base = CUSTOM_OBJ(floatx_class, new_obj);
 	new_base->v = base->v;
 	zend_objects_clone_members(new_obj, obj);
@@ -535,7 +535,7 @@ static zval *floatx_read_property(zend_object *obj, zend_string *member, int typ
 static zval *floatx_write_property(zend_object *obj, zend_string *member, zval *value, void **cache_slot)
 {
 	if (zend_string_equals_literal(member, "value")) {
-		php_cbor_floatx_set_value(obj, value, 0);
+		cbor_floatx_set_value(obj, value, 0);
 	} else {
 		value = zend_std_write_property(obj, member, value, cache_slot);
 	}
@@ -572,7 +572,7 @@ static void floatx_unset_property(zend_object *obj, zend_string *member, void **
 	zend_std_unset_property(obj, member, cache_slot);
 }
 
-size_t php_cbor_floatx_get_value(zend_object *obj, char *out)
+size_t cbor_floatx_get_value(zend_object *obj, char *out)
 {
 	floatx_class *base = CUSTOM_OBJ(floatx_class, obj);
 	if (obj->ce == CBOR_CE(float32)) {
@@ -611,13 +611,13 @@ static zend_array *floatx_get_properties_for(zend_object *obj, zend_prop_purpose
 		if (obj->ce == CBOR_CE(float32)) {
 			value = (double)base->v.binary32.f;
 		} else {
-			value = php_cbor_from_float16(base->v.binary16);
+			value = cbor_from_float16(base->v.binary16);
 		}
 		ZVAL_DOUBLE(&zv, value);
 		zend_hash_str_add_new(props, ZEND_STRL("value"), &zv);
 	} else {
 		char bin[4];
-		size_t len = php_cbor_floatx_get_value(obj, bin);
+		size_t len = cbor_floatx_get_value(obj, bin);
 		ZVAL_STRINGL(&zv, bin, len);
 		zend_hash_next_index_insert(props, &zv);
 	}
@@ -633,7 +633,7 @@ static HashTable *floatx_get_properties(zend_object *obj)
 	return obj->properties;
 }
 
-double php_cbor_from_float16(uint16_t value)
+double cbor_from_float16(uint16_t value)
 {
 	/* Based on RFC 8949 code */
 	binary64_alias bin64;
@@ -655,7 +655,7 @@ double php_cbor_from_float16(uint16_t value)
 	return bin64.f;
 }
 
-uint16_t php_cbor_to_float16(float value)
+uint16_t cbor_to_float16(float value)
 {
 	binary32_alias binary32;
 	uint16_t binary16 = 0;
@@ -740,9 +740,9 @@ void php_cbor_minit_types()
 	undef_handlers.unset_property = &undef_unset_property;
 	undef_handlers.cast_object = &undef_cast;
 
-	CBOR_CE(xstring)->create_object = &php_cbor_xstring_create;
-	CBOR_CE(byte)->create_object = &php_cbor_xstring_create;
-	CBOR_CE(text)->create_object = &php_cbor_xstring_create;
+	CBOR_CE(xstring)->create_object = &cbor_xstring_create;
+	CBOR_CE(byte)->create_object = &cbor_xstring_create;
+	CBOR_CE(text)->create_object = &cbor_xstring_create;
 	memcpy(&xstring_handlers, &std_object_handlers, sizeof(zend_object_handlers));
 	xstring_handlers.offset = XtOffsetOf(xstring_class, std);
 	xstring_handlers.free_obj = &xstring_free;
@@ -756,8 +756,8 @@ void php_cbor_minit_types()
 	xstring_handlers.get_properties = &xstring_get_properties;
 	xstring_handlers.get_properties_for = &xstring_get_properties_for;
 
-	CBOR_CE(float16)->create_object = &php_cbor_floatx_create;
-	CBOR_CE(float32)->create_object = &php_cbor_floatx_create;
+	CBOR_CE(float16)->create_object = &cbor_floatx_create;
+	CBOR_CE(float32)->create_object = &cbor_floatx_create;
 	memcpy(&floatx_handlers, &std_object_handlers, sizeof(zend_object_handlers));
 	floatx_handlers.offset = XtOffsetOf(floatx_class, std);
 	floatx_handlers.clone_obj = &floatx_clone;

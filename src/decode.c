@@ -600,8 +600,8 @@ static bool append_string_item(dec_context *ctx, zval *value, bool is_text, bool
 	} else if (ctx->args.flags & type_flag) {  /* to PHP string */
 		/* do nothing*/
 	} else {
-		zend_object *obj = php_cbor_xstring_create(string_ce);
-		php_cbor_xstring_set_value(obj, Z_STR_P(value));
+		zend_object *obj = cbor_xstring_create(string_ce);
+		cbor_xstring_set_value(obj, Z_STR_P(value));
 		ZVAL_OBJ(&container, obj);
 		value = &container;
 	}
@@ -745,13 +745,13 @@ static void do_floatx(dec_context *ctx, uint32_t raw, int bits)
 			binary32.i = raw;
 			ZVAL_DOUBLE(&value, (double)binary32.f);
 		} else {
-			ZVAL_DOUBLE(&value, php_cbor_from_float16((uint16_t)raw));
+			ZVAL_DOUBLE(&value, cbor_from_float16((uint16_t)raw));
 		}
 		append_item(ctx, &value);
 		return;
 	}
-	obj = php_cbor_floatx_create(float_ce);
-	php_cbor_floatx_set_value(obj, NULL, raw);  /* always succeeds */
+	obj = cbor_floatx_create(float_ce);
+	cbor_floatx_set_value(obj, NULL, raw);  /* always succeeds */
 	ZVAL_OBJ(&container, obj);
 	append_item(ctx, &container);
 	zval_ptr_dtor(&container);
@@ -784,7 +784,7 @@ static void proc_null(dec_context *ctx)
 static void proc_undefined(dec_context *ctx)
 {
 	zval value;
-	ZVAL_OBJ(&value, php_cbor_get_undef());
+	ZVAL_OBJ(&value, cbor_get_undef());
 	Z_ADDREF(value);
 	append_item(ctx, &value);
 }
@@ -823,7 +823,7 @@ FINALLY:
 	stack_free_item(item);
 }
 
-bool php_cbor_is_len_string_ref(size_t str_len, uint32_t next_index)
+bool cbor_is_len_string_ref(size_t str_len, uint32_t next_index)
 {
 	size_t threshold;
 	if (next_index <= 23) {
@@ -848,11 +848,11 @@ static void tag_handler_str_ref_ns_data(dec_context *ctx, stack_item *item, data
 		if (Z_TYPE_P(value) == IS_STRING) {
 			str_len = Z_STRLEN_P(value);
 		} else if (EXPECTED(Z_TYPE_P(value) == IS_OBJECT)) {
-			str_len = ZSTR_LEN(php_cbor_get_xstring_value(value));
+			str_len = ZSTR_LEN(cbor_get_xstring_value(value));
 		} else {
 			RETURN_CB_ERROR(CBOR_ERROR_INTERNAL);
 		}
-		if (php_cbor_is_len_string_ref(str_len, zend_hash_num_elements(str_table))) {
+		if (cbor_is_len_string_ref(str_len, zend_hash_num_elements(str_table))) {
 			if (zend_hash_next_index_insert(str_table, value) == NULL) {
 				RETURN_CB_ERROR(CBOR_ERROR_INTERNAL);
 			}
