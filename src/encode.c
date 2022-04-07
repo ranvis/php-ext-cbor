@@ -4,11 +4,11 @@
  */
 
 #include "cbor.h"
-#include <ext/date/php_date.h>
-#include "private.h"
+#include "codec.h"
 #include "compatibility.h"
 #include "di_encoder.h"
 #include "tags.h"
+#include "types.h"
 #include "utf8.h"
 
 #define CTX_TEXT_FLAG(ctx)  (((ctx)->args.flags & PHP_CBOR_TEXT) != 0)

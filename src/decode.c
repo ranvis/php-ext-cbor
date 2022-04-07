@@ -4,10 +4,11 @@
  */
 
 #include "cbor.h"
-#include "private.h"
 #include "di_decoder.h"
-#include "utf8.h"
+#include "codec.h"
 #include "tags.h"
+#include "types.h"
+#include "utf8.h"
 #include "xzval.h"
 
 #define SIZE_INIT_LIMIT  4096

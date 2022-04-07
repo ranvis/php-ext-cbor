@@ -4,7 +4,7 @@
  */
 
 #include "cbor.h"
-#include "private.h"
+#include "types.h"
 
 #define DEF_THIS_PROP(name, prop_literal)  CBOR_CE(name), Z_OBJ_P(ZEND_THIS), ZEND_STRL(prop_literal)
 

@@ -5,11 +5,12 @@
 
 #include "cbor.h"
 #include <ext/json/php_json.h>
-#include "private.h"
 #include "cbor_arginfo.h"
 #include "cbor_ns_arginfo.h"
+#include "codec.h"
 #include "compatibility.h"
 #include "tags.h"
+#include "types.h"
 
 #define PHP_CBOR_VERSION "0.2.2a2"
 
@@ -151,10 +152,16 @@ PHP_MSHUTDOWN_FUNCTION(cbor)
 }
 /* }}} */
 
+#if defined(_MSC_VER)
+#pragma warning(disable: 4459)
+#endif
 /* {{{ PHP_GINIT_FUNCTION
  */
 static PHP_GINIT_FUNCTION(cbor)
 {
+#if defined(_MSC_VER)
+#pragma warning(default: 4459)
+#endif
 	cbor_globals->undef_ins = NULL;
 }
 /* }}} */

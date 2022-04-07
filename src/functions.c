@@ -4,7 +4,7 @@
  */
 
 #include "cbor.h"
-#include "private.h"
+#include "codec.h"
 
 /* {{{ proto string cbor_encode(mixed $value, int $flags = CBOR_BYTE, ?array $options = [...])
    Return a CBOR encoded string of a value. */

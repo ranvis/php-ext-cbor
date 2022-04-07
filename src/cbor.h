@@ -16,6 +16,7 @@
 
 #include <main/php.h>
 #include <main/php_ini.h>
+#include <ext/date/php_date.h> /* not globally required, but emits a warning */
 #include <ext/standard/info.h>
 #include <Zend/zend_exceptions.h>
 #include <Zend/zend_smart_str.h>
@@ -25,3 +26,5 @@
 #elif defined(_MSC_VER)
 #pragma warning(pop)
 #endif
+
+#include "php_cbor.h"

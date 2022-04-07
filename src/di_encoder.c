@@ -1,15 +1,6 @@
 #include "cbor.h"
 #include "di.h"
-
-typedef union binary64_alias {
-	uint64_t i;
-	double f;
-} binary64_alias;
-
-typedef union binary32_alias {
-	uint32_t i;
-	float f;
-} binary32_alias;
+#include "types.h"
 
 void cbor_di_write_int(smart_str *buf, uint8_t di_type, uint64_t val)
 {

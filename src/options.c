@@ -4,7 +4,7 @@
  */
 
 #include "cbor.h"
-#include "private.h"
+#include "codec.h"
 
 #define CHECK_ERROR(e) do { \
 		if ((error = (e)) != 0) { \
