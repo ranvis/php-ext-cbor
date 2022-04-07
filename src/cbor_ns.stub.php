@@ -89,9 +89,20 @@ final class Tag
     //public const SHAREABLE = 28;
     //public const SHARED_REF = 29;
     //public const DATETIME = 0;
+    //public const EPOCH = 1;
     //public const BIGNUM_U = 2;
     //public const BIGNUM_N = 3;
     //public const DECIMAL = 4;
+    //public const BIGFLOAT = 5;
+    //public const TO_BASE64URL = 21;
+    //public const TO_BASE64 = 22;
+    //public const TO_HEX = 23;
+    //public const CBOR_DATA = 24;
+    //public const URI = 32;
+    //public const BASE64URL = 33;
+    //public const BASE64 = 34;
+    //public const PCRE_REGEX = 35;
+    //public const MIME = 36;
     /* tag constants end */
 
     public int $tag;
