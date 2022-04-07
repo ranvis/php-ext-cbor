@@ -19,13 +19,13 @@ See [RFC 8949](https://datatracker.ietf.org/doc/html/rfc8949) for the details an
 
 ```
 phpize
-./configure --with-cbor
+./configure --enable-cbor
 make install
 ```
 
 ## Quick Guide
 
-### Interface
+### Functions
 
 ```php
 function cbor_encode(
@@ -40,6 +40,11 @@ function cbor_decode(
     ?array $options,
 ): mixed;
 ```
+Encodes to or decodes from a CBOR data item.
+
+When decoding, CBOR data item must be a single item, or emits an error.
+This means this function cannot decode CBOR sequence format defined in [RFC 8742](https://datatracker.ietf.org/doc/html/rfc8742).
+
 `$options` are:
 
 - `max_depth` (default:`64`; range: `0`..`10000`)
@@ -62,26 +67,71 @@ See "Supported Tags" below for the following options:
 - `datetime`, `bignum`, `decimal`:
   - Encode: default: `true`; values: `bool`
 
+### Classes
+
+#### Serializable
+
+```php
+namespace Cbor;
+
+interface Serializable
+{
+    public function cborSerialize(): mixed;
+}
+```
+
+When encoding classes that implements `Cbor\Serializable`, the encoder will call `cborSerializable()`.
+Implementors may return data structure to serialize the instance, or throw an Exception to stop serializing.
+Classes that does not implement this interface cannot be serialized (aside from `stdClass` plain object).
+
+#### EncodeParams
+
+```php
+namespace Cbor;
+
+final class EncodeParams
+{
+    public mixed $value;
+    public array $params;
+
+    public function __construct(mixed $value, array $params) {}
+}
+```
+
+When the encoder encounters an `EncodeParams` instance, it encodes `$value` with the specified `$params` flags and options added to the current flags and options. After encoding inner `$value`, those parameters are back to the previous state.
+This can be useful when you want to enforce specific parameters to the surrounding data.
+
+`$params` are:
+
+- `$flags`: Encoding flags to set.
+- `$flags_clear`: Encoding flags to clear.
+Flags in `$flags_clear` are cleared first then flags in `$flags` are set.
+Note that you don't need to clear conflicting string flags, i.e. clearing `CBOR_TEXT` when setting `CBOR_BYTE` or vice versa. The same applies for `CBOR_KEY_*` string flags.
+- Other `$options` values.
+You cannot change `max_depth` or options that makes CBOR data contextual.
+
 ### Types of CBOR and PHP
 
 #### Integers
 
 CBOR `unsigned integer` and `negative integer` are translated to PHP `int`.
 The value must be within the range PHP can handle (`PHP_INT_MIN`..`PHP_INT_MAX`).
-This is -2**63..2**63-1 on 64-bit PHP, which is narrower than CBOR's -2**64..2**64-1.
+This is -2\**63..2\**63-1 on 64-bit PHP, which is narrower than CBOR's -2\**64..2\**64-1.
 
 #### Floating-Point Numbers
 
-CBOR `float` has three sizes. 64 bits value is translated to PHP `float`.
+CBOR `float` has three sizes. 64-bit value is translated to PHP `float`.
 
-32 bits values and 16 bits values are translated to PHP `Cbor\Float32` and `Cbor\Float16` respectively.
+32-bit values and 16-bit values are translated to PHP `Cbor\Float32` and `Cbor\Float16` respectively.
 But if the flags `CBOR_FLOAT32` and/or `CBOR_FLOAT16` is passed, they are treated as PHP `float`.
 
 #### Strings
 
-CBOR has two types of strings: `byte string` (binary data) and `text string` (UTF-8 encoded string).
+CBOR has two types of strings: `byte string` (binary octets) and `text string` (UTF-8 encoded octets).
 PHP `string` type does not have this distinction.
+
 If you specify `CBOR_BYTE` flag (default) and/or `CBOR_TEXT` flag on decoding, those strings are decoded to PHP `string`. If the flags are not specified, strings are decoded to `Cbor\Byte` and `Cbor\Text` object respectively.
+
 On encoding PHP `string`, you must specify either of the flag so that the extension knows to which you want your strings to be encoded.
 
 `CBOR_KEY_BYTE` and `CBOR_KEY_TEXT` are for strings of CBOR `map` keys.
@@ -98,10 +148,11 @@ Number of elements in an array must be under 2**32.
 
 #### Maps
 
-CBOR map is translated to PHP `stdClass` object.
+CBOR `map` is translated to PHP `stdClass` object.
 If `CBOR_MAP_AS_ARRAY` flag is passed when decoding, it is translated to PHP `array` instead.
 
 Keys must be of CBOR `string` type.
+
 The extension may accept CBOR `integer` key if `CBOR_INT_KEY` flag is passed. Also the flag will encode PHP `int` key (including integer numeric `string` keys in the range of CBOR `integer`) as CBOR `integer` key.
 
 Number of properties in an object must be under 2**32.
@@ -162,11 +213,15 @@ Constants:
 - `Cbor\Tag::STRING_REF_NS`
 - `Cbor\Tag::STRING_REF`
 
-The tag {stringref} is like a compression, that "references" the string previously appeared inside {stringref-namespace} tag. Note that it differs from PHP's reference to `string`, i.e. not the concept of `$stringRef = &$string`.
-On encode, it can save payload size by replacing the string already seen with the tag + index (or at the worst case increase by 3-bytes overall when single-namespaced). On decode it can save memory of decoded value because PHP can share the same `string` until one of them is going to be modified (copy-on-write). At the cost of bookkeeping all the strings on both encoding and decoding.
+The tag {stringref} is like a compression, that "references" the string previously appeared inside {stringref-namespace} tag. Note that it differs from PHP's reference to `string`, i.e. _not_ the concept of `$stringRef = &$string`.
+
+On encode, it can save payload size by replacing the string already seen with the tag + index (or at the worst case increase by 3-bytes overall when single-namespaced).
+
+On decode it can save memory of decoded value because PHP can share the same `string` until one of them is going to be modified (copy-on-write). At the cost of bookkeeping all the strings on both encoding and decoding.
 
 For decoding, the option is enabled by default, while encoding it should be specified explicitly.
-If `true` is specified on encoding, data is always wrapped with {stringref-namespace} tag. It initializes the string index (like compression dictionary) for the content inside the tag. `'explicit'` makes {stringref} active but the root namespace is not implicitly created, meaning {stringref} is not created on its own.
+If `true` is specified on encoding, data is always wrapped with {stringref-namespace} tag. It initializes the string index (like compression dictionary) for the content inside the tag.
+`'explicit'` makes {stringref} active but the root namespace is not implicitly created, meaning {stringref} is not created on its own.
 
 On encoding, the {stringref-namespace} tag added implicitly is handled specially and not counted as `max_depth` level.
 
