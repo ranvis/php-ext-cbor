@@ -10,50 +10,50 @@
  * Decode: Retain self-describe tag at the beginning of the stream.
  *   The tag is stripped if one exists and the flag is NOT specified.
  */
-#define CBOR_SELF_DESCRIBE    (1 << 0)
+#define CBOR_SELF_DESCRIBE    (1 << 15)
 
 /**
  * Encode: Treat all PHP string as CBOR byte string (binary) instead of CBOR text string (UTF-8 encoded byte sequences).
  *   Either CBOR_BYTE or CBOR_TEXT must be specified to encode PHP string.
  * Decode: Accept text strings as PHP string instead of Cbor\Byte instance.
  */
-#define CBOR_BYTE             (1 << 1)
+#define CBOR_BYTE             (1 << 0)
 
 /**
  * Encode: Treat all PHP string as CBOR text string (UTF-8 encoded byte sequences) instead of CBOR byte string (binary).
  *   It is caller's responsibility to pass valid UTF-8 strings.
  * Decode: Accept text strings as PHP string instead of Cbor\String instance.
  */
-#define CBOR_TEXT             (1 << 2)
+#define CBOR_TEXT             (1 << 1)
 
 /**
  * Encode: Store unsigned integer keys in PHP array as unsigned integer for map key.
  * Decode: Accept unsigned integer keys in map as numeric string of PHP object key, or PHP array key.
  */
-#define CBOR_INT_KEY          (1 << 3)
+#define CBOR_INT_KEY          (1 << 2)
 
 /**
  * Encode: Store strings keys of map as byte string instead of text string.
  *   Either CBOR_KEY_BYTE or CBOR_KEY_TEXT must be specified to encode PHP array/object string key.
  * Decode: Accept text string instead of byte string for map string key.
  */
-#define CBOR_KEY_BYTE         (1 << 4)
+#define CBOR_KEY_BYTE         (1 << 3)
 
 /**
  * Encode: Store strings keys of map as text string instead of byte string.
  * Decode: Accept text string instead of byte string for map string key.
  */
-#define CBOR_KEY_TEXT         (1 << 5)
+#define CBOR_KEY_TEXT         (1 << 4)
+
+/**
+ * Ignore invalid UTF-8 sequences in text string.
+ */
+#define CBOR_UNSAFE_TEXT      (1 << 5)
 
 /**
  * Decode: Translate map to PHP array.
  */
 #define CBOR_MAP_AS_ARRAY     (1 << 6)
-
-/**
- * Ignore invalid UTF-8 sequences in text string.
- */
-#define CBOR_UNSAFE_TEXT      (1 << 7)
 
 /**
  * Encode: Store PHP floats (which should be in double-precision, IEEE 754 binary64) as half-precision floats (IEEE 754 binary16)
