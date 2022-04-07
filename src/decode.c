@@ -1166,7 +1166,12 @@ static php_cbor_error decode_cbor_data_item(const uint8_t *data, size_t len, cbo
 		proc_undefined(ctx);
 		break;
 	case DI_SIMPLE:
-		return PHP_CBOR_ERROR_MALFORMED_DATA;
+		SET_READ_ERROR(cbor_di_read_int(data, len, out));
+		if (out->v.i32 <= DI_INFO_MAX) {
+			/* not-well-formed range is not used (RFC 8949 3.3) */
+			return PHP_CBOR_ERROR_MALFORMED_DATA;
+		}
+		return PHP_CBOR_ERROR_UNSUPPORTED_TYPE;
 	case DI_FLOAT16:
 		SET_READ_ERROR(cbor_di_read_float(data, len, out));
 		proc_float16(ctx, out->v.f16);

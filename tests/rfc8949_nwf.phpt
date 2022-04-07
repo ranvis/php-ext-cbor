@@ -23,7 +23,7 @@ run(function () {
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, '9a01ff00');
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, 'b8');
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, 'd8');
-    cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'f8');  // reserved
+    cdecThrows(CBOR_ERROR_TRUNCATED_DATA, 'f8');  // simple value (1 byte follows)
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, 'f900');
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, 'fa0000');
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, 'fb000000');

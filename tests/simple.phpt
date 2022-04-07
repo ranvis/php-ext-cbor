@@ -18,6 +18,9 @@ run(function () {
     eq(null, cdec('f6'));
     eq(Cbor\Undefined::get(), cdec('f7'));
 
+    // simple value
+    cdecThrows(CBOR_ERROR_UNSUPPORTED_TYPE, 'f820');
+
     // break
     cdecThrows(CBOR_ERROR_SYNTAX, 'ff');
     cdecThrows(CBOR_ERROR_SYNTAX, '81ff');
