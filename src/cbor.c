@@ -42,22 +42,6 @@ PHP_INI_END()
 */
 /* }}} */
 
-
-static void *php_cbor_malloc(size_t size)
-{
-	return emalloc(size);
-}
-
-static void *php_cbor_realloc(void *ptr, size_t size)
-{
-	return erealloc(ptr, size);
-}
-
-static void php_cbor_free(void *ptr)
-{
-	efree(ptr);
-}
-
 /* {{{ PHP_MINIT_FUNCTION
  */
 PHP_MINIT_FUNCTION(cbor)
@@ -132,10 +116,6 @@ PHP_MINIT_FUNCTION(cbor)
 	php_cbor_minit_types();
 	php_cbor_minit_encode();
 	php_cbor_minit_decode();
-
-#if CBOR_CUSTOM_ALLOC
-	cbor_set_allocs(php_cbor_malloc, php_cbor_realloc, php_cbor_free);
-#endif
 
 	return SUCCESS;
 }

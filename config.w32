@@ -8,7 +8,7 @@ ARG_ENABLE("cbor", "enable cbor support", "no");
 		return;
 	}
 
-	var src = 'src/cbor.c src/compatibility.c src/decode.c src/di_encoder.c src/di_decoder.c src/encode.c src/functions.c src/options.c src/types.c src/utf8.c'.replace(/\//g, '\\'); /* path sep must be \ */
+	var src = 'src/cbor.c src/compatibility.c src/decode.c src/di_encoder.c src/di_decoder.c src/encode.c src/functions.c src/options.c src/types.c src/utf8.c'.replace(/\//g, '\\'); // path sep must be \
 	EXTENSION("cbor", src, PHP_CBOR_SHARED, "/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 /W4 /wd4100");
 
 })();
