@@ -40,7 +40,7 @@ static const uint8_t utf8d[] = {
 	12,36,12,12,12,12,12,12,12,12,12,12,
 };
 
-bool is_utf8(const uint8_t *str, size_t len)
+bool cbor_is_utf8(const uint8_t *str, size_t len)
 {
 	uint32_t state = 0;
 	while (len && *str < 0x80) {

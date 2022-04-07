@@ -11,11 +11,11 @@
 PHP_FUNCTION(cbor_encode)
 {
 	zval *value;
-	zend_long flags = PHP_CBOR_BYTE | PHP_CBOR_KEY_BYTE;
+	zend_long flags = CBOR_BYTE | CBOR_KEY_BYTE;
 	HashTable *options = NULL;
 	zend_string *str = NULL;
-	php_cbor_error error;
-	php_cbor_encode_args args;
+	cbor_error error;
+	cbor_encode_args args;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z|lh", &value, &flags, &options) == FAILURE) {
 		RETURN_THROWS();
 	}
@@ -25,7 +25,7 @@ PHP_FUNCTION(cbor_encode)
 		error = php_cbor_encode(value, &str, &args);
 	}
 	if (error) {
-		if (error != PHP_CBOR_ERROR_EXCEPTION) {
+		if (error != CBOR_ERROR_EXCEPTION) {
 			php_cbor_throw_error(error, false, 0);
 		}
 		RETURN_THROWS();
@@ -41,11 +41,11 @@ PHP_FUNCTION(cbor_encode)
 PHP_FUNCTION(cbor_decode)
 {
 	zend_string *data;
-	zend_long flags = PHP_CBOR_BYTE | PHP_CBOR_KEY_BYTE;
+	zend_long flags = CBOR_BYTE | CBOR_KEY_BYTE;
 	HashTable *options = NULL;
 	zval value;
-	php_cbor_error error;
-	php_cbor_decode_args args;
+	cbor_error error;
+	cbor_decode_args args;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|lh", &data, &flags, &options) == FAILURE) {
 		RETURN_THROWS();
 	}
@@ -55,7 +55,7 @@ PHP_FUNCTION(cbor_decode)
 		error = php_cbor_decode(data, &value, &args);
 	}
 	if (error) {
-		if (error != PHP_CBOR_ERROR_EXCEPTION) {
+		if (error != CBOR_ERROR_EXCEPTION) {
 			php_cbor_throw_error(error, true, args.error_arg);
 		}
 		RETURN_THROWS();
@@ -64,69 +64,69 @@ PHP_FUNCTION(cbor_decode)
 }
 /* }}} */
 
-void php_cbor_throw_error(php_cbor_error error, bool has_arg, size_t arg)
+void php_cbor_throw_error(cbor_error error, bool has_arg, size_t arg)
 {
 	const char *message = "Unknown error code.";
 	bool can_have_arg = true;
 	switch (error) {
-	case PHP_CBOR_ERROR_INVALID_FLAGS:
+	case CBOR_ERROR_INVALID_FLAGS:
 		message = "Invalid flags are specified.";
 		can_have_arg = false;
 		break;
-	case PHP_CBOR_ERROR_INVALID_OPTIONS:
+	case CBOR_ERROR_INVALID_OPTIONS:
 		message = "Invalid options are specified.";
 		can_have_arg = false;
 		break;
-	case PHP_CBOR_ERROR_DEPTH:
+	case CBOR_ERROR_DEPTH:
 		message = "Depth limit exceeded.";
 		break;
-	case PHP_CBOR_ERROR_RECURSION:
+	case CBOR_ERROR_RECURSION:
 		message = "Recursion is detected.";
 		can_have_arg = false;
 		break;
-	case PHP_CBOR_ERROR_SYNTAX:
+	case CBOR_ERROR_SYNTAX:
 		message = "Data syntax error.";
 		break;
-	case PHP_CBOR_ERROR_UTF8:
+	case CBOR_ERROR_UTF8:
 		message = "Invalid UTF-8 sequences.";
 		break;
-	case PHP_CBOR_ERROR_UNSUPPORTED_TYPE:
+	case CBOR_ERROR_UNSUPPORTED_TYPE:
 		message = "Unsupported type of data.";
 		break;
-	case PHP_CBOR_ERROR_UNSUPPORTED_VALUE:
+	case CBOR_ERROR_UNSUPPORTED_VALUE:
 		message = "Unsupported value.";
 		break;
-	case PHP_CBOR_ERROR_UNSUPPORTED_SIZE:
+	case CBOR_ERROR_UNSUPPORTED_SIZE:
 		message = "Unsupported size of data.";
 		break;
-	case PHP_CBOR_ERROR_UNSUPPORTED_KEY_TYPE:
+	case CBOR_ERROR_UNSUPPORTED_KEY_TYPE:
 		message = "Unsupported type of data for key.";
 		break;
-	case PHP_CBOR_ERROR_UNSUPPORTED_KEY_VALUE:
+	case CBOR_ERROR_UNSUPPORTED_KEY_VALUE:
 		message = "Unsupported value for key.";
 		break;
-	case PHP_CBOR_ERROR_UNSUPPORTED_KEY_SIZE:
+	case CBOR_ERROR_UNSUPPORTED_KEY_SIZE:
 		message = "Unsupported size of data for key.";
 		break;
-	case PHP_CBOR_ERROR_TRUNCATED_DATA:
+	case CBOR_ERROR_TRUNCATED_DATA:
 		message = "Data is truncated.";
 		break;
-	case PHP_CBOR_ERROR_MALFORMED_DATA:
+	case CBOR_ERROR_MALFORMED_DATA:
 		message = "Data is malformed.";
 		break;
-	case PHP_CBOR_ERROR_EXTRANEOUS_DATA:
+	case CBOR_ERROR_EXTRANEOUS_DATA:
 		message = "Extraneous data.";
 		break;
-	case PHP_CBOR_ERROR_TAG_SYNTAX:
+	case CBOR_ERROR_TAG_SYNTAX:
 		message = "The tag cannot be used here.";
 		break;
-	case PHP_CBOR_ERROR_TAG_TYPE:
+	case CBOR_ERROR_TAG_TYPE:
 		message = "Invalid data type for the tag content.";
 		break;
-	case PHP_CBOR_ERROR_TAG_VALUE:
+	case CBOR_ERROR_TAG_VALUE:
 		message = "Invalid data value for the tag content.";
 		break;
-	case PHP_CBOR_ERROR_INTERNAL:
+	case CBOR_ERROR_INTERNAL:
 		message = "Internal error.";
 		break;
 	}

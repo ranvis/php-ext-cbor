@@ -38,8 +38,8 @@ typedef struct stack_item stack_item;
 typedef struct srns_item srns_item;
 
 typedef struct {
-	php_cbor_decode_args args;
-	php_cbor_error cb_error;
+	cbor_decode_args args;
+	cbor_error cb_error;
 	size_t length;
 	size_t offset;
 	size_t limit;  /* 0:unknown */
@@ -105,8 +105,8 @@ struct srns_item {  /* srns: string ref namespace */
 	HashTable *str_table;
 };
 
-static php_cbor_error dec_zval(dec_context *ctx);
-static php_cbor_error decode_cbor_data_item(const uint8_t *data, size_t len, cbor_di_decoded *out, dec_context *ctx);
+static cbor_error dec_zval(dec_context *ctx);
+static cbor_error decode_cbor_data_item(const uint8_t *data, size_t len, cbor_di_decoded *out, dec_context *ctx);
 static void free_srns_item(srns_item *srns);
 
 void php_cbor_minit_decode()
@@ -132,7 +132,7 @@ void php_cbor_minit_decode()
 	}
 #define SI_SET_HANDLER_VEC(member, si, handler)  do { \
 		if (!register_handler_vec_##member(si, handler) && !ctx->cb_error) { \
-			ctx->cb_error = PHP_CBOR_ERROR_INTERNAL; \
+			ctx->cb_error = CBOR_ERROR_INTERNAL; \
 		} \
 	} while (0)
 #define SI_SET_HANDLER(member, si, handler)  si->member = handler
@@ -192,7 +192,7 @@ static void stack_push_item(dec_context *ctx, stack_item *item)
 	stack_item *parent_item = ctx->stack_top;
 	if (ctx->stack_depth >= ctx->args.max_depth) {
 		stack_free_item(item);
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_DEPTH);
+		RETURN_CB_ERROR(CBOR_ERROR_DEPTH);
 	}
 	if (parent_item) {
 		SI_CALL_CHILD_HANDLER(parent_item, ctx, item, parent_item);
@@ -265,20 +265,20 @@ static void free_ctx_content(dec_context *ctx)
 	}
 }
 
-php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_args *args)
+cbor_error php_cbor_decode(zend_string *data, zval *value, cbor_decode_args *args)
 {
-	php_cbor_error error;
+	cbor_error error;
 	dec_context ctx;
 	const uint8_t *ptr = (const uint8_t *)ZSTR_VAL(data);
 	size_t length = ZSTR_LEN(data);
-	if ((args->flags & PHP_CBOR_FLOAT16 && args->flags & PHP_CBOR_FLOAT32)) {
-		return PHP_CBOR_ERROR_INVALID_FLAGS;
+	if ((args->flags & CBOR_FLOAT16 && args->flags & CBOR_FLOAT32)) {
+		return CBOR_ERROR_INVALID_FLAGS;
 	}
 	ctx.stack_top = NULL;
 	ctx.stack_depth = 0;
 	ctx.offset = 0;
-	if (!(args->flags & PHP_CBOR_SELF_DESCRIBE) && length >= 3
-			&& !memcmp(ptr, PHP_CBOR_SELF_DESCRIBE_DATA, sizeof PHP_CBOR_SELF_DESCRIBE_DATA - 1)) {
+	if (!(args->flags & CBOR_SELF_DESCRIBE) && length >= 3
+			&& !memcmp(ptr, CBOR_SELF_DESCRIBE_DATA, sizeof CBOR_SELF_DESCRIBE_DATA - 1)) {
 		ctx.offset = 3;
 	}
 	ZVAL_UNDEF(&ctx.root);
@@ -292,7 +292,7 @@ php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_a
 	error = dec_zval(&ctx);
 	free_ctx_content(&ctx);
 	if (!error && ctx.offset != ctx.length) {
-		error = PHP_CBOR_ERROR_EXTRANEOUS_DATA;
+		error = CBOR_ERROR_EXTRANEOUS_DATA;
 		ctx.args.error_arg = ctx.offset;
 	}
 	if (!error) {
@@ -311,15 +311,15 @@ php_cbor_error php_cbor_decode(zend_string *data, zval *value, php_cbor_decode_a
 	return error;
 }
 
-static php_cbor_error dec_zval(dec_context *ctx)
+static cbor_error dec_zval(dec_context *ctx)
 {
-	php_cbor_error error;
+	cbor_error error;
 	cbor_di_decoded out_data;
 	ctx->cb_error = 0;
 	do {
 		if (ctx->offset >= ctx->length) {
 			ctx->args.error_arg = ctx->offset;
-			return PHP_CBOR_ERROR_TRUNCATED_DATA;
+			return CBOR_ERROR_TRUNCATED_DATA;
 		}
 		error = decode_cbor_data_item(ctx->data + ctx->offset, ctx->length - ctx->offset, &out_data, ctx);
 		ctx->offset += out_data.read_len;
@@ -364,10 +364,10 @@ static bool append_item(dec_context *ctx, xzval *value);
 static bool append_item_to_array(dec_context *ctx, xzval *value, stack_item *item)
 {
 	if (XZ_ISXXINT_P(value)) {
-		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+		RETURN_CB_ERROR_B(CBOR_ERROR_UNSUPPORTED_VALUE);
 	}
 	if (add_next_index_zval(&item->v.value, value) != SUCCESS) {
-		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_INTERNAL);
+		RETURN_CB_ERROR_B(CBOR_ERROR_INTERNAL);
 	}
 	Z_TRY_ADDREF_P(value);
 	if (item->count && --item->count == 0) {
@@ -388,8 +388,8 @@ static bool append_item_to_map(dec_context *ctx, xzval *value, stack_item *item)
 		case IS_LONG:
 		case IS_X_UINT:
 		case IS_X_NINT:
-			if (!(ctx->args.flags & PHP_CBOR_INT_KEY)) {
-				RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_KEY_TYPE);
+			if (!(ctx->args.flags & CBOR_INT_KEY)) {
+				RETURN_CB_ERROR_B(CBOR_ERROR_UNSUPPORTED_KEY_TYPE);
 			}
 			ZVAL_COPY_VALUE(&item->v.map.key, value);
 			break;
@@ -398,16 +398,16 @@ static bool append_item_to_map(dec_context *ctx, xzval *value, stack_item *item)
 			Z_TRY_ADDREF_P(value);
 			break;
 		default:
-			RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_KEY_TYPE);
+			RETURN_CB_ERROR_B(CBOR_ERROR_UNSUPPORTED_KEY_TYPE);
 		}
 		return true;
 	}
 	if (XZ_ISXXINT_P(value)) {
-		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+		RETURN_CB_ERROR_B(CBOR_ERROR_UNSUPPORTED_VALUE);
 	}
 	if (XZ_ISXXINT(item->v.map.key)) {
 		if (!convert_xz_xint_to_string(&item->v.map.key)) {
-			RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_KEY_TYPE);
+			RETURN_CB_ERROR_B(CBOR_ERROR_UNSUPPORTED_KEY_TYPE);
 		}
 	}
 	if (Z_TYPE(item->v.map.dest) == IS_OBJECT) {
@@ -418,14 +418,14 @@ static bool append_item_to_map(dec_context *ctx, xzval *value, stack_item *item)
 		}
 		assert(Z_TYPE_P(value) != IS_REFERENCE || Z_TYPE_P(Z_REFVAL_P(value)) != IS_OBJECT);
 		if (Z_STRLEN(item->v.map.key) >= 1 && Z_STRVAL(item->v.map.key)[0] == '\0') {
-			RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_KEY_VALUE);
+			RETURN_CB_ERROR_B(CBOR_ERROR_UNSUPPORTED_KEY_VALUE);
 		}
 		if (EXPECTED(Z_TYPE_P(value) != IS_REFERENCE)) {
 			zend_std_write_property(Z_OBJ(item->v.map.dest), Z_STR(item->v.map.key), value, NULL);
 		} else {
 			zval *dest = zend_std_get_property_ptr_ptr(Z_OBJ(item->v.map.dest), Z_STR(item->v.map.key), BP_VAR_W, NULL);
 			if (dest == NULL) {
-				RETURN_CB_ERROR_B(PHP_CBOR_ERROR_INTERNAL);
+				RETURN_CB_ERROR_B(CBOR_ERROR_INTERNAL);
 			}
 			Z_TRY_ADDREF_P(value);
 			zval_ptr_dtor(dest);
@@ -459,10 +459,10 @@ static bool append_item_to_tag(dec_context *ctx, xzval *value, stack_item *item)
 	zval container;
 	bool result;
 	if (XZ_ISXXINT_P(value)) {
-		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+		RETURN_CB_ERROR_B(CBOR_ERROR_UNSUPPORTED_VALUE);
 	}
 	if (object_init_ex(&container, CBOR_CE(tag)) != SUCCESS) {
-		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_INTERNAL);
+		RETURN_CB_ERROR_B(CBOR_ERROR_INTERNAL);
 	}
 	zend_call_known_instance_method_with_2_params(CBOR_CE(tag)->constructor, Z_OBJ(container), NULL, &item->v.tag_id, value);
 	assert(ctx->stack_top == item);
@@ -499,7 +499,7 @@ static bool append_item(dec_context *ctx, xzval *value)
 	stack_item *item = ctx->stack_top;
 	if (item == NULL) {
 		if (XZ_ISXXINT_P(value)) {
-			RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+			RETURN_CB_ERROR_B(CBOR_ERROR_UNSUPPORTED_VALUE);
 		}
 		Z_TRY_ADDREF_P(value);
 		ZVAL_COPY_VALUE(&ctx->root, value);
@@ -515,7 +515,7 @@ static bool append_item(dec_context *ctx, xzval *value)
 	case SI_TYPE_TAG_HANDLED:
 		return append_item_to_tag_handled(ctx, value, item);
 	}
-	RETURN_CB_ERROR_B(PHP_CBOR_ERROR_SYNTAX);
+	RETURN_CB_ERROR_B(CBOR_ERROR_SYNTAX);
 }
 
 #if -(ZEND_LONG_MIN + 1) != ZEND_LONG_MAX
@@ -587,15 +587,15 @@ static bool create_value_object(zval *container, zval *value, zend_class_entry *
 static bool append_string_item(dec_context *ctx, zval *value, bool is_text, bool is_indef)
 {
 	zval container;
-	int type_flag = is_text ? PHP_CBOR_TEXT : PHP_CBOR_BYTE;
+	int type_flag = is_text ? CBOR_TEXT : CBOR_BYTE;
 	zend_class_entry *string_ce = is_text ? CBOR_CE(text) : CBOR_CE(byte);
 	stack_item *item = ctx->stack_top;
 	bool result;
 	ZVAL_NULL(&container);
 	if (item && item->si_type == SI_TYPE_MAP && Z_ISUNDEF(item->v.map.key)) {  /* is map key */
-		bool is_valid_type = is_text ? (ctx->args.flags & PHP_CBOR_KEY_TEXT) : (ctx->args.flags & PHP_CBOR_KEY_BYTE);
+		bool is_valid_type = is_text ? (ctx->args.flags & CBOR_KEY_TEXT) : (ctx->args.flags & CBOR_KEY_BYTE);
 		if (!is_valid_type) {
-			RETURN_CB_ERROR_B(PHP_CBOR_ERROR_UNSUPPORTED_KEY_TYPE);
+			RETURN_CB_ERROR_B(CBOR_ERROR_UNSUPPORTED_KEY_TYPE);
 		}
 	} else if (ctx->args.flags & type_flag) {  /* to PHP string */
 		/* do nothing*/
@@ -621,12 +621,12 @@ static void do_xstring(dec_context *ctx, const char *val, uint64_t length, bool 
 	stack_item *item = ctx->stack_top;
 #if UINT64_MAX > SIZE_MAX
 	if (length > SIZE_MAX) {
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_SIZE);
+		RETURN_CB_ERROR(CBOR_ERROR_UNSUPPORTED_SIZE);
 	}
 #endif
-	if (is_text && !(ctx->args.flags & PHP_CBOR_UNSAFE_TEXT)
+	if (is_text && !(ctx->args.flags & CBOR_UNSAFE_TEXT)
 			&& !is_utf8((uint8_t *)val, (size_t)length)) {
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_UTF8);
+		RETURN_CB_ERROR(CBOR_ERROR_UTF8);
 	}
 	if (item != NULL && item->si_type & SI_TYPE_STRING_MASK) {
 		/* indefinite-length string */
@@ -634,13 +634,13 @@ static void do_xstring(dec_context *ctx, const char *val, uint64_t length, bool 
 		if (item->si_type == str_si_type) {
 			if (length) {
 				if (UNEXPECTED(length > SIZE_MAX - smart_str_get_len(&item->v.str))) {
-					RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_SIZE);
+					RETURN_CB_ERROR(CBOR_ERROR_UNSUPPORTED_SIZE);
 				}
 				smart_str_appendl(&item->v.str, (const char *)val, (size_t)length);
 			}
 			return;
 		}
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_SYNTAX);
+		RETURN_CB_ERROR(CBOR_ERROR_SYNTAX);
 	}
 	ZVAL_STRINGL_FAST(&value, (const char *)val, (size_t)length);
 	append_string_item(ctx, &value, is_text, false);
@@ -671,10 +671,10 @@ static void proc_array_start(dec_context *ctx, uint32_t count)
 {
 	zval value;
 	if (count > ctx->args.max_size) {
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_SIZE);
+		RETURN_CB_ERROR(CBOR_ERROR_UNSUPPORTED_SIZE);
 	}
 	if (ctx->limit && ctx->offset + count > ctx->limit) {
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_TRUNCATED_DATA);
+		RETURN_CB_ERROR(CBOR_ERROR_TRUNCATED_DATA);
 	}
 	array_init_size(&value, ((count > SIZE_INIT_LIMIT) ? SIZE_INIT_LIMIT : (uint32_t)count));
 	if (count) {
@@ -696,12 +696,12 @@ static void proc_map_start(dec_context *ctx, uint32_t count)
 {
 	zval value;
 	if (count > ctx->args.max_size) {
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_SIZE);
+		RETURN_CB_ERROR(CBOR_ERROR_UNSUPPORTED_SIZE);
 	}
 	if (ctx->limit && ctx->offset + count > ctx->limit) {
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_TRUNCATED_DATA);
+		RETURN_CB_ERROR(CBOR_ERROR_TRUNCATED_DATA);
 	}
-	if (ctx->args.flags & PHP_CBOR_MAP_AS_ARRAY) {
+	if (ctx->args.flags & CBOR_MAP_AS_ARRAY) {
 		array_init_size(&value, ((count > SIZE_INIT_LIMIT) ? SIZE_INIT_LIMIT : (uint32_t)count));
 	} else {
 		ZVAL_OBJ(&value, zend_objects_new(zend_standard_class_def));
@@ -717,7 +717,7 @@ static void proc_map_start(dec_context *ctx, uint32_t count)
 static void proc_indef_map_start(dec_context *ctx)
 {
 	zval value;
-	if (ctx->args.flags & PHP_CBOR_MAP_AS_ARRAY) {
+	if (ctx->args.flags & CBOR_MAP_AS_ARRAY) {
 		array_init(&value);
 	} else {
 		ZVAL_OBJ(&value, zend_objects_new(zend_standard_class_def));
@@ -728,7 +728,7 @@ static void proc_indef_map_start(dec_context *ctx)
 static void proc_tag(dec_context *ctx, uint64_t val)
 {
 	if (val > ZEND_LONG_MAX) {
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+		RETURN_CB_ERROR(CBOR_ERROR_UNSUPPORTED_VALUE);
 	}
 	stack_push_tag(ctx, (zend_long)val);
 }
@@ -737,7 +737,7 @@ static void do_floatx(dec_context *ctx, uint32_t raw, int bits)
 {
 	zval container, value;
 	zend_object *obj;
-	int type_flag = bits == 32 ? PHP_CBOR_FLOAT32 : PHP_CBOR_FLOAT16;
+	int type_flag = bits == 32 ? CBOR_FLOAT32 : CBOR_FLOAT16;
 	zend_class_entry *float_ce = bits == 32 ? CBOR_CE(float32) : CBOR_CE(float16);
 	if (ctx->args.flags & type_flag) {
 		if (bits == 32) {
@@ -800,10 +800,10 @@ static void proc_indef_break(dec_context *ctx)
 {
 	stack_item *item = stack_pop_item(ctx);
 	if (UNEXPECTED(item == NULL)) {
-		THROW_CB_ERROR(PHP_CBOR_ERROR_SYNTAX);
+		THROW_CB_ERROR(CBOR_ERROR_SYNTAX);
 	}
 	if (UNEXPECTED(!item->si_type)) {
-		THROW_CB_ERROR(PHP_CBOR_ERROR_SYNTAX);
+		THROW_CB_ERROR(CBOR_ERROR_SYNTAX);
 	}
 	if (item->si_type & SI_TYPE_STRING_MASK) {
 		bool is_text = item->si_type == SI_TYPE_TEXT;
@@ -814,7 +814,7 @@ static void proc_indef_break(dec_context *ctx)
 	} else {  /* SI_TYPE_ARRAY, SI_TYPE_MAP, SI_TYPE_TAG, SI_TYPE_TAG_HANDLED */
 		if (UNEXPECTED(item->count != 0)  /* definite-length */
 				|| (item->si_type == SI_TYPE_MAP && UNEXPECTED(!Z_ISUNDEF(item->v.map.key)))) {  /* value is expected */
-			THROW_CB_ERROR(PHP_CBOR_ERROR_SYNTAX);
+			THROW_CB_ERROR(CBOR_ERROR_SYNTAX);
 		}
 		assert(item->si_type == SI_TYPE_ARRAY || item->si_type == SI_TYPE_MAP);
 		append_item(ctx, &item->v.value);
@@ -850,11 +850,11 @@ static void tag_handler_str_ref_ns_data(dec_context *ctx, stack_item *item, data
 		} else if (EXPECTED(Z_TYPE_P(value) == IS_OBJECT)) {
 			str_len = ZSTR_LEN(php_cbor_get_xstring_value(value));
 		} else {
-			RETURN_CB_ERROR(PHP_CBOR_ERROR_INTERNAL);
+			RETURN_CB_ERROR(CBOR_ERROR_INTERNAL);
 		}
 		if (php_cbor_is_len_string_ref(str_len, zend_hash_num_elements(str_table))) {
 			if (zend_hash_next_index_insert(str_table, value) == NULL) {
-				RETURN_CB_ERROR(PHP_CBOR_ERROR_INTERNAL);
+				RETURN_CB_ERROR(CBOR_ERROR_INTERNAL);
 			}
 			Z_ADDREF_P(value);
 		}
@@ -911,14 +911,14 @@ static xzval *tag_handler_str_ref_exit(dec_context *ctx, xzval *value, stack_ite
 	zend_long index;
 	zval *str;
 	if (Z_TYPE_P(value) != IS_LONG) {
-		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_TYPE);
+		RETURN_CB_ERROR_V(value, CBOR_ERROR_TAG_TYPE);
 	}
 	index = Z_LVAL_P(value);
 	if (index < 0) {
-		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_VALUE);
+		RETURN_CB_ERROR_V(value, CBOR_ERROR_TAG_VALUE);
 	}
 	if ((str = zend_hash_index_find(ctx->srns->str_table, index)) == NULL) {
-		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_VALUE);
+		RETURN_CB_ERROR_V(value, CBOR_ERROR_TAG_VALUE);
 	}
 	assert(Z_TYPE_P(value) == IS_LONG);
 	Z_ADDREF_P(str);
@@ -931,7 +931,7 @@ static bool tag_handler_str_ref_enter(dec_context *ctx, stack_item *item)
 	SI_SET_EXIT_HANDLER(item, &tag_handler_str_ref_exit);
 	if (!ctx->srns) {
 		/* outer stringref-namespace is expected */
-		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_TAG_SYNTAX);
+		RETURN_CB_ERROR_B(CBOR_ERROR_TAG_SYNTAX);
 	}
 	return true;
 }
@@ -948,7 +948,7 @@ static void tag_handler_shareable_child(dec_context *ctx, stack_item *item, stac
 		if (ctx->args.shared_ref == OPT_SHAREABLE) {
 			ZVAL_TRUE(&self->v.tag_h.v.shareable.value);
 			if (!create_value_object(&tmp_v, &self->v.tag_h.v.shareable.value, CBOR_CE(shareable))) {
-				RETURN_CB_ERROR(PHP_CBOR_ERROR_INTERNAL);
+				RETURN_CB_ERROR(CBOR_ERROR_INTERNAL);
 			}
 			real_v = &tmp_v;
 		} else if (ctx->args.shared_ref == OPT_UNSAFE_REF) {
@@ -956,12 +956,12 @@ static void tag_handler_shareable_child(dec_context *ctx, stack_item *item, stac
 			real_v = &self->v.tag_h.v.shareable.value;
 			ZVAL_NEW_REF(real_v, &tmp_v);
 		} else {
-			RETURN_CB_ERROR(PHP_CBOR_ERROR_TAG_TYPE);
+			RETURN_CB_ERROR(CBOR_ERROR_TAG_TYPE);
 		}
 	}
 	if (zend_hash_index_update(ctx->refs, self->v.tag_h.v.shareable.index, real_v) == NULL) {
 		zval_ptr_dtor(real_v);
-		RETURN_CB_ERROR(PHP_CBOR_ERROR_INTERNAL);
+		RETURN_CB_ERROR(CBOR_ERROR_INTERNAL);
 	} else {
 		Z_ADDREF_P(real_v);
 	}
@@ -971,7 +971,7 @@ static xzval *tag_handler_shareable_exit(dec_context *ctx, xzval *value, stack_i
 {
 	zval *real_v;
 	if (XZ_ISXXINT_P(value)) {
-		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+		RETURN_CB_ERROR_V(value, CBOR_ERROR_UNSUPPORTED_VALUE);
 	}
 	if (Z_TYPE(item->v.tag_h.v.shareable.value) == IS_NULL) {
 		/* child handler is not called */
@@ -987,16 +987,16 @@ static xzval *tag_handler_shareable_exit(dec_context *ctx, xzval *value, stack_i
 		} else if (ctx->args.shared_ref == OPT_SHAREABLE) {
 			real_v = tmp_v;
 			if (!create_value_object(real_v, value, CBOR_CE(shareable))) {
-				RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_INTERNAL);
+				RETURN_CB_ERROR_V(value, CBOR_ERROR_INTERNAL);
 			}
 		} else {
-			RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_TYPE);
+			RETURN_CB_ERROR_V(value, CBOR_ERROR_TAG_TYPE);
 		}
 		if (zend_hash_index_update(ctx->refs, item->v.tag_h.v.shareable.index, real_v) == NULL) {
 			if (real_v != value) {
 				zval_ptr_dtor(real_v);
 			}
-			RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_INTERNAL);
+			RETURN_CB_ERROR_V(value, CBOR_ERROR_INTERNAL);
 		}
 	} else {
 		real_v = tmp_v;
@@ -1016,16 +1016,16 @@ static xzval *tag_handler_shareable_exit(dec_context *ctx, xzval *value, stack_i
 
 static bool tag_handler_shareable_enter(dec_context *ctx, stack_item *item)
 {
-	if (ctx->stack_top && ctx->stack_top->si_type == SI_TYPE_TAG_HANDLED && ctx->stack_top->v.tag_h.tag_id == PHP_CBOR_TAG_SHAREABLE) {
+	if (ctx->stack_top && ctx->stack_top->si_type == SI_TYPE_TAG_HANDLED && ctx->stack_top->v.tag_h.tag_id == CBOR_TAG_SHAREABLE) {
 		/* nested shareable */
-		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_TAG_SYNTAX);
+		RETURN_CB_ERROR_B(CBOR_ERROR_TAG_SYNTAX);
 	}
 	SI_SET_CHILD_HANDLER(item, &tag_handler_shareable_child);
 	SI_SET_EXIT_HANDLER(item, &tag_handler_shareable_exit);
 	ZVAL_NULL(&item->v.tag_h.v.shareable.value); /* cannot be undef if adding to HashTable */
 	item->v.tag_h.v.shareable.index = zend_hash_num_elements(ctx->refs);
 	if (zend_hash_next_index_insert(ctx->refs, &item->v.tag_h.v.shareable.value) == NULL) {
-		RETURN_CB_ERROR_B(PHP_CBOR_ERROR_INTERNAL);
+		RETURN_CB_ERROR_B(CBOR_ERROR_INTERNAL);
 	}
 	return true;
 }
@@ -1035,15 +1035,15 @@ static xzval *tag_handler_shared_ref_exit(dec_context *ctx, zval *value, stack_i
 	zend_long index;
 	zval *ref_v;
 	if (Z_TYPE_P(value) != IS_LONG) {
-		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_TYPE);
+		RETURN_CB_ERROR_V(value, CBOR_ERROR_TAG_TYPE);
 	}
 	index = Z_LVAL_P(value);
 	if (index < 0) {
-		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_VALUE);
+		RETURN_CB_ERROR_V(value, CBOR_ERROR_TAG_VALUE);
 	}
 	if ((ref_v = zend_hash_index_find(ctx->refs, index)) == NULL) {
 		/* the spec doesn't prohibit referencing future shareable, but it is unlikely */
-		RETURN_CB_ERROR_V(value, PHP_CBOR_ERROR_TAG_VALUE);
+		RETURN_CB_ERROR_V(value, CBOR_ERROR_TAG_VALUE);
 	}
 	assert(Z_TYPE_P(value) == IS_LONG);	/* zval_ptr_dtor(value); */
 	Z_ADDREF_P(ref_v);
@@ -1060,13 +1060,13 @@ static bool do_tag_enter(dec_context *ctx, zend_long tag_id)
 {
 	/* must return true if pushed to stack or an error occurred */
 	tag_handler_enter_t *handler = NULL;
-	if (tag_id == PHP_CBOR_TAG_STRING_REF_NS && ctx->args.string_ref) {
+	if (tag_id == CBOR_TAG_STRING_REF_NS && ctx->args.string_ref) {
 		handler = &tag_handler_str_ref_ns_enter;
-	} else if (tag_id == PHP_CBOR_TAG_STRING_REF && ctx->args.string_ref) {
+	} else if (tag_id == CBOR_TAG_STRING_REF && ctx->args.string_ref) {
 		handler = &tag_handler_str_ref_enter;
-	} else if (tag_id == PHP_CBOR_TAG_SHAREABLE && ctx->args.shared_ref) {
+	} else if (tag_id == CBOR_TAG_SHAREABLE && ctx->args.shared_ref) {
 		handler = &tag_handler_shareable_enter;
-	} else if (tag_id == PHP_CBOR_TAG_SHARED_REF && ctx->args.shared_ref) {
+	} else if (tag_id == CBOR_TAG_SHARED_REF && ctx->args.shared_ref) {
 		handler = &tag_handler_shared_ref_enter;
 	}
 	if (handler) {
@@ -1085,15 +1085,15 @@ static bool do_tag_enter(dec_context *ctx, zend_long tag_id)
 
 #define SET_READ_ERROR(result)  do { \
 		if (!result) { \
-			error = out->req_len ? PHP_CBOR_ERROR_TRUNCATED_DATA \
-				: PHP_CBOR_ERROR_MALFORMED_DATA; \
+			error = out->req_len ? CBOR_ERROR_TRUNCATED_DATA \
+				: CBOR_ERROR_MALFORMED_DATA; \
 			goto FINALLY; \
 		} \
 	} while (0)
 
-static php_cbor_error decode_cbor_data_item(const uint8_t *data, size_t len, cbor_di_decoded *out, dec_context *ctx)
+static cbor_error decode_cbor_data_item(const uint8_t *data, size_t len, cbor_di_decoded *out, dec_context *ctx)
 {
-	php_cbor_error error = 0;
+	cbor_error error = 0;
 	uint8_t type = cbor_di_get_type(data, len);
 	out->read_len = 1;
 	out->req_len = 0;
@@ -1134,7 +1134,7 @@ static php_cbor_error decode_cbor_data_item(const uint8_t *data, size_t len, cbo
 		SET_READ_ERROR(cbor_di_read_list(data, len, out));
 		if (!out->v.ext.is_indef) {
 			if (out->v.i64 > 0xffffffff) {
-				return PHP_CBOR_ERROR_UNSUPPORTED_SIZE;
+				return CBOR_ERROR_UNSUPPORTED_SIZE;
 			}
 			proc_array_start(ctx, (uint32_t)out->v.i64);
 		} else {
@@ -1145,7 +1145,7 @@ static php_cbor_error decode_cbor_data_item(const uint8_t *data, size_t len, cbo
 		SET_READ_ERROR(cbor_di_read_list(data, len, out));
 		if (!out->v.ext.is_indef) {
 			if (out->v.i64 > 0xffffffff) {
-				return PHP_CBOR_ERROR_UNSUPPORTED_SIZE;
+				return CBOR_ERROR_UNSUPPORTED_SIZE;
 			}
 			proc_map_start(ctx, (uint32_t)out->v.i64);
 		} else {
@@ -1170,9 +1170,9 @@ static php_cbor_error decode_cbor_data_item(const uint8_t *data, size_t len, cbo
 		SET_READ_ERROR(cbor_di_read_int(data, len, out));
 		if (out->v.i32 <= DI_INFO_MAX) {
 			/* not-well-formed range is not used (RFC 8949 3.3) */
-			return PHP_CBOR_ERROR_MALFORMED_DATA;
+			return CBOR_ERROR_MALFORMED_DATA;
 		}
-		return PHP_CBOR_ERROR_UNSUPPORTED_TYPE;
+		return CBOR_ERROR_UNSUPPORTED_TYPE;
 	case DI_FLOAT16:
 		SET_READ_ERROR(cbor_di_read_float(data, len, out));
 		proc_float16(ctx, out->v.f16);
@@ -1190,7 +1190,7 @@ static php_cbor_error decode_cbor_data_item(const uint8_t *data, size_t len, cbo
 		break;
 	default:
 		out->read_len = 0;
-		return PHP_CBOR_ERROR_MALFORMED_DATA;
+		return CBOR_ERROR_MALFORMED_DATA;
 	}
 FINALLY:
 	return error;

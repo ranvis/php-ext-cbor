@@ -11,7 +11,7 @@
 #include "types.h"
 #include "utf8.h"
 
-#define CTX_TEXT_FLAG(ctx)  (((ctx)->args.flags & PHP_CBOR_TEXT) != 0)
+#define CTX_TEXT_FLAG(ctx)  (((ctx)->args.flags & CBOR_TEXT) != 0)
 
 #define MAKE_ZSTR(ls)  zend_string_init(ZEND_STRL(ls), false)
 
@@ -40,7 +40,7 @@ enum {
 };
 
 typedef struct {
-	php_cbor_encode_args args;
+	cbor_encode_args args;
 	uint32_t cur_depth;
 	smart_str *buf;
 	srns_item *srns; /* string ref namespace */
@@ -59,28 +59,28 @@ typedef enum {
 	HASH_STD_CLASS,
 } hash_type;
 
-static php_cbor_error enc_zval(enc_context *ctx, zval *value);
+static cbor_error enc_zval(enc_context *ctx, zval *value);
 static void enc_long(enc_context *ctx, zend_long value);
 static void enc_z_double(enc_context *ctx, zval *value, bool is_small);
-static php_cbor_error enc_string(enc_context *ctx, zend_string *value, bool to_text);
-static php_cbor_error enc_string_len(enc_context *ctx, const char *value, size_t length, zend_string *v_str, bool to_text);
-static php_cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type);
-static php_cbor_error enc_typed_byte(enc_context *ctx, zval *ins);
-static php_cbor_error enc_typed_text(enc_context *ctx, zval *ins);
+static cbor_error enc_string(enc_context *ctx, zend_string *value, bool to_text);
+static cbor_error enc_string_len(enc_context *ctx, const char *value, size_t length, zend_string *v_str, bool to_text);
+static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type);
+static cbor_error enc_typed_byte(enc_context *ctx, zval *ins);
+static cbor_error enc_typed_text(enc_context *ctx, zval *ins);
 static void enc_typed_floatx(enc_context *ctx, zval *ins, int bits);
-static php_cbor_error enc_tag(enc_context *ctx, zval *ins);
+static cbor_error enc_tag(enc_context *ctx, zval *ins);
 static void enc_tag_bare(enc_context *ctx, zend_long tag_id);
-static php_cbor_error enc_serializable(enc_context *ctx, zval *value);
-static php_cbor_error enc_encodeparams(enc_context *ctx, zval *ins);
+static cbor_error enc_serializable(enc_context *ctx, zval *value);
+static cbor_error enc_encodeparams(enc_context *ctx, zval *ins);
 
 static void init_srns_stack(enc_context *ctx);
 static void free_srns_stack(enc_context *ctx);
-static php_cbor_error enc_string_ref(enc_context *ctx, const char *value, size_t length, zend_string *v_str, bool to_text);
-static php_cbor_error enc_ref_counted(enc_context *ctx, zval *value);
-static php_cbor_error enc_shareable(enc_context *ctx, zval *value);
-static php_cbor_error enc_datetime(enc_context *ctx, zval *value);
-static php_cbor_error enc_bignum(enc_context *ctx, zval *value);
-static php_cbor_error enc_decimal(enc_context *ctx, zval *value);
+static cbor_error enc_string_ref(enc_context *ctx, const char *value, size_t length, zend_string *v_str, bool to_text);
+static cbor_error enc_ref_counted(enc_context *ctx, zval *value);
+static cbor_error enc_shareable(enc_context *ctx, zval *value);
+static cbor_error enc_datetime(enc_context *ctx, zval *value);
+static cbor_error enc_bignum(enc_context *ctx, zval *value);
+static cbor_error enc_decimal(enc_context *ctx, zval *value);
 
 static zend_result call_fn(zval *object, zend_string *func_str, zval *retval_ptr, uint32_t param_count, zval params[]/*, HashTable *named_params*/);
 static zend_string *decode_dec_str(const char *in_c, size_t in_len);
@@ -100,19 +100,19 @@ void php_cbor_minit_encode()
 		} \
 	} while (0);
 
-static php_cbor_error validate_flags(uint32_t flags)
+static cbor_error validate_flags(uint32_t flags)
 {
-	if ((flags & PHP_CBOR_BYTE && flags & PHP_CBOR_TEXT)
-			|| (flags & PHP_CBOR_KEY_BYTE && flags & PHP_CBOR_KEY_TEXT)
+	if ((flags & CBOR_BYTE && flags & CBOR_TEXT)
+			|| (flags & CBOR_KEY_BYTE && flags & CBOR_KEY_TEXT)
 	) {
-		return PHP_CBOR_ERROR_INVALID_FLAGS;
+		return CBOR_ERROR_INVALID_FLAGS;
 	}
 	return 0;
 }
 
-php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_encode_args *args)
+cbor_error php_cbor_encode(zval *value, zend_string **data, const cbor_encode_args *args)
 {
-	php_cbor_error error;
+	cbor_error error;
 	enc_context ctx;
 	smart_str buf = {0};
 	memset(&ctx, 0, sizeof ctx);
@@ -123,11 +123,11 @@ php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_e
 	if ((error = validate_flags(ctx.args.flags)) != 0) {
 		return error;
 	}
-	if (ctx.args.flags & PHP_CBOR_SELF_DESCRIBE) {
-		enc_tag_bare(&ctx, PHP_CBOR_TAG_SELF_DESCRIBE);
+	if (ctx.args.flags & CBOR_SELF_DESCRIBE) {
+		enc_tag_bare(&ctx, CBOR_TAG_SELF_DESCRIBE);
 	}
 	if (ctx.args.string_ref == OPT_TRUE) {
-		enc_tag_bare(&ctx, PHP_CBOR_TAG_STRING_REF_NS);
+		enc_tag_bare(&ctx, CBOR_TAG_STRING_REF_NS);
 		init_srns_stack(&ctx);
 	}
 	ctx.refs = zend_new_array(0);
@@ -153,11 +153,11 @@ php_cbor_error php_cbor_encode(zval *value, zend_string **data, const php_cbor_e
 	return error;
 }
 
-static php_cbor_error enc_zval(enc_context *ctx, zval *value)
+static cbor_error enc_zval(enc_context *ctx, zval *value)
 {
-	php_cbor_error error = 0;
+	cbor_error error = 0;
 	if (ctx->cur_depth++ > ctx->args.max_depth) {
-		return PHP_CBOR_ERROR_DEPTH;
+		return CBOR_ERROR_DEPTH;
 	}
 RETRY:
 	switch (Z_TYPE_P(value)) {
@@ -177,8 +177,8 @@ RETRY:
 		enc_z_double(ctx, value, false);
 		break;
 	case IS_STRING:
-		if (!(ctx->args.flags & (PHP_CBOR_BYTE | PHP_CBOR_TEXT))) {
-			error = PHP_CBOR_ERROR_INVALID_FLAGS;
+		if (!(ctx->args.flags & (CBOR_BYTE | CBOR_TEXT))) {
+			error = CBOR_ERROR_INVALID_FLAGS;
 			break;
 		}
 		ENC_RESULT(enc_string(ctx, Z_STR_P(value), CTX_TEXT_FLAG(ctx)));
@@ -204,7 +204,7 @@ RETRY:
 		} else if (ce == zend_standard_class_def) {
 			if (ctx->args.shared_ref && Z_REFCOUNT_P(value) > 1) {
 				error = enc_ref_counted(ctx, value);
-				if (error != PHP_CBOR_STATUS_VALUE_FOLLOWS) {
+				if (error != CBOR_STATUS_VALUE_FOLLOWS) {
 					ENC_RESULT(error);
 				}
 			}
@@ -233,7 +233,7 @@ RETRY:
 			} else if (ctx->args.decimal && ce == ctx->ce.decimal) {
 				error = enc_decimal(ctx, value);
 			} else {
-				error = PHP_CBOR_ERROR_UNSUPPORTED_TYPE;
+				error = CBOR_ERROR_UNSUPPORTED_TYPE;
 			}
 		}
 		break;
@@ -243,14 +243,14 @@ RETRY:
 			/* no CBOR representation of &object is defined as of writing (double-sharedref or indirection(22098) is not what it means) */
 			/* PHP reference actually shares container of the value, not the value it contains after all */
 			error = enc_ref_counted(ctx, value);
-			if (error != PHP_CBOR_STATUS_VALUE_FOLLOWS) {
+			if (error != CBOR_STATUS_VALUE_FOLLOWS) {
 				ENC_RESULT(error);
 			}
 		}
 		ZVAL_DEREF(value);
 		goto RETRY;
 	default:
-		error = PHP_CBOR_ERROR_UNSUPPORTED_TYPE;
+		error = CBOR_ERROR_UNSUPPORTED_TYPE;
 	}
 ENCODED:
 	ctx->cur_depth--;
@@ -268,8 +268,8 @@ static void enc_long(enc_context *ctx, zend_long value)
 
 static void enc_z_double(enc_context *ctx, zval *value, bool is_small)
 {
-	int float_type = ctx->args.flags & (PHP_CBOR_FLOAT16 | PHP_CBOR_FLOAT32);
-	if (float_type == (PHP_CBOR_FLOAT16 | PHP_CBOR_FLOAT32)) {
+	int float_type = ctx->args.flags & (CBOR_FLOAT16 | CBOR_FLOAT32);
+	if (float_type == (CBOR_FLOAT16 | CBOR_FLOAT32)) {
 		/* Test if smaller type will fit. (But not to denormalized numbers.) */
 		binary64_alias bin64;
 		bin64.f = Z_DVAL_P(value);
@@ -277,20 +277,20 @@ static void enc_z_double(enc_context *ctx, zval *value, bool is_small)
 		uint64_t frac = bin64.i & 0xfffffffffffff;  /* fraction */
 		bool is_inf_nan = exp == 0x7ff;
 		if (bin64.i == 0) { /* 0.0 */
-			float_type = PHP_CBOR_FLOAT16;
+			float_type = CBOR_FLOAT16;
 		} else if ((is_inf_nan || (exp >= 1023 - 126 && exp <= 1023 + 127)) && !(frac & 0x1fffffff)) {  /* fraction: 52 to 23 */
 			if ((is_inf_nan || (exp >= 1023 - 14 && exp <= 1023 + 15)) && !(frac & 0x3ffffffffff)) {  /* fraction: 52 to 10 */
-				float_type = PHP_CBOR_FLOAT16;
+				float_type = CBOR_FLOAT16;
 			} else {
-				float_type = PHP_CBOR_FLOAT32;
+				float_type = CBOR_FLOAT32;
 			}
 		}
 	}
-	if (float_type == PHP_CBOR_FLOAT16) {
+	if (float_type == CBOR_FLOAT16) {
 		/* XXX: Reusing float-to-half. For precise rounding, double may have to be used. */
 		uint16_t binary16 = php_cbor_to_float16((float)Z_DVAL_P(value));
 		cbor_di_write_float16(ctx->buf, binary16);
-	} else if (float_type == PHP_CBOR_FLOAT32) {
+	} else if (float_type == CBOR_FLOAT32) {
 		cbor_di_write_float32(ctx->buf, (float)Z_DVAL_P(value));
 	} else {
 		cbor_di_write_float64(ctx->buf, Z_DVAL_P(value));
@@ -313,24 +313,24 @@ static void enc_bin_int(enc_context *ctx, const char *str, size_t length, bool i
 	enc_xint(ctx, i_value, is_negative);
 }
 
-static php_cbor_error enc_string(enc_context *ctx, zend_string *value, bool to_text)
+static cbor_error enc_string(enc_context *ctx, zend_string *value, bool to_text)
 {
 	return enc_string_len(ctx, ZSTR_VAL(value), ZSTR_LEN(value), value, to_text);
 }
 
-static php_cbor_error enc_string_len(enc_context *ctx, const char *value, size_t length, zend_string *v_str, bool to_text)
+static cbor_error enc_string_len(enc_context *ctx, const char *value, size_t length, zend_string *v_str, bool to_text)
 {
-	php_cbor_error error;
+	cbor_error error;
 	if (ctx->srns) {
 		error = enc_string_ref(ctx, value, length, v_str, to_text);
-		if (error != PHP_CBOR_STATUS_VALUE_FOLLOWS) {
+		if (error != CBOR_STATUS_VALUE_FOLLOWS) {
 			return error;
 		}
 	}
 	if (to_text) {
-		if (!(ctx->args.flags & PHP_CBOR_UNSAFE_TEXT)
+		if (!(ctx->args.flags & CBOR_UNSAFE_TEXT)
 				&& !is_utf8((uint8_t *)value, length)) {
-			return PHP_CBOR_ERROR_UTF8;
+			return CBOR_ERROR_UTF8;
 		}
 	}
 	cbor_di_write_int(ctx->buf, to_text ? DI_TSTR : DI_BSTR, length);
@@ -388,26 +388,26 @@ static bool convert_string_to_int(zend_string *str, uint64_t *value, bool *is_ne
 	return true;
 }
 
-static php_cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
+static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 {
-	php_cbor_error error = 0;
+	cbor_error error = 0;
 	HashTable *ht = NULL;
 	zend_object *obj = NULL;
 	zend_ulong count;
-	bool to_text = (ctx->args.flags & PHP_CBOR_KEY_TEXT) != 0;
-	bool key_flag_error = !(ctx->args.flags & (PHP_CBOR_KEY_BYTE | PHP_CBOR_KEY_TEXT));
+	bool to_text = (ctx->args.flags & CBOR_KEY_TEXT) != 0;
+	bool key_flag_error = !(ctx->args.flags & (CBOR_KEY_BYTE | CBOR_KEY_TEXT));
 	bool is_list;
 	bool is_indef_length = false;
-	bool use_int_key = ctx->args.flags & PHP_CBOR_INT_KEY;
+	bool use_int_key = ctx->args.flags & CBOR_INT_KEY;
 	if (type != HASH_ARRAY) {
 		obj = Z_OBJ_P(value);
 		if (GC_IS_RECURSIVE(obj)) {
-			return PHP_CBOR_ERROR_RECURSION;
+			return CBOR_ERROR_RECURSION;
 		}
 	} else {
 		ht = Z_ARR_P(value);
 		if (GC_IS_RECURSIVE(ht)) {
-			return PHP_CBOR_ERROR_RECURSION;
+			return CBOR_ERROR_RECURSION;
 		}
 	}
 	if (type != HASH_ARRAY) {
@@ -416,7 +416,7 @@ static php_cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 	is_list = type == HASH_ARRAY && zend_array_is_list(ht);
 	count = zend_hash_num_elements(ht);
 	if ((type == HASH_OBJ && count)
-			|| UNEXPECTED(count > 0xff && (ctx->args.flags & PHP_CBOR_PACKED))) {
+			|| UNEXPECTED(count > 0xff && (ctx->args.flags & CBOR_PACKED))) {
 		is_indef_length = true;
 		cbor_di_write_indef(ctx->buf, is_list ? DI_ARRAY : DI_MAP);
 	} else {
@@ -444,7 +444,7 @@ static php_cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 						enc_xint(ctx, key_int, is_negative);
 						error = 0;
 					} else if (UNEXPECTED(key_flag_error)) {
-						error = PHP_CBOR_ERROR_INVALID_FLAGS;
+						error = CBOR_ERROR_INVALID_FLAGS;
 					} else {
 						error = enc_string(ctx, key, to_text);
 					}
@@ -452,7 +452,7 @@ static php_cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 					char num_str[ZEND_LTOA_BUF_LEN];
 					ZEND_LTOA((zend_long)index, num_str, sizeof num_str);
 					if (UNEXPECTED(key_flag_error)) {
-						error = PHP_CBOR_ERROR_INVALID_FLAGS;
+						error = CBOR_ERROR_INVALID_FLAGS;
 					} else {
 						error = enc_string_len(ctx, num_str, strlen(num_str), NULL, to_text);
 					}
@@ -471,7 +471,7 @@ static php_cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 		}
 		ZEND_HASH_FOREACH_END();
 		if (!error && count) {
-			error = PHP_CBOR_ERROR_INTERNAL;
+			error = CBOR_ERROR_INTERNAL;
 		}
 		if (type != HASH_ARRAY) {
 			GC_TRY_UNPROTECT_RECURSION(obj);
@@ -490,13 +490,13 @@ static php_cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 
 #define PROP_L(prop_literal) prop_literal, sizeof prop_literal - 1
 
-static php_cbor_error enc_typed_byte(enc_context *ctx, zval *ins)
+static cbor_error enc_typed_byte(enc_context *ctx, zval *ins)
 {
 	zend_string *str = php_cbor_get_xstring_value(ins);
 	return enc_string(ctx, str, false);
 }
 
-static php_cbor_error enc_typed_text(enc_context *ctx, zval *ins)
+static cbor_error enc_typed_text(enc_context *ctx, zval *ins)
 {
 	zend_string *str = php_cbor_get_xstring_value(ins);
 	return enc_string(ctx, str, true);
@@ -516,9 +516,9 @@ static void enc_tag_bare(enc_context *ctx, zend_long tag_id)
 	cbor_di_write_int(ctx->buf, DI_TAG, tag_id);
 }
 
-static php_cbor_error enc_tag(enc_context *ctx, zval *ins)
+static cbor_error enc_tag(enc_context *ctx, zval *ins)
 {
-	php_cbor_error error = 0;
+	cbor_error error = 0;
 	zval tmp_tag, tmp_content;
 	zval *tag, *content;
 	zend_long tag_id;
@@ -527,28 +527,28 @@ static php_cbor_error enc_tag(enc_context *ctx, zval *ins)
 	tag = zend_read_property(CBOR_CE(tag), Z_OBJ_P(ins), PROP_L("tag"), false, &tmp_tag);
 	content = zend_read_property(CBOR_CE(tag), Z_OBJ_P(ins), PROP_L("content"), false, &tmp_content);
 	if (!tag || !content) {
-		return PHP_CBOR_ERROR_INTERNAL;
+		return CBOR_ERROR_INTERNAL;
 	}
 	tag_id = Z_LVAL_P(tag);
 	if (tag_id < 0) {
-		return PHP_CBOR_ERROR_SYNTAX;
+		return CBOR_ERROR_SYNTAX;
 	}
 	enc_tag_bare(ctx, tag_id);
-	if (tag_id == PHP_CBOR_TAG_STRING_REF_NS && ctx->args.string_ref) {
+	if (tag_id == CBOR_TAG_STRING_REF_NS && ctx->args.string_ref) {
 		new_srns = true;
 		orig_srns = ctx->srns;
 		init_srns_stack(ctx);
-	} else if (tag_id == PHP_CBOR_TAG_STRING_REF && ctx->args.string_ref) {
+	} else if (tag_id == CBOR_TAG_STRING_REF && ctx->args.string_ref) {
 		zend_long tag_content;
 		if (Z_TYPE_P(content) != IS_LONG) {
-			return PHP_CBOR_ERROR_TAG_TYPE;
+			return CBOR_ERROR_TAG_TYPE;
 		}
 		if (!ctx->srns) {
-			return PHP_CBOR_ERROR_TAG_SYNTAX;
+			return CBOR_ERROR_TAG_SYNTAX;
 		}
 		tag_content = Z_LVAL_P(content);
 		if (tag_content < 0 || (zend_ulong)tag_content >= ctx->srns->next_index) {
-			return PHP_CBOR_ERROR_TAG_VALUE;
+			return CBOR_ERROR_TAG_VALUE;
 		}
 	}
 	error = enc_zval(ctx, content);
@@ -559,21 +559,21 @@ static php_cbor_error enc_tag(enc_context *ctx, zval *ins)
 	return error;
 }
 
-static php_cbor_error enc_serializable(enc_context *ctx, zval *value)
+static cbor_error enc_serializable(enc_context *ctx, zval *value)
 {
-	php_cbor_error error;
+	cbor_error error;
 	zval r_value;
 	if (Z_IS_RECURSIVE_P(value)) {
-		return PHP_CBOR_ERROR_RECURSION;
+		return CBOR_ERROR_RECURSION;
 	}
 	if (!ctx->str[EXT_STR_ENC_SERIALIZE_FN]) {
 		ctx->str[EXT_STR_ENC_SERIALIZE_FN] = MAKE_ZSTR("cborserialize");
 	}
 	if (call_fn(value, ctx->str[EXT_STR_ENC_SERIALIZE_FN], &r_value, 0, NULL) != SUCCESS) {
-		return PHP_CBOR_ERROR_INTERNAL;
+		return CBOR_ERROR_INTERNAL;
 	}
 	if (UNEXPECTED(EG(exception))) {
-		return PHP_CBOR_ERROR_EXCEPTION;
+		return CBOR_ERROR_EXCEPTION;
 	}
 	Z_PROTECT_RECURSION_P(value);
 	error = enc_zval(ctx, &r_value);
@@ -582,28 +582,28 @@ static php_cbor_error enc_serializable(enc_context *ctx, zval *value)
 	return error;
 }
 
-static php_cbor_error enc_encodeparams(enc_context *ctx, zval *ins)
+static cbor_error enc_encodeparams(enc_context *ctx, zval *ins)
 {
-	php_cbor_error error;
-	php_cbor_encode_args saved_args;
+	cbor_error error;
+	cbor_encode_args saved_args;
 	zval tmp_value, tmp_params;
 	zval *value, *params, *conf;
 	zend_long flags;
 	HashTable *ht;
 	saved_args = ctx->args;
 	if (Z_IS_RECURSIVE_P(ins)) {
-		ENC_RESULT(PHP_CBOR_ERROR_RECURSION);
+		ENC_RESULT(CBOR_ERROR_RECURSION);
 	}
 	value = zend_read_property(CBOR_CE(encodeparams), Z_OBJ_P(ins), PROP_L("value"), false, &tmp_value);
 	params = zend_read_property(CBOR_CE(encodeparams), Z_OBJ_P(ins), PROP_L("params"), false, &tmp_params);
 	if (!value || !params) {
-		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
+		ENC_RESULT(CBOR_ERROR_INTERNAL);
 	}
 	ht = Z_ARR_P(params);
 	conf = zend_hash_str_find_deref(ht, ZEND_STRL("flags_clear"));
 	if (conf) {
 		if (Z_TYPE_P(conf) != IS_LONG) {
-			ENC_RESULT(PHP_CBOR_ERROR_INVALID_FLAGS);
+			ENC_RESULT(CBOR_ERROR_INVALID_FLAGS);
 		}
 		flags = Z_LVAL_P(conf);
 		ctx->args.flags &= ~flags;
@@ -612,18 +612,18 @@ static php_cbor_error enc_encodeparams(enc_context *ctx, zval *ins)
 	if (conf) {
 		uint32_t mutex_flags = 0;
 		if (Z_TYPE_P(conf) != IS_LONG) {
-			ENC_RESULT(PHP_CBOR_ERROR_INVALID_FLAGS);
+			ENC_RESULT(CBOR_ERROR_INVALID_FLAGS);
 		}
 		flags = Z_LVAL_P(conf);
-		if (flags & PHP_CBOR_BYTE) {
-			mutex_flags = PHP_CBOR_TEXT;
-		} else if (flags & PHP_CBOR_TEXT) {
-			mutex_flags = PHP_CBOR_BYTE;
+		if (flags & CBOR_BYTE) {
+			mutex_flags = CBOR_TEXT;
+		} else if (flags & CBOR_TEXT) {
+			mutex_flags = CBOR_BYTE;
 		}
-		if (flags & PHP_CBOR_KEY_BYTE) {
-			mutex_flags |= PHP_CBOR_KEY_TEXT;
-		} else if (flags & PHP_CBOR_KEY_TEXT) {
-			mutex_flags |= PHP_CBOR_KEY_BYTE;
+		if (flags & CBOR_KEY_BYTE) {
+			mutex_flags |= CBOR_KEY_TEXT;
+		} else if (flags & CBOR_KEY_TEXT) {
+			mutex_flags |= CBOR_KEY_BYTE;
 		}
 		ctx->args.flags &= ~mutex_flags;
 		ctx->args.flags |= flags;
@@ -657,9 +657,9 @@ static void free_srns_stack(enc_context *ctx)
 	}
 }
 
-static php_cbor_error enc_string_ref(enc_context *ctx, const char *value, size_t length, zend_string *v_str, bool to_text)
+static cbor_error enc_string_ref(enc_context *ctx, const char *value, size_t length, zend_string *v_str, bool to_text)
 {
-	php_cbor_error error = 0;
+	cbor_error error = 0;
 	srns_item *srns = ctx->srns;
 	HashTable *str_table;
 	int table_index;
@@ -674,22 +674,22 @@ static php_cbor_error enc_string_ref(enc_context *ctx, const char *value, size_t
 	str_table = srns->str_table[table_index];
 	str_index = zend_hash_find(str_table, v_str);
 	if (str_index) {
-		enc_tag_bare(ctx, PHP_CBOR_TAG_STRING_REF);
+		enc_tag_bare(ctx, CBOR_TAG_STRING_REF);
 		enc_long(ctx, Z_LVAL_P(str_index));
 		goto ENCODED;
 	}
 	if (!php_cbor_is_len_string_ref(length, srns->next_index)) {
-		ENC_RESULT(PHP_CBOR_STATUS_VALUE_FOLLOWS);
+		ENC_RESULT(CBOR_STATUS_VALUE_FOLLOWS);
 	}
 	if (srns->next_index == ZEND_LONG_MAX) {  /* until max - 1 for simplicity */
-		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
+		ENC_RESULT(CBOR_ERROR_INTERNAL);
 	}
 	ZVAL_LONG(&new_index, srns->next_index);
 	srns->next_index++;
 	if (!zend_hash_add_new(str_table, v_str, &new_index)) {
-		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
+		ENC_RESULT(CBOR_ERROR_INTERNAL);
 	}
-	error = PHP_CBOR_STATUS_VALUE_FOLLOWS;
+	error = CBOR_STATUS_VALUE_FOLLOWS;
 ENCODED:
 	if (created) {
 		zend_string_release(v_str);
@@ -697,7 +697,7 @@ ENCODED:
 	return error;
 }
 
-static php_cbor_error enc_ref_counted(enc_context *ctx, zval *value)
+static cbor_error enc_ref_counted(enc_context *ctx, zval *value)
 {
 #if ZEND_ULONG_MAX < UINTPTR_MAX
 #error "Unimplemented: maybe use pointer as a binary string key?"
@@ -706,34 +706,34 @@ static php_cbor_error enc_ref_counted(enc_context *ctx, zval *value)
 	zval new_index, *ref_index;
 	assert(Z_REFCOUNTED_P(value));
 	if ((ref_index = zend_hash_index_find(ctx->refs, key_index)) != NULL) {
-		enc_tag_bare(ctx, PHP_CBOR_TAG_SHARED_REF);
+		enc_tag_bare(ctx, CBOR_TAG_SHARED_REF);
 		enc_long(ctx, Z_LVAL_P(ref_index));
 		return 0;
 	}
 	ZVAL_LONG(&new_index, zend_hash_num_elements(ctx->refs));
 	if (!zend_hash_index_add_new(ctx->refs, key_index, &new_index)
 			|| !zend_hash_next_index_insert_new(ctx->ref_lock, value)) {
-		return PHP_CBOR_ERROR_INTERNAL;
+		return CBOR_ERROR_INTERNAL;
 	}
 	Z_TRY_ADDREF_P(value);
-	enc_tag_bare(ctx, PHP_CBOR_TAG_SHAREABLE);
-	return PHP_CBOR_STATUS_VALUE_FOLLOWS;
+	enc_tag_bare(ctx, CBOR_TAG_SHAREABLE);
+	return CBOR_STATUS_VALUE_FOLLOWS;
 }
 
-static php_cbor_error enc_shareable(enc_context *ctx, zval *value)
+static cbor_error enc_shareable(enc_context *ctx, zval *value)
 {
-	php_cbor_error error = 0;
+	cbor_error error = 0;
 	zval tmp_v;
 	error = enc_ref_counted(ctx, value);
-	if (error != PHP_CBOR_STATUS_VALUE_FOLLOWS) {
+	if (error != CBOR_STATUS_VALUE_FOLLOWS) {
 		return error;
 	}
 	value = zend_read_property(CBOR_CE(shareable), Z_OBJ_P(value), PROP_L("value"), false, &tmp_v);
 	if (!value) {
-		return PHP_CBOR_ERROR_INTERNAL;
+		return CBOR_ERROR_INTERNAL;
 	}
 	if (Z_TYPE_P(value) == IS_OBJECT && Z_OBJ_P(value)->ce == CBOR_CE(shareable)) {
-		return PHP_CBOR_ERROR_TAG_VALUE;  /* nested Shareable */
+		return CBOR_ERROR_TAG_VALUE;  /* nested Shareable */
 	}
 	return enc_zval(ctx, value);
 }
@@ -745,9 +745,9 @@ static zend_result call_fn(zval *object, zend_string *func_str, zval *retval_ptr
 	return call_user_function(NULL, object, &func_name, retval_ptr, param_count, params);
 }
 
-static php_cbor_error enc_datetime(enc_context *ctx, zval *value)
+static cbor_error enc_datetime(enc_context *ctx, zval *value)
 {
-	php_cbor_error error;
+	cbor_error error;
 	zval r_value;
 	zval params[1];
 	zend_string *r_str;
@@ -758,7 +758,7 @@ static php_cbor_error enc_datetime(enc_context *ctx, zval *value)
 	}
 	ZVAL_NEW_STR(&params[0], ctx->str[EXT_STR_DATE_FORMAT]);
 	if (call_fn(value, ctx->str[EXT_STR_DATE_FORMAT_FN], &r_value, 1, params) != SUCCESS) {
-		return PHP_CBOR_ERROR_INTERNAL;
+		return CBOR_ERROR_INTERNAL;
 	}
 	r_str = Z_STR(r_value);
 	/* 0         1         2         3   */
@@ -766,7 +766,7 @@ static php_cbor_error enc_datetime(enc_context *ctx, zval *value)
 	/* 2001-02-03T04:05:06.000007+08:09  */
 	len = 32;
 	if (ZSTR_LEN(r_str) != len) {
-		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
+		ENC_RESULT(CBOR_ERROR_INTERNAL);
 	}
 	r_str = zend_string_separate(r_str, false);
 	/* remove redundant fractional zeros */
@@ -792,16 +792,16 @@ static php_cbor_error enc_datetime(enc_context *ctx, zval *value)
 		ZSTR_VAL(r_str)[len] = '\0';
 		r_str = zend_string_truncate(r_str, len, false);
 	}
-	enc_tag_bare(ctx, PHP_CBOR_TAG_DATETIME);
+	enc_tag_bare(ctx, CBOR_TAG_DATETIME);
 	error = enc_string(ctx, r_str, true);
 ENCODED:
 	zend_string_release(r_str);
 	return error;
 }
 
-static php_cbor_error enc_bignum(enc_context *ctx, zval *value)
+static cbor_error enc_bignum(enc_context *ctx, zval *value)
 {
-	php_cbor_error error = 0;
+	cbor_error error = 0;
 	zval r_value, com_value;
 	zval params[2];
 	zend_string *r_str = NULL;
@@ -817,18 +817,18 @@ static php_cbor_error enc_bignum(enc_context *ctx, zval *value)
 	ZVAL_COPY_VALUE(&params[0], value);
 	ZVAL_LONG(&params[1], 0);
 	if (call_fn(NULL, ctx->str[EXT_STR_GMP_CMP_FN], &r_value, 2, params) != SUCCESS) {
-		return PHP_CBOR_ERROR_INTERNAL;
+		return CBOR_ERROR_INTERNAL;
 	}
 	is_negative = Z_LVAL(r_value) < 0;
 	if (is_negative) {
 		if (call_fn(NULL, ctx->str[EXT_STR_GMP_COM_FN], &com_value, 1, params) != SUCCESS) {
-			return PHP_CBOR_ERROR_INTERNAL;
+			return CBOR_ERROR_INTERNAL;
 		}
 		value = &com_value;
 		ZVAL_COPY_VALUE(&params[0], value);
 	}
 	if (call_fn(NULL, ctx->str[EXT_STR_GMP_EXPORT_FN], &r_value, 1, params) != SUCCESS) {
-		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
+		ENC_RESULT(CBOR_ERROR_INTERNAL);
 	}
 	r_str = Z_STR(r_value);
 	len = ZSTR_LEN(r_str);
@@ -845,7 +845,7 @@ static php_cbor_error enc_bignum(enc_context *ctx, zval *value)
 		ZSTR_VAL(r_str)[len] = '\0';
 		r_str = zend_string_truncate(r_str, len, false);
 	}
-	enc_tag_bare(ctx, is_negative ? PHP_CBOR_TAG_BIGNUM_N : PHP_CBOR_TAG_BIGNUM_U);
+	enc_tag_bare(ctx, is_negative ? CBOR_TAG_BIGNUM_N : CBOR_TAG_BIGNUM_U);
 	error = enc_string(ctx, r_str, false);
 ENCODED:
 	zval_ptr_dtor(&com_value);
@@ -855,9 +855,9 @@ ENCODED:
 	return error;
 }
 
-static php_cbor_error enc_decimal(enc_context *ctx, zval *value)
+static cbor_error enc_decimal(enc_context *ctx, zval *value)
 {
-	php_cbor_error error = 0;
+	cbor_error error = 0;
 	zval r_value;
 	zend_string *r_str = NULL;
 	zend_string *bin_str = NULL;
@@ -873,7 +873,7 @@ static php_cbor_error enc_decimal(enc_context *ctx, zval *value)
 		ctx->str[EXT_STR_DEC_TOSTR_FN] = MAKE_ZSTR("tostring");
 	}
 	if (call_fn(value, ctx->str[EXT_STR_DEC_ISNAN_FN], &r_value, 0, NULL) != SUCCESS) {
-		return PHP_CBOR_ERROR_INTERNAL;
+		return CBOR_ERROR_INTERNAL;
 	}
 	if (Z_TYPE(r_value) == IS_TRUE) {
 		zval *nan = zend_get_constant_str(ZEND_STRL("NAN"));  /* use PHP's constant, not the extension's compiler's */
@@ -881,31 +881,31 @@ static php_cbor_error enc_decimal(enc_context *ctx, zval *value)
 		goto ENCODED;
 	}
 	if (call_fn(value, ctx->str[EXT_STR_DEC_ISINF_FN], &r_value, 0, NULL) != SUCCESS) {
-		return PHP_CBOR_ERROR_INTERNAL;
+		return CBOR_ERROR_INTERNAL;
 	}
 	if (Z_TYPE(r_value) == IS_TRUE) {
 		if (call_fn(value, ctx->str[EXT_STR_DEC_ISNEG_FN], &r_value, 0, NULL) != SUCCESS) {
-			return PHP_CBOR_ERROR_INTERNAL;
+			return CBOR_ERROR_INTERNAL;
 		}
 		ZVAL_DOUBLE(&r_value, (Z_TYPE(r_value) == IS_TRUE) ? -INFINITY : INFINITY);
 		enc_z_double(ctx, &r_value, true);
 		goto ENCODED;
 	}
 	if (call_fn(value, ctx->str[EXT_STR_DEC_TOSTR_FN], &r_value, 0, NULL) != SUCCESS) {
-		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
+		ENC_RESULT(CBOR_ERROR_INTERNAL);
 	}
 	/* output will be like '-123.45E+67' */
 	r_str = Z_STR(r_value);
 	len = ZSTR_LEN(r_str);
 	if (!len) {
-		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
+		ENC_RESULT(CBOR_ERROR_INTERNAL);
 	}
 	r_ptr = ZSTR_VAL(r_str);
 	is_negative = *r_ptr == '-';
 	if (is_negative) {
 		r_ptr++;
 		if (!--len) {
-			ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
+			ENC_RESULT(CBOR_ERROR_INTERNAL);
 		}
 	}
 	exp = 0;
@@ -914,14 +914,14 @@ static php_cbor_error enc_decimal(enc_context *ctx, zval *value)
 		size_t exp_len = len - (c_ptr - r_ptr);
 		/* Decimal extension appears not to support arbitraly length exponent. So is this. */
 		if (exp_len - 1 >= MAX_LENGTH_OF_LONG) {  /* skip 'E', exclude max length to avoid overflow */
-			ENC_RESULT(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+			ENC_RESULT(CBOR_ERROR_UNSUPPORTED_VALUE);
 		}
 		exp = ZEND_ATOL(c_ptr + 1);
 		len -= exp_len;
 	}
 	bin_str = decode_dec_str(r_ptr, len);
 	if (!bin_str) {
-		ENC_RESULT(PHP_CBOR_ERROR_INTERNAL);
+		ENC_RESULT(CBOR_ERROR_INTERNAL);
 	}
 	if (is_negative) {
 		if (ZSTR_LEN(bin_str) == 0) {
@@ -936,12 +936,12 @@ static php_cbor_error enc_decimal(enc_context *ctx, zval *value)
 	exp_p = c_ptr ? -(int)(len - 1 - (c_ptr - r_ptr)) : 0;  /* to keep precision of Decimal instance, exp never be greater than zero */
 	if ((exp > 0 && exp_p > ZEND_LONG_MAX - exp)
 			|| (exp < 0 && exp_p < ZEND_LONG_MIN - exp)) {
-		ENC_RESULT(PHP_CBOR_ERROR_UNSUPPORTED_VALUE);
+		ENC_RESULT(CBOR_ERROR_UNSUPPORTED_VALUE);
 	}
 	exp += exp_p;
 	len = ZSTR_LEN(bin_str);
 	if (exp || len > 8) {
-		enc_tag_bare(ctx, PHP_CBOR_TAG_DECIMAL);
+		enc_tag_bare(ctx, CBOR_TAG_DECIMAL);
 		cbor_di_write_int(ctx->buf, DI_ARRAY, 2);
 		enc_long(ctx, exp);
 	}
@@ -949,7 +949,7 @@ static php_cbor_error enc_decimal(enc_context *ctx, zval *value)
 		enc_bin_int(ctx, ZSTR_VAL(bin_str), len, is_negative);
 		goto ENCODED;
 	}
-	enc_tag_bare(ctx, is_negative ? PHP_CBOR_TAG_BIGNUM_N : PHP_CBOR_TAG_BIGNUM_U);
+	enc_tag_bare(ctx, is_negative ? CBOR_TAG_BIGNUM_N : CBOR_TAG_BIGNUM_U);
 	error = enc_string(ctx, bin_str, false);
 ENCODED:
 	if (r_str) {
