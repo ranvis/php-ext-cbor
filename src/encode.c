@@ -702,7 +702,6 @@ static php_cbor_error enc_ref_counted(enc_context *ctx, zval *value)
 #if ZEND_ULONG_MAX < UINTPTR_MAX
 #error "Unimplemented: maybe use pointer as a binary string key?"
 #endif
-	php_cbor_error error = 0;
 	zend_ulong key_index = (zend_ulong)Z_COUNTED_P(value);
 	zval new_index, *ref_index;
 	assert(Z_REFCOUNTED_P(value));
@@ -834,12 +833,7 @@ static php_cbor_error enc_bignum(enc_context *ctx, zval *value)
 	r_str = Z_STR(r_value);
 	len = ZSTR_LEN(r_str);
 	if (len <= 8) {
-		uint64_t i_value = 0;
-		for (size_t i = 0; i < len; i++) {
-			i_value <<= 8;
-			i_value |= (uint8_t)ZSTR_VAL(r_str)[i];
-		}
-		enc_xint(ctx, i_value, is_negative);
+		enc_bin_int(ctx, ZSTR_VAL(r_str), len, is_negative);
 		goto ENCODED;
 	}
 	/* len > 8 */
