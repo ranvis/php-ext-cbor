@@ -628,9 +628,7 @@ static php_cbor_error enc_encodeparams(enc_context *ctx, zval *ins)
 		ctx->args.flags &= ~mutex_flags;
 		ctx->args.flags |= flags;
 	}
-	if ((error = validate_flags(ctx->args.flags)) != 0) {
-		return error;
-	}
+	ENC_CHECK(validate_flags(ctx->args.flags));
 	ENC_CHECK(php_cbor_override_encode_options(&ctx->args, ht));
 	Z_PROTECT_RECURSION_P(ins);
 	error = enc_zval(ctx, value);
