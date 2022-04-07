@@ -18,19 +18,19 @@ typedef union binary64_alias {
 	double f;
 } binary64_alias;
 
-extern void php_cbor_minit_types();
+void php_cbor_minit_types();
 
 /* undefined */
-extern zend_object *cbor_get_undef();
+zend_object *cbor_get_undef();
 
 /* xstring */
-extern zend_object *cbor_xstring_create(zend_class_entry *ce);
-extern void cbor_xstring_set_value(zend_object *obj, zend_string *value);
-extern zend_string *cbor_get_xstring_value(zval *value);
+zend_object *cbor_xstring_create(zend_class_entry *ce);
+void cbor_xstring_set_value(zend_object *obj, zend_string *value);
+zend_string *cbor_get_xstring_value(zval *value);
 
 /* floatx */
-extern zend_object *cbor_floatx_create(zend_class_entry *ce);
-extern bool cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw);
-extern size_t cbor_floatx_get_value(zend_object *obj, char *out);
-extern double cbor_from_float16(uint16_t value);
-extern uint16_t cbor_to_float16(float value);
+zend_object *cbor_floatx_create(zend_class_entry *ce);
+bool cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw);
+size_t cbor_floatx_get_value(zend_object *obj, char *out);
+double cbor_from_float16(uint16_t value);
+uint16_t cbor_to_float16(float value);

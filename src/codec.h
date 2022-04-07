@@ -54,17 +54,17 @@ typedef struct {
 	uint8_t shared_ref;
 } cbor_decode_args;
 
-extern void php_cbor_minit_encode();
-extern void php_cbor_minit_decode();
+void php_cbor_minit_encode();
+void php_cbor_minit_decode();
 
 /* options */
-extern cbor_error php_cbor_override_encode_options(cbor_encode_args *args, HashTable *options);
-extern cbor_error php_cbor_set_encode_options(cbor_encode_args *args, HashTable *options);
-extern cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *options);
+cbor_error php_cbor_override_encode_options(cbor_encode_args *args, HashTable *options);
+cbor_error php_cbor_set_encode_options(cbor_encode_args *args, HashTable *options);
+cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *options);
 
-extern void php_cbor_throw_error(cbor_error error, bool has_arg, size_t arg);
+void php_cbor_throw_error(cbor_error error, bool has_arg, size_t arg);
 
-extern cbor_error php_cbor_encode(zval *value, zend_string **data, const cbor_encode_args *args);
-extern cbor_error php_cbor_decode(zend_string *data, zval *value, cbor_decode_args *args);
+cbor_error php_cbor_encode(zval *value, zend_string **data, const cbor_encode_args *args);
+cbor_error php_cbor_decode(zend_string *data, zval *value, cbor_decode_args *args);
 
-extern bool cbor_is_len_string_ref(size_t str_len, uint32_t next_index);
+bool cbor_is_len_string_ref(size_t str_len, uint32_t next_index);

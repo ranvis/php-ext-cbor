@@ -32,8 +32,8 @@ typedef struct {
 #define DI_IS_SINGLE(out)  ((out).read_len == 1 + 4)
 #define DI_IS_DOUBLE(out)  ((out).read_len == 1 + 8)
 
-extern uint8_t cbor_di_get_type(const uint8_t *data, size_t len);
-extern bool cbor_di_read_int(const uint8_t *data, size_t len, cbor_di_decoded *out);
-extern bool cbor_di_read_str(const uint8_t *data, size_t len, cbor_di_decoded *out);
-extern bool cbor_di_read_list(const uint8_t *data, size_t len, cbor_di_decoded *out);
-extern bool cbor_di_read_float(const uint8_t *data, size_t len, cbor_di_decoded *out);
+uint8_t cbor_di_get_type(const uint8_t *data, size_t len);
+bool cbor_di_read_int(const uint8_t *data, size_t len, cbor_di_decoded *out);
+bool cbor_di_read_str(const uint8_t *data, size_t len, cbor_di_decoded *out);
+bool cbor_di_read_list(const uint8_t *data, size_t len, cbor_di_decoded *out);
+bool cbor_di_read_float(const uint8_t *data, size_t len, cbor_di_decoded *out);
