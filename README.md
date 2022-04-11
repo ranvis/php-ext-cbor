@@ -103,12 +103,12 @@ This can be useful when you want to enforce specific parameters to the surroundi
 
 `$params` are:
 
-- `$flags`: Encoding flags to set.
-- `$flags_clear`: Encoding flags to clear.
-Flags in `$flags_clear` are cleared first then flags in `$flags` are set.
+- `'flags' => int`: Encoding flags to set.
+- `'flags_clear' => int`: Encoding flags to clear.
+Flags in `'flags_clear'` are cleared first then flags in `'flags'` are set.
 Note that you don't need to clear conflicting string flags, i.e. clearing `CBOR_TEXT` when setting `CBOR_BYTE` or vice versa. The same applies for `CBOR_KEY_*` string flags.
-- Other `$options` values.
-You cannot change `max_depth` or options that makes CBOR data contextual.
+- Other `$options` values for encoding.
+You cannot change `'max_depth'` or options that makes CBOR data contextual.
 
 ### Types of CBOR and PHP
 
