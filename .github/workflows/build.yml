@@ -1,0 +1,153 @@
+# @author SATO Kentaro
+# @license BSD-2-Clause
+
+name: Build and release
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [master]
+    tags: ['v[0-9]*']
+
+env:
+  basename: php_cbor
+
+jobs:
+  build-ext:
+    runs-on: windows-2022
+    if: github.ref_type == 'tag' || !startsWith(github.event.commits[0].message, 'v')
+
+    strategy:
+      matrix:
+        isa: [x86, x64]
+        ts: [nts, ts]
+        php_ver: ['8.0', '8.1']
+
+    steps:
+      - name: Cache PHP SDK - Get base action
+        # Cache, but manually run post action arbitrarily, inspired from https://github.com/mxxk/gh-actions-cache-always
+        uses: actions/checkout@v3
+        with:
+          repository: actions/cache
+          ref: v3
+          path: .tmp/actions/cache-orig
+
+      - name: Cache PHP SDK - Prepare actions
+        shell: bash
+        run: |
+          # Copy to 'cache-main'
+          cp -ar .tmp/actions/cache-orig .tmp/actions/cache-main
+          # Remove 'post-if'
+          perl -pi -e 's/^ +post-if:.+//' .tmp/actions/cache-main/action.yml
+          # Comment out 'post'
+          perl -pi -e 's/^( +)(?=post:)/$1#/' .tmp/actions/cache-main/action.yml
+          # Copy to 'cache-post'
+          cp -ar .tmp/actions/cache-main .tmp/actions/cache-post
+          # Remove 'main'
+          perl -pi -e 's/^ +main:.+//' .tmp/actions/cache-post/action.yml
+          # Change 'post' to 'main'
+          perl -pi -e 's/^( +)#post:/$1 . "main:"/e' .tmp/actions/cache-post/action.yml
+
+      - name: Cache PHP SDK - Get cache data
+        id: cache-phpsdk
+        uses: ./.tmp/actions/cache-main
+        with:
+          path: phpsdk
+          key: phpsdk-${{runner.os}}-${{matrix.ts}}-${{matrix.isa}}-${{matrix.php_ver}}
+
+      - name: Preparation
+        run: |
+          mkdir downloads
+
+      - name: Store PHP SDK
+        if: steps.cache-phpsdk.outputs.cache-hit != 'true'
+        uses: ranvis/setup-php-sdk@mod
+        with:
+          php_version: ${{matrix.php_ver}}
+          ts: ${{matrix.ts}}
+          arch: ${{matrix.isa}}
+          install_dir: ${{github.workspace}}\phpsdk
+          cache_dir: ${{github.workspace}}\downloads
+
+      - name: Cache PHP SDK - Cache data
+        if: steps.cache-phpsdk.outputs.cache-hit != 'true'
+        uses: ./.tmp/actions/cache-post
+        with:
+          path: phpsdk
+          key: phpsdk-${{runner.os}}-${{matrix.ts}}-${{matrix.isa}}-${{matrix.php_ver}}
+
+      - name: Cache repo
+        id: cache-repo
+        uses: actions/cache@v3
+        with:
+          path: src
+          key: src-${{github.sha}}
+
+      - name: Checkout repo
+        if: steps.cache-repo.outputs.cache-hit != 'true'
+        uses: actions/checkout@v3
+        with:
+          path: src
+
+      - name: Build
+        shell: cmd
+        run: |
+          cd src
+
+          echo ::group::Prepare
+          set PHP_SDK_RUN_FROM_ROOT=1
+          set "VSCMD_START_DIR=%CD%"
+          set __VSCMD_ARG_NO_LOGO=yes
+          set PHP_SDK_ROOT_PATH=${{github.workspace}}\phpsdk\php-sdk
+          REM %PHP_SDK_ROOT_PATH%\bin\phpsdk_setshell.bat vs17 ${{matrix.isa}}
+          REM https://github.com/actions/virtual-environments/blob/main/images/win/Windows2022-Readme.md#visual-studio-enterprise-2022
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{matrix.isa}} -vcvars_ver=14.29
+          call %PHP_SDK_ROOT_PATH%\bin\phpsdk_setvars.bat 
+          echo ::endgroup::
+
+          echo ::group::Configure
+          call ..\phpsdk\php-devpack\phpize.bat
+          call configure.bat --with-prefix=..\build --enable-cbor
+          perl -pi .\msvc_mod_make.pl Makefile
+          echo ::endgroup::
+
+          echo ::group::Make
+          nmake /nologo
+          echo ::endgroup::
+
+          echo ::group::Install
+          nmake /nologo install
+          echo ::endgroup::
+
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{env.basename}}-${{github.ref_name}}-${{matrix.php_ver}}-${{matrix.ts}}-${{matrix.isa}}.dll
+          path: |
+            build/ext/php_cbor.dll
+            src/LICENSE
+            src/README.md
+
+      - name: Archive
+        id: archive
+        if: github.ref_type == 'tag'
+        shell: cmd
+        run: |
+          set arcName=${{env.basename}}-${{github.ref_name}}-${{matrix.php_ver}}-${{matrix.ts}}-${{matrix.isa}}.zip
+          #set files=build\ext\php_cbor.dll src\README.md src\LICENSE
+          #zip -j9 %arcName% %files%
+          cd ${{github.workspace}}\build\ext
+          7z a ..\..\%arcName% php_cbor.dll
+          cd ${{github.workspace}}\src
+          7z a ..\%arcName% README.md LICENSE
+          echo ::set-output name=arc_name::%arcName%
+
+      - name: Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v1
+        with:
+          #draft: true
+          #prerelease: true
+          files: ${{github.workspace}}/${{steps.archive.outputs.arc_name}}
