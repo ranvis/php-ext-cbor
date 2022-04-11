@@ -22,15 +22,15 @@ run(function () {
     ok($instance === eval('return ' . var_export($instance, true) . ';'));
 
     // evaluated as false
-    assert($instance ? false : true);
-    assert(!$instance ? true : false);
-    assert($instance == false);
+    ok($instance ? false : true);
+    ok(!$instance ? true : false);
+    ok($instance == false);
 
     // not the false value
-    assert($instance !== false);
+    ok($instance !== false);
 
     // not the null value
-    assert($instance != null);
+    ok($instance != null);
 
     // prohibited actions
     throws('Error', fn () => $instance->abc);
