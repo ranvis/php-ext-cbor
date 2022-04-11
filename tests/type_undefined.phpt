@@ -41,9 +41,10 @@ run(function () {
     throws('Error', fn () => $x = &$instance->abc);
     throws('Error', fn () => new Cbor\Undefined());
 
-    // serialization
-    eq($instance, unserialize(serialize($instance)));
-    ok($instance !== unserialize(serialize($instance))); // XXX:
+    // uniqueness for serialization
+    $serialized = 'C:14:"Cbor\Undefined":0:{}';
+    eq($serialized, serialize($instance));
+    ok($instance === unserialize($serialized));
 
     // void context
     Cbor\Undefined::get();

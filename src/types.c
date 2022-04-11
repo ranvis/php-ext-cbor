@@ -44,6 +44,23 @@ PHP_METHOD(Cbor_EncodeParams, __construct)
 
 /* PHP has IS_UNDEF type, but it is semantically different from CBOR's "undefined" value. */
 
+static int undef_serialize(zval *obj, unsigned char **buffer, size_t *buf_len, zend_serialize_data *data)
+{
+	*buffer = emalloc(0);  /* allocate just in case */
+	*buf_len = 0;
+	return SUCCESS;
+}
+
+static int undef_unserialize(zval *obj, zend_class_entry *ce, const unsigned char *buf, size_t buf_len, zend_unserialize_data *data)
+{
+	if (buf_len != 0) {
+		zend_throw_error(NULL, "Unexpected data for %s", ZSTR_VAL(ce->name));
+		return FAILURE;
+	}
+	ZVAL_OBJ(obj, cbor_get_undef());
+	return SUCCESS;
+}
+
 static zend_object *undef_clone(zend_object *obj)
 {
 	GC_ADDREF(obj);
@@ -731,6 +748,8 @@ PHP_METHOD(Cbor_Shareable, jsonSerialize)
 
 void php_cbor_minit_types()
 {
+	CBOR_CE(undefined)->serialize = undef_serialize;
+	CBOR_CE(undefined)->unserialize = undef_unserialize;
 	memcpy(&undef_handlers, &std_object_handlers, sizeof(zend_object_handlers));
 	undef_handlers.clone_obj = &undef_clone;
 	undef_handlers.read_property = &undef_read_property;
