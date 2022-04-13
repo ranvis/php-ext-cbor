@@ -17,7 +17,7 @@ env:
 jobs:
   build-ext:
     runs-on: windows-2022
-    if: github.ref_type == 'tag' || !startsWith(github.event.commits[0].message, 'v')
+    if: github.ref_type == 'tag' || !startsWith(github.event.commits[0].message, 'Version ')
 
     strategy:
       matrix:
@@ -48,7 +48,7 @@ jobs:
           # Remove 'main'
           perl -pi -e 's/^ +main:.+//' .tmp/actions/cache-post/action.yml
           # Change 'post' to 'main'
-          perl -pi -e 's/^( +)#post:/$1 . "main:"/e' .tmp/actions/cache-post/action.yml
+          perl -pi -e 's/^( +)#post:/${1}main:/' .tmp/actions/cache-post/action.yml
 
       - name: Cache PHP SDK - Get cache data
         id: cache-phpsdk
