@@ -271,9 +271,6 @@ cbor_error php_cbor_decode(zend_string *data, zval *value, cbor_decode_args *arg
 	dec_context ctx;
 	const uint8_t *ptr = (const uint8_t *)ZSTR_VAL(data);
 	size_t length = ZSTR_LEN(data);
-	if ((args->flags & CBOR_FLOAT16 && args->flags & CBOR_FLOAT32)) {
-		return CBOR_ERROR_INVALID_FLAGS;
-	}
 	ctx.stack_top = NULL;
 	ctx.stack_depth = 0;
 	ctx.offset = 0;

@@ -15,6 +15,7 @@ run(function () {
     eq('0x400921fb54442d18', toDump(pack('E', (float)cdec('fb400921fb54442d18'))));
     eq('0x400921fb60000000', toDump(pack('E', (float)cdec('fa40490fdb', CBOR_FLOAT32))));
     eq('3.140625', (string)cdec('f94248', CBOR_FLOAT16));
+    eq('3.140625', (string)cdec('f94248', CBOR_FLOAT16 | CBOR_FLOAT32));
 
     eq('0xfa40490fdb', cenc(new Cbor\Float32($m_pi)));
     eq('0xf94248', cenc(new Cbor\Float16($m_pi)));
