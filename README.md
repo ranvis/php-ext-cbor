@@ -80,7 +80,7 @@ interface Serializable
 }
 ```
 
-When encoding classes that implements `Cbor\Serializable`, the encoder will call `cborSerializable()`.
+When encoding classes that implements `Cbor\Serializable`, the encoder will call `cborSerialize()`.
 Implementors may return data structure to serialize the instance, or throw an Exception to stop serializing.
 Classes that does not implement this interface cannot be serialized (aside from `stdClass` plain object).
 
@@ -94,7 +94,7 @@ final class EncodeParams
     public mixed $value;
     public array $params;
 
-    public function __construct(mixed $value, array $params) {}
+    public function __construct(mixed $value, array $params)
 }
 ```
 
@@ -106,7 +106,7 @@ This can be useful when you want to enforce specific parameters to the surroundi
 - `'flags' => int`: Encoding flags to set.
 - `'flags_clear' => int`: Encoding flags to clear.
 Flags in `'flags_clear'` are cleared first then flags in `'flags'` are set.
-Note that you don't need to clear conflicting string flags, i.e. clearing `CBOR_TEXT` when setting `CBOR_BYTE` or vice versa. The same applies for `CBOR_KEY_*` string flags.
+Note that you don't need to clear conflicting string flags, i.e. `CBOR_TEXT` is cleared when setting `CBOR_BYTE` and vice versa. The same applies for `CBOR_KEY_*` string flags.
 - Other `$options` values for encoding.
 You cannot change `'max_depth'` or options that makes CBOR data contextual.
 
