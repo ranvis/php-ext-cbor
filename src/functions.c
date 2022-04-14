@@ -64,75 +64,156 @@ PHP_FUNCTION(cbor_decode)
 }
 /* }}} */
 
+#define DESC_MSG(m)  do { \
+		desc_msg = ". " m; \
+		goto MSG_SET; \
+	} while (0)
+
 void php_cbor_throw_error(cbor_error error, bool has_arg, size_t arg)
 {
-	const char *message = "Unknown error code.";
+	const char *message = "Unknown error code";
+	const char *desc_msg = "";
 	bool can_have_arg = true;
-	switch (error) {
+	cbor_error error_code = error & CBOR_ERROR_CODE_MASK;
+	cbor_error error_desc = (error & CBOR_ERROR_DESC_MASK) >> CBOR_ERROR_DESC_SHIFT;
+	switch (error_code) {
 	case CBOR_ERROR_INVALID_FLAGS:
-		message = "Invalid flags are specified.";
+		message = "Invalid flags are specified";
 		can_have_arg = false;
+		switch (error_desc) {
+		case CBOR_ERROR_INVALID_FLAGS__BOTH_STRING_FLAG:
+			DESC_MSG("CBOR_BYTE and CBOR_TEXT flags cannot be specified simultaneously on encoding");
+		case CBOR_ERROR_INVALID_FLAGS__BOTH_KEY_STRING_FLAG:
+			DESC_MSG("CBOR_KEY_BYTE and CBOR_KEY_TEXT flags cannot be specified simultaneously on encoding");
+		case CBOR_ERROR_INVALID_FLAGS__NO_STRING_FLAG:
+			DESC_MSG("Either CBOR_BYTE or CBOR_TEXT flag must be specified to encode string");
+		case CBOR_ERROR_INVALID_FLAGS__NO_KEY_STRING_FLAG:
+			DESC_MSG("Either CBOR_KEY_BYTE or CBOR_KEY_TEXT flag must be specified to encode string as key");
+		}
 		break;
 	case CBOR_ERROR_INVALID_OPTIONS:
-		message = "Invalid options are specified.";
+		message = "Invalid options are specified";
 		can_have_arg = false;
 		break;
 	case CBOR_ERROR_DEPTH:
-		message = "Depth limit exceeded.";
+		message = "Depth limit exceeded";
 		break;
 	case CBOR_ERROR_RECURSION:
-		message = "Recursion is detected.";
+		message = "Recursion is detected";
 		can_have_arg = false;
 		break;
 	case CBOR_ERROR_SYNTAX:
-		message = "Data syntax error.";
+		message = "Data syntax error";
+		switch (error_desc) {
+		case CBOR_ERROR_SYNTAX__BREAK_UNDERFLOW:
+			DESC_MSG("Break without indefinite type");
+		case CBOR_ERROR_SYNTAX__BREAK_UNEXPECTED:
+			DESC_MSG("Break without indefinite type or it is too early");
+		case CBOR_ERROR_SYNTAX__INCONSISTENT_STRING_TYPE:
+			DESC_MSG("Inner string type is inconsistent with outer indefinite string");
+		}
 		break;
 	case CBOR_ERROR_UTF8:
-		message = "Invalid UTF-8 sequences.";
+		message = "Invalid UTF-8 sequences";
 		break;
 	case CBOR_ERROR_UNSUPPORTED_TYPE:
-		message = "Unsupported type of data.";
+		message = "Unsupported type of data";
+		switch (error_desc) {
+		case CBOR_ERROR_UNSUPPORTED_TYPE__SIMPLE:
+			DESC_MSG("Unknown simple value");
+		}
 		break;
 	case CBOR_ERROR_UNSUPPORTED_VALUE:
-		message = "Unsupported value.";
+		message = "Unsupported value";
+		switch (error_desc) {
+		case CBOR_ERROR_UNSUPPORTED_VALUE__INT_RANGE:
+			DESC_MSG("Integer is out of range");
+		}
 		break;
 	case CBOR_ERROR_UNSUPPORTED_SIZE:
-		message = "Unsupported size of data.";
+		message = "Unsupported size of data";
 		break;
 	case CBOR_ERROR_UNSUPPORTED_KEY_TYPE:
-		message = "Unsupported type of data for key.";
+		message = "Unsupported type of data for key";
+		switch (error_desc) {
+		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__INT_KEY:
+			DESC_MSG("Integer key while flag CBOR_INT_KEY is not specified");
+		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__NULL:
+			DESC_MSG("Null cannot be a map key");
+		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__BOOL:
+			DESC_MSG("Bool cannot be a map key");
+		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__FLOAT:
+			DESC_MSG("Float cannot be a map key");
+		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__BYTE:
+			DESC_MSG("Uncoerced string cannot be a map key. Specify lag CBOR_KEY_BYTE to circumvent this");
+		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__TEXT:
+			DESC_MSG("Uncoerced string cannot be a map key. Specify flag CBOR_KEY_TEXT to circumvent this");
+		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__ARRAY:
+			DESC_MSG("Array cannot be a map key");
+		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__OBJECT:
+			DESC_MSG("Object cannot be a map key");
+		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__UNDEF:
+			DESC_MSG("Undefined cannot be a map key");
+		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__TAG:
+			DESC_MSG("Tag cannot be a map key");
+		}
 		break;
 	case CBOR_ERROR_UNSUPPORTED_KEY_VALUE:
-		message = "Unsupported value for key.";
+		message = "Unsupported value for key";
+		switch (error_desc) {
+		case CBOR_ERROR_UNSUPPORTED_KEY_VALUE__RESERVED_PROP_NAME:
+			DESC_MSG("Object property name starting with NUL character is reserved. Specify flag CBOR_MAP_AS_ARRAY and decode map into array to circumvent this");
+		}
 		break;
 	case CBOR_ERROR_UNSUPPORTED_KEY_SIZE:
-		message = "Unsupported size of data for key.";
+		message = "Unsupported size of data for key";
 		break;
 	case CBOR_ERROR_TRUNCATED_DATA:
-		message = "Data is truncated.";
+		message = "Data is truncated";
 		break;
 	case CBOR_ERROR_MALFORMED_DATA:
-		message = "Data is malformed.";
+		message = "Data is malformed";
 		break;
 	case CBOR_ERROR_EXTRANEOUS_DATA:
-		message = "Extraneous data.";
+		message = "Extraneous data";
 		break;
 	case CBOR_ERROR_TAG_SYNTAX:
-		message = "The tag cannot be used here.";
+		message = "The tag cannot be used here";
+		switch (error_desc) {
+		case CBOR_ERROR_TAG_SYNTAX__STR_REF_NO_NS:
+			DESC_MSG("Stringref without stringref-namespace");
+		case CBOR_ERROR_TAG_SYNTAX__SHARE_NESTED:
+			DESC_MSG("Shareable cannot be nested");
+		}
 		break;
 	case CBOR_ERROR_TAG_TYPE:
-		message = "Invalid data type for the tag content.";
+		message = "Invalid data type for the tag content";
+		switch (error_desc) {
+		case CBOR_ERROR_TAG_TYPE__STR_REF_NOT_INT:
+			DESC_MSG("Stringref expects integer");
+		case CBOR_ERROR_TAG_TYPE__SHARE_INCOMPATIBLE:
+			DESC_MSG("Incompatible type is marked as shareable. Specify option ['shared_ref' => 'shareable'] to circumvent this");
+		case CBOR_ERROR_TAG_TYPE__SHARE_NOT_INT:
+			DESC_MSG("Sharedref expects integer");
+		}
 		break;
 	case CBOR_ERROR_TAG_VALUE:
-		message = "Invalid data value for the tag content.";
+		message = "Invalid data value for the tag content";
+		switch (error_desc) {
+		case CBOR_ERROR_TAG_VALUE__STR_REF_RANGE:
+			DESC_MSG("Stringref is out of range");
+		case CBOR_ERROR_TAG_VALUE__SHARE_RANGE:
+			DESC_MSG("Sharedref is out of range");
+		}
 		break;
 	case CBOR_ERROR_INTERNAL:
-		message = "Internal error.";
+		message = "Internal error";
 		break;
 	}
+MSG_SET:
 	if (can_have_arg && has_arg) {
-		zend_throw_exception_ex(CBOR_CE(exception), error, "%s at offset %zu.", message, arg);
+		zend_throw_exception_ex(CBOR_CE(exception), error_code, "%s%s; at offset %zu", message, desc_msg, arg);
 	} else {
-		zend_throw_exception(CBOR_CE(exception), message, error);
+		zend_throw_exception_ex(CBOR_CE(exception), error_code, "%s%s.", message, desc_msg);
 	}
 }

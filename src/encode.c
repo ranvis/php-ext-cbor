@@ -102,10 +102,11 @@ void php_cbor_minit_encode()
 
 static cbor_error validate_flags(uint32_t flags)
 {
-	if ((flags & CBOR_BYTE && flags & CBOR_TEXT)
-			|| (flags & CBOR_KEY_BYTE && flags & CBOR_KEY_TEXT)
-	) {
-		return CBOR_ERROR_INVALID_FLAGS;
+	if (flags & CBOR_BYTE && flags & CBOR_TEXT) {
+		return E_DESC(CBOR_ERROR_INVALID_FLAGS, BOTH_STRING_FLAG);
+	}
+	if (flags & CBOR_KEY_BYTE && flags & CBOR_KEY_TEXT) {
+		return E_DESC(CBOR_ERROR_INVALID_FLAGS, BOTH_KEY_STRING_FLAG);
 	}
 	return 0;
 }
@@ -177,8 +178,8 @@ RETRY:
 		enc_z_double(ctx, value, false);
 		break;
 	case IS_STRING:
-		if (!(ctx->args.flags & (CBOR_BYTE | CBOR_TEXT))) {
-			error = CBOR_ERROR_INVALID_FLAGS;
+		if (UNEXPECTED(!(ctx->args.flags & (CBOR_BYTE | CBOR_TEXT)))) {
+			error = E_DESC(CBOR_ERROR_INVALID_FLAGS, NO_STRING_FLAG);
 			break;
 		}
 		ENC_RESULT(enc_string(ctx, Z_STR_P(value), CTX_TEXT_FLAG(ctx)));
@@ -444,7 +445,7 @@ static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 						enc_xint(ctx, key_int, is_negative);
 						error = 0;
 					} else if (UNEXPECTED(key_flag_error)) {
-						error = CBOR_ERROR_INVALID_FLAGS;
+						error = E_DESC(CBOR_ERROR_INVALID_FLAGS, NO_KEY_STRING_FLAG);
 					} else {
 						error = enc_string(ctx, key, to_text);
 					}
@@ -452,7 +453,7 @@ static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 					char num_str[ZEND_LTOA_BUF_LEN];
 					ZEND_LTOA((zend_long)index, num_str, sizeof num_str);
 					if (UNEXPECTED(key_flag_error)) {
-						error = CBOR_ERROR_INVALID_FLAGS;
+						error = E_DESC(CBOR_ERROR_INVALID_FLAGS, NO_KEY_STRING_FLAG);
 					} else {
 						error = enc_string_len(ctx, num_str, strlen(num_str), NULL, to_text);
 					}
