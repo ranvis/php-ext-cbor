@@ -196,6 +196,7 @@ function getErrorName(int $code): string
          25 => 'CBOR_ERROR_UNSUPPORTED_KEY_TYPE',
                'CBOR_ERROR_UNSUPPORTED_KEY_VALUE',
                'CBOR_ERROR_UNSUPPORTED_KEY_SIZE',
+               'CBOR_ERROR_DUPLICATE_KEY',
          33 => 'CBOR_ERROR_TRUNCATED_DATA',
                'CBOR_ERROR_MALFORMED_DATA',
                'CBOR_ERROR_EXTRANEOUS_DATA',

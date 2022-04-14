@@ -56,6 +56,11 @@
 #define CBOR_MAP_AS_ARRAY     (1 << 6)
 
 /**
+ * Decode: Error if map key overwrites an existing key.
+ */
+#define CBOR_MAP_NO_DUP_KEY   (1 << 7)
+
+/**
  * Encode: Store PHP floats (which should be in double-precision, IEEE 754 binary64) as half-precision floats (IEEE 754 binary16)
  * Decode: Accept half-precision floats as PHP float instead of Cbor\Float16
  */

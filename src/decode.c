@@ -434,6 +434,10 @@ static bool append_item_to_map(dec_context *ctx, xzval *value, stack_item *item)
 		if (Z_STRLEN(item->v.map.key) >= 1 && Z_STRVAL(item->v.map.key)[0] == '\0') {
 			RETURN_CB_ERROR_B(E_DESC(CBOR_ERROR_UNSUPPORTED_KEY_VALUE, RESERVED_PROP_NAME));
 		}
+		if (ctx->args.flags & CBOR_MAP_NO_DUP_KEY
+				&& zend_std_has_property(Z_OBJ(item->v.map.dest), Z_STR(item->v.map.key), ZEND_PROPERTY_EXISTS, NULL)) {
+			RETURN_CB_ERROR_B(CBOR_ERROR_DUPLICATE_KEY);
+		}
 		if (EXPECTED(Z_TYPE_P(value) != IS_REFERENCE)) {
 			zend_std_write_property(Z_OBJ(item->v.map.dest), Z_STR(item->v.map.key), value, NULL);
 		} else {
@@ -447,9 +451,18 @@ static bool append_item_to_map(dec_context *ctx, xzval *value, stack_item *item)
 		}
 	} else {  /* IS_ARRAY */
 		if (Z_TYPE(item->v.map.key) == IS_LONG) {
+			zend_ulong index = (zend_ulong)Z_LVAL(item->v.map.key);
+			if (ctx->args.flags & CBOR_MAP_NO_DUP_KEY
+					&& zend_hash_index_exists(Z_ARRVAL(item->v.map.dest), index)) {
+				RETURN_CB_ERROR_B(CBOR_ERROR_DUPLICATE_KEY);
+			}
 			/* The argument accepts zend_ulong as underlying hash table does, but the actual index visible for PHP script is still zend_long. */
-			add_index_zval(&item->v.map.dest, (zend_ulong)Z_LVAL(item->v.map.key), value);
+			add_index_zval(&item->v.map.dest, index, value);
 		} else {
+			if (ctx->args.flags & CBOR_MAP_NO_DUP_KEY
+					&& zend_symtable_exists(Z_ARRVAL(item->v.map.dest), Z_STR(item->v.map.key))) {
+				RETURN_CB_ERROR_B(CBOR_ERROR_DUPLICATE_KEY);
+			}
 			add_assoc_zval_ex(&item->v.map.dest, Z_STRVAL(item->v.map.key), Z_STRLEN(item->v.map.key), value);
 		}
 		Z_TRY_ADDREF_P(value);
