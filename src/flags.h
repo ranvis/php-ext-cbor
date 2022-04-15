@@ -3,6 +3,9 @@
  * @license BSD-2-Clause
  */
 
+/**
+ * Binary string that indicates the data is CBOR format.
+ */
 #define CBOR_SELF_DESCRIBE_DATA  "\xd9\xd9\xf7"
 
 /**
@@ -21,26 +24,25 @@
 
 /**
  * Encode: Treat all PHP string as CBOR text string (UTF-8 encoded byte sequences) instead of CBOR byte string (binary).
- *   It is caller's responsibility to pass valid UTF-8 strings.
  * Decode: Accept text strings as PHP string instead of Cbor\String instance.
  */
 #define CBOR_TEXT             (1 << 1)
 
 /**
- * Encode: Store unsigned integer keys in PHP array as unsigned integer for map key.
- * Decode: Accept unsigned integer keys in map as numeric string of PHP object key, or PHP array key.
+ * Encode: Store integer keys in PHP array/object as integer for map key.
+ * Decode: Accept integer keys in map as numeric string of PHP object key, or PHP array key.
  */
 #define CBOR_INT_KEY          (1 << 2)
 
 /**
- * Encode: Store strings keys of map as byte string instead of text string.
+ * Encode: Store keys of map as byte string.
  *   Either CBOR_KEY_BYTE or CBOR_KEY_TEXT must be specified to encode PHP array/object string key.
  * Decode: Accept text string instead of byte string for map string key.
  */
 #define CBOR_KEY_BYTE         (1 << 3)
 
 /**
- * Encode: Store strings keys of map as text string instead of byte string.
+ * Encode: Store keys of map as text string.
  * Decode: Accept text string instead of byte string for map string key.
  */
 #define CBOR_KEY_TEXT         (1 << 4)
