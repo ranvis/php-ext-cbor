@@ -71,34 +71,13 @@ See "Supported Tags" below for the following options:
 
 #### Serializable
 
-```php
-namespace Cbor;
-
-interface Serializable
-{
-    public function cborSerialize(): mixed;
-}
-```
-
 When encoding classes that implements `Cbor\Serializable`, the encoder will call `cborSerialize()`.
 Implementors may return data structure to serialize the instance, or throw an Exception to stop serializing.
 Classes that does not implement this interface cannot be serialized (aside from `stdClass` plain object).
 
 #### EncodeParams
 
-```php
-namespace Cbor;
-
-final class EncodeParams
-{
-    public mixed $value;
-    public array $params;
-
-    public function __construct(mixed $value, array $params)
-}
-```
-
-When the encoder encounters an `EncodeParams` instance, it encodes `$value` with the specified `$params` flags and options added to the current flags and options. After encoding inner `$value`, those parameters are back to the previous state.
+When the encoder encounters an `Cbor\EncodeParams` instance, it encodes `$value` with the specified `$params` flags and options added to the current flags and options. After encoding inner `$value`, those parameters are back to the previous state.
 This can be useful when you want to enforce specific parameters to the surrounding data.
 
 `$params` are:

@@ -2,10 +2,10 @@
 /**
  * @author SATO Kentaro
  * @license BSD-2-Clause
- * @generate-function-entries
  */
 
-/*//
+/* functions start */
+/**
  * Encode value to CBOR string.
  * @param mixed $value A value to encode
  * @param int $flags Configuration flags
@@ -15,7 +15,7 @@
  */
 function cbor_encode(mixed $value, int $flags = CBOR_BYTE | CBOR_KEY_BYTE, ?array $options = null): string {}
 
-/*//
+/**
  * Decode CBOR string.
  * @param string $data CBOR string to decode
  * @param int $flags Configuration flags
@@ -24,3 +24,4 @@ function cbor_encode(mixed $value, int $flags = CBOR_BYTE | CBOR_KEY_BYTE, ?arra
  * @throws Cbor\Exception
  */
 function cbor_decode(string $data, int $flags = CBOR_BYTE | CBOR_KEY_BYTE, ?array $options = null): mixed {}
+/* functions end */

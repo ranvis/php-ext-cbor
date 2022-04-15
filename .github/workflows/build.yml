@@ -17,7 +17,7 @@ env:
 jobs:
   build-ext:
     runs-on: windows-2022
-    if: github.ref_type == 'tag' || !startsWith(github.event.commits[0].message, 'Version ')
+    if: github.ref_type == 'tag' || !startsWith(github.event.head_commit.message, 'Version ')
 
     strategy:
       matrix:
@@ -141,7 +141,7 @@ jobs:
           cd ${{github.workspace}}\build\ext
           7z a ..\..\%arcName% php_cbor.dll
           cd ${{github.workspace}}\src
-          7z a ..\%arcName% README.md LICENSE
+          7z a ..\%arcName% README.md LICENSE stub
           echo ::set-output name=arc_name::%arcName%
 
       - name: Release
