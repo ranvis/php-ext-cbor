@@ -18,7 +18,6 @@ static cbor_error bool_option(bool *opt_value, const char *name, size_t name_len
 	if (value == NULL) {
 		return 0;
 	}
-	ZVAL_DEREF(value);
 	if (Z_TYPE_P(value) == IS_TRUE) {
 		*opt_value = true;
 	} else if (Z_TYPE_P(value) == IS_FALSE) {
@@ -35,7 +34,6 @@ static cbor_error bool_n_option(uint8_t *opt_value, const char *name, size_t nam
 	if (value == NULL) {
 		return 0;
 	}
-	ZVAL_DEREF(value);
 	switch (Z_TYPE_P(value)) {
 	case IS_TRUE:
 		*opt_value = OPT_TRUE;
@@ -68,7 +66,6 @@ static cbor_error uint32_option(uint32_t *opt_value, const char *name, size_t na
 	if (value == NULL) {
 		return 0;
 	}
-	ZVAL_DEREF(value);
 	if (Z_TYPE_P(value) != IS_LONG) {
 		return CBOR_ERROR_INVALID_OPTIONS;
 	}
