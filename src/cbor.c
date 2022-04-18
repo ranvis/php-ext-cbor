@@ -12,7 +12,7 @@
 #include "tags.h"
 #include "types.h"
 
-#define PHP_CBOR_VERSION "0.3.1"
+#define PHP_CBOR_VERSION "0.3.2"
 
 ZEND_DECLARE_MODULE_GLOBALS(cbor)
 
