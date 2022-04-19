@@ -145,7 +145,7 @@ void php_cbor_throw_error(cbor_error error, bool has_arg, size_t arg)
 		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__FLOAT:
 			DESC_MSG("Float cannot be a map key");
 		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__BYTE:
-			DESC_MSG("Uncoerced string cannot be a map key. Specify lag CBOR_KEY_BYTE to circumvent this");
+			DESC_MSG("Uncoerced string cannot be a map key. Specify flag CBOR_KEY_BYTE to circumvent this");
 		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__TEXT:
 			DESC_MSG("Uncoerced string cannot be a map key. Specify flag CBOR_KEY_TEXT to circumvent this");
 		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__ARRAY:
