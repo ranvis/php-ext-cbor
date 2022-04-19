@@ -147,23 +147,25 @@ function toDump($value): string
     return '0x' . bin2hex($value);
 }
 
-function xThrows(int $code, callable $fn): void
+function xThrows(int|string $code, callable $fn): void
 {
     try {
         $actual = toDump($fn());
     } catch (Cbor\Exception $e) {
         $actual = getErrorName($e->getCode());
+    } catch (Throwable $e) {
+        $actual = get_class($e) . '#' . $e->getCode();
     }
-    eq(getErrorName($code), $actual, 2);
+    eq(is_int($code) ? getErrorName($code) : $code, $actual, 2);
 }
 
-function cencThrows(int $code, mixed $value, ...$args): void
+function cencThrows(int|string $code, mixed $value, ...$args): void
 {
     TestStats::inc('assertThrows');
     xThrows($code, fn () => cborEncode($value, ...$args));
 }
 
-function cdecThrows(int $code, string $value, ...$args): void
+function cdecThrows(int|string $code, string $value, ...$args): void
 {
     TestStats::inc('assertThrows');
     xThrows($code, fn () => cborDecode(decodeHex($value), ...$args));

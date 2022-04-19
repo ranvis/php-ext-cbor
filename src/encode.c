@@ -24,6 +24,7 @@ enum {
 	EXT_STR_GMP_CN = 0,
 	EXT_STR_DEC_MN,
 	EXT_STR_DEC_CN,
+	EXT_STR_URI_IN,
 
 	EXT_STR_ENC_SERIALIZE_FN,
 	EXT_STR_DATE_FORMAT_FN,
@@ -49,6 +50,7 @@ typedef struct {
 		zend_class_entry *date_i;
 		zend_class_entry *gmp;
 		zend_class_entry *decimal;
+		zend_class_entry *uri_i;
 	} ce;
 	zend_string *str[_EXT_STR_COUNT];
 } enc_context;
@@ -81,6 +83,7 @@ static cbor_error enc_shareable(enc_context *ctx, zval *value);
 static cbor_error enc_datetime(enc_context *ctx, zval *value);
 static cbor_error enc_bignum(enc_context *ctx, zval *value);
 static cbor_error enc_decimal(enc_context *ctx, zval *value);
+static cbor_error enc_uri(enc_context *ctx, zval *value);
 
 static zend_result call_fn(zval *object, zend_string *func_str, zval *retval_ptr, uint32_t param_count, zval params[]/*, HashTable *named_params*/);
 static zend_string *decode_dec_str(const char *in_c, size_t in_len);
@@ -226,6 +229,8 @@ RETRY:
 				if (zend_hash_exists(&module_registry, ctx->str[EXT_STR_DEC_MN])) {
 					ctx->ce.decimal = zend_lookup_class_ex(ctx->str[EXT_STR_DEC_CN], ctx->str[EXT_STR_DEC_CN], ZEND_FETCH_CLASS_NO_AUTOLOAD);
 				}
+				ctx->str[EXT_STR_URI_IN] = MAKE_ZSTR("psr\\http\\message\\uriinterface");
+				ctx->ce.uri_i = zend_lookup_class_ex(ctx->str[EXT_STR_URI_IN], ctx->str[EXT_STR_URI_IN], ZEND_FETCH_CLASS_NO_AUTOLOAD);
 			}
 			if (ctx->args.datetime && instanceof_function(ce, ctx->ce.date_i)) {
 				error = enc_datetime(ctx, value);
@@ -233,6 +238,8 @@ RETRY:
 				error = enc_bignum(ctx, value);
 			} else if (ctx->args.decimal && ce == ctx->ce.decimal) {
 				error = enc_decimal(ctx, value);
+			} else if (ctx->args.uri && ctx->ce.uri_i && instanceof_function(ce, ctx->ce.uri_i)) {
+				error = enc_uri(ctx, value);
 			} else {
 				error = CBOR_ERROR_UNSUPPORTED_TYPE;
 			}
@@ -959,6 +966,26 @@ ENCODED:
 	if (bin_str) {
 		zend_string_release(bin_str);
 	}
+	return error;
+}
+
+static cbor_error enc_uri(enc_context *ctx, zval *value)
+{
+	cbor_error error = 0;
+	zend_object *obj;
+	zval str;
+	obj = Z_OBJ_P(value);
+	if (obj->handlers->cast_object(obj, &str, IS_STRING) == FAILURE) {
+		assert(EG(exception));
+		return CBOR_ERROR_EXCEPTION;
+	}
+	if (Z_TYPE(str) == IS_STRING) {
+		enc_tag_bare(ctx, CBOR_TAG_URI);
+		error = enc_string(ctx, Z_STR(str), true);
+	} else {
+		error = CBOR_ERROR_TAG_TYPE;
+	}
+	zval_ptr_dtor(&str);
 	return error;
 }
 

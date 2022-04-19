@@ -86,6 +86,7 @@ cbor_error php_cbor_override_encode_options(cbor_encode_args *args, HashTable *o
 	CHECK_ERROR(bool_option(&args->datetime, ZEND_STRL("datetime"), options));
 	CHECK_ERROR(bool_option(&args->bignum, ZEND_STRL("bignum"), options));
 	CHECK_ERROR(bool_option(&args->decimal, ZEND_STRL("decimal"), options));
+	CHECK_ERROR(bool_option(&args->uri, ZEND_STRL("uri"), options));
 FINALLY:
 	return error;
 }
@@ -99,6 +100,7 @@ cbor_error php_cbor_set_encode_options(cbor_encode_args *args, HashTable *option
 	args->datetime = true;
 	args->bignum = true;
 	args->decimal = true;
+	args->uri = true;
 	if (options == NULL) {
 		return 0;
 	}

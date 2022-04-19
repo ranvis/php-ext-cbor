@@ -86,6 +86,7 @@ typedef struct {
 	bool datetime;
 	bool bignum;
 	bool decimal;
+	bool uri;
 } cbor_encode_args;
 
 typedef struct {
