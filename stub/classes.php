@@ -154,7 +154,7 @@ final class Tag
     public const BASE64URL = 33;
     public const BASE64 = 34;
     public const PCRE_REGEX = 35;
-    public const MIME = 36;
+    public const MIME_MSG = 36;
     /* tag constants end */
 
     public int $tag;
