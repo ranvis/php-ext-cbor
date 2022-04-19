@@ -2,17 +2,12 @@
 
 CBOR codec extension for PHP
 
+This extension makes it possible to encode/decode CBOR data defined in [RFC 8949](https://datatracker.ietf.org/doc/html/rfc8949) on PHP.
+
 
 ## License
 
 BSD 2-Clause License
-
-
-## What is CBOR?
-
-CBOR, Concise Binary Object Representation is a binary data format designed to be small message size.
-
-See [RFC 8949](https://datatracker.ietf.org/doc/html/rfc8949) for the details and why we are having yet another binary serialization format.
 
 
 ## Installation
@@ -23,6 +18,9 @@ phpize
 make install
 ```
 
+See [Releases](https://github.com/ranvis/php-ext-cbor/releases) for the Windows binaries.
+
+
 ## Quick Guide
 
 ### Functions
@@ -31,13 +29,13 @@ make install
 function cbor_encode(
     mixed $value,
     int $flags = CBOR_BYTE | CBOR_KEY_BYTE,
-    ?array $options,
+    ?array $options = null,
 ): string;
 
 function cbor_decode(
     string $data,
     int $flags = CBOR_BYTE | CBOR_KEY_BYTE,
-    ?array $options,
+    ?array $options = null,
 ): mixed;
 ```
 Encodes to or decodes from a CBOR data item.
@@ -75,6 +73,8 @@ When encoding classes that implements `Cbor\Serializable`, the encoder will call
 Implementors may return data structure to serialize the instance, or throw an Exception to stop serializing.
 Classes that does not implement this interface cannot be serialized (aside from `stdClass` plain object).
 
+Although some classes such as PSR-7 `UriInterface` are serializable by default as described below, `Serializable` can take precedence.
+
 #### EncodeParams
 
 When the encoder encounters an `Cbor\EncodeParams` instance, it encodes `$value` with the specified `$params` flags and options added to the current flags and options. After encoding inner `$value`, those parameters are back to the previous state.
@@ -96,6 +96,7 @@ You cannot change `'max_depth'` or options that makes CBOR data contextual.
 CBOR `unsigned integer` and `negative integer` are translated to PHP `int`.
 The value must be within the range PHP can handle (`PHP_INT_MIN`..`PHP_INT_MAX`).
 This is -2\**63..2\**63-1 on 64-bit PHP, which is narrower than CBOR's -2\**64..2\**64-1.
+If decoding data contains out-of-range value, an exception is thrown.
 
 #### Floating-Point Numbers
 
@@ -195,14 +196,15 @@ Constants:
 The tag {stringref} is like a compression, that "references" the string previously appeared inside {stringref-namespace} tag. Note that it differs from PHP's reference to `string`, i.e. _not_ the concept of `$stringRef = &$string`.
 
 On encode, it can save payload size by replacing the string already seen with the tag + index (or at the worst case increase by 3-bytes overall when single-namespaced).
+But if smaller payload is desired, it should perform better to apply a data compression instead.
 
-On decode it can save memory of decoded value because PHP can share the same `string` until one of them is going to be modified (copy-on-write). At the cost of bookkeeping all the strings on both encoding and decoding.
+On decode it can save memory of decoded value because PHP can share the identical `string` sequences until one of them is going to be modified (copy-on-write).
 
-For decoding, the option is enabled by default, while encoding it should be specified explicitly.
+For decoding, the option is enabled as `true` by default, while encoding it should be specified explicitly.
+
 If `true` is specified on encoding, data is always wrapped with {stringref-namespace} tag. It initializes the string index (like compression dictionary) for the content inside the tag.
+The {stringref-namespace} tag added implicitly is handled specially and not counted as `max_depth` level.
 `'explicit'` makes {stringref} active but the root namespace is not implicitly created, meaning {stringref} is not created on its own.
-
-On encoding, the {stringref-namespace} tag added implicitly is handled specially and not counted as `max_depth` level.
 
 The use of this tag makes CBOR contextual.
 CBOR data that use {stringref} can be embedded in other CBOR. But data that doesn't use cannot always be embedded safely in {stringref} CBOR, because it will corrupt reference indices of the following strings.
@@ -241,7 +243,50 @@ The use of this tag makes CBOR contextual.
 
 ### tag(0): date/time string
 
-### tag(2) tag(3): bignum, tag(4) decimal
+Option:
+- `datetime`:
+  - Encode: default: `true`; values: `bool`
+
+Constant:
+- `Cbor\Tag::CBOR_TAG_DATETIME`
+
+If the option is enabled, an instance of `DateTimeInterface` is encoded as a `text string` with a {date/time} tag.
+
+### tag(2) tag(3): bignum
+
+Option:
+- `bignum`:
+  - Encode: default: `true`; values: `bool`
+
+Constants:
+- `Cbor\Tag::CBOR_TAG_BIGNUM_U`
+- `Cbor\Tag::CBOR_TAG_BIGNUM_N`
+
+If the option is enabled, an instance of `GMP` is encoded as a `byte string` with {bignum} tag.
+
+### tag(4) decimal
+
+Option:
+- `decimal`:
+  - Encode: default: `true`; values: `bool`
+
+Constant:
+- `Cbor\Tag::CBOR_TAG_DECIMAL`
+
+If the option is enabled, an instance of `Decimal` is encoded as an `array` of integer mantissa and exponent with {decimal} tag.
+
+Although the precision is retained, the maximum precision specified on instance creation is lost.
+
+### tag(32) uri
+
+Option:
+- `uri`:
+  - Encode: default: `true`; values: `bool`
+
+Constant:
+- `Cbor\Tag::CBOR_TAG_URI`
+
+If the option is enabled, an instance of class that implements PSR-7 `UriInterface` is encoded as an `text string` with {uri} tag.
 
 
 ## Examples
