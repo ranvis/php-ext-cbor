@@ -219,12 +219,12 @@ RETRY:
 				ctx->ce.date_i = php_date_get_interface_ce();  /* in core */
 				ctx->str[EXT_STR_GMP_CN] = MAKE_ZSTR("gmp");
 				if (zend_hash_exists(&module_registry, ctx->str[EXT_STR_GMP_CN])) {
-					ctx->ce.gmp = zend_lookup_class_ex(ctx->str[EXT_STR_GMP_CN], ctx->str[EXT_STR_GMP_CN], 0);
+					ctx->ce.gmp = zend_lookup_class_ex(ctx->str[EXT_STR_GMP_CN], ctx->str[EXT_STR_GMP_CN], ZEND_FETCH_CLASS_NO_AUTOLOAD);
 				}
 				ctx->str[EXT_STR_DEC_MN] = MAKE_ZSTR("decimal");
 				ctx->str[EXT_STR_DEC_CN] = MAKE_ZSTR("decimal\\decimal");
 				if (zend_hash_exists(&module_registry, ctx->str[EXT_STR_DEC_MN])) {
-					ctx->ce.decimal = zend_lookup_class_ex(ctx->str[EXT_STR_DEC_CN], ctx->str[EXT_STR_DEC_CN], 0);
+					ctx->ce.decimal = zend_lookup_class_ex(ctx->str[EXT_STR_DEC_CN], ctx->str[EXT_STR_DEC_CN], ZEND_FETCH_CLASS_NO_AUTOLOAD);
 				}
 			}
 			if (ctx->args.datetime && instanceof_function(ce, ctx->ce.date_i)) {
