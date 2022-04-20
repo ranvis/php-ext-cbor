@@ -146,7 +146,7 @@ jobs:
           cd ${{github.workspace}}\build\ext
           7z a ..\..\%arcName% php_cbor.dll
           cd ${{github.workspace}}\src
-          7z a ..\%arcName% README.md LICENSE stub
+          7z a ..\%arcName% README.md LICENSE stubs
           echo ::set-output name=arc_name::%arcName%
 
       - name: Release
