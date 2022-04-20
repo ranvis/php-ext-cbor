@@ -15,18 +15,6 @@ class Exception extends \Exception
 }
 
 /**
- * Interface for object to CBOR serialization.
- */
-interface Serializable
-{
-    /**
-     * Serialize object to CBOR-ready value.
-     * @return mixed The value of object in serializable structure.
-     */
-    public function cborSerialize(): mixed;
-}
-
-/**
  * Instructs encoder to use the specified parameters.
  */
 final class EncodeParams
