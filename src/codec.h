@@ -67,7 +67,7 @@ typedef enum {
 	CBOR_ERROR_TAG_VALUE__SHARE_RANGE,
 } cbor_error;
 
-#define E_DESC(e, d)  ((e) | (##e##__##d << CBOR_ERROR_DESC_SHIFT))
+#define E_DESC(e, d)  ((e) | (e##__##d << CBOR_ERROR_DESC_SHIFT))
 
 enum {
 	OPT_TRUE = 1,
