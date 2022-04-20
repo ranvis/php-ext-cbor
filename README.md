@@ -5,6 +5,15 @@ CBOR codec extension for PHP
 This extension makes it possible to encode/decode CBOR data defined in [RFC 8949](https://datatracker.ietf.org/doc/html/rfc8949) on PHP.
 
 
+- [License](#license)
+- [Installation](#installation)
+- [Quick Guide](#quick-guide)
+  - [Functions](#functions)
+  - [Classes](#classes)
+  - [Types of CBOR and PHP](#types-of-cbor-and-php)
+- [Supported Tags](#supported-tags)
+
+
 ## License
 
 BSD 2-Clause License
@@ -39,6 +48,22 @@ function cbor_decode(
 ): mixed;
 ```
 Encodes to or decodes from a CBOR data item.
+
+```php
+try {
+    echo bin2hex(cbor_encode(['binary', 1, 2, null])) . "\n";
+    // 844662696e6172790102f6
+    var_export(cbor_decode(hex2bin('8446737472696e670102f6')));
+    // array (
+    //  0 => 'string',
+    //  1 => 1,
+    //  2 => 2,
+    //  3 => NULL,
+    // )
+} catch (Cbor\Exception $e) {
+    echo $e->getMessage();
+}
+```
 
 When decoding, CBOR data item must be a single item, or emits an error.
 This means this function cannot decode CBOR sequence format defined in [RFC 8742](https://datatracker.ietf.org/doc/html/rfc8742).
@@ -287,10 +312,3 @@ Constant:
 - `Cbor\Tag::CBOR_TAG_URI`
 
 If the option is enabled, an instance of class that implements PSR-7 `UriInterface` is encoded as an `text string` with {uri} tag.
-
-
-## Examples
-
-```php
-TBD.
-```
