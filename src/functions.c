@@ -25,9 +25,7 @@ PHP_FUNCTION(cbor_encode)
 		error = php_cbor_encode(value, &str, &args);
 	}
 	if (error) {
-		if (error != CBOR_ERROR_EXCEPTION) {
-			php_cbor_throw_error(error, false, 0);
-		}
+		php_cbor_throw_error(error, false, 0);
 		RETURN_THROWS();
 	}
 	assert(str);
@@ -55,9 +53,7 @@ PHP_FUNCTION(cbor_decode)
 		error = php_cbor_decode(data, &value, &args);
 	}
 	if (error) {
-		if (error != CBOR_ERROR_EXCEPTION) {
-			php_cbor_throw_error(error, true, args.error_arg);
-		}
+		php_cbor_throw_error(error, true, args.error_arg);
 		RETURN_THROWS();
 	}
 	RETVAL_COPY_VALUE(&value);
@@ -74,6 +70,9 @@ void php_cbor_throw_error(cbor_error error, bool has_arg, size_t arg)
 	const char *message = "Unknown error code";
 	const char *desc_msg = "";
 	bool can_have_arg = true;
+	if (error == CBOR_ERROR_EXCEPTION && EG(exception)) {
+		return;
+	}
 	cbor_error error_code = error & CBOR_ERROR_CODE_MASK;
 	cbor_error error_desc = (error & CBOR_ERROR_DESC_MASK) >> CBOR_ERROR_DESC_SHIFT;
 	switch (error_code) {
