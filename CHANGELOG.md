@@ -6,6 +6,7 @@
 ### Changed
 ### Removed
 ### Fixed
+- Fix memory leak on CBOR_ERROR_EXTRANEOUS_DATA.
 ### Security
 ### Deprecated
 

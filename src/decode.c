@@ -304,6 +304,7 @@ cbor_error php_cbor_decode(zend_string *data, zval *value, cbor_decode_args *arg
 		}
 	} else {
 		args->error_arg = ctx.args.error_arg;
+		zval_ptr_dtor(&ctx.root);
 	}
 	return error;
 }
