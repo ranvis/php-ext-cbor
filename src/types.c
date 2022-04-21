@@ -33,7 +33,7 @@ static zend_object_handlers floatx_handlers;
 PHP_METHOD(Cbor_EncodeParams, __construct)
 {
 	zval *value, *params;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "za", &value, &params) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "za", &value, &params) != SUCCESS) {
 		RETURN_THROWS();
 	}
 	zend_update_property(THIS_PROP("value"), value);
@@ -284,7 +284,7 @@ PHP_METHOD(Cbor_XString, __construct)
 {
 	xstring_class *base = CUSTOM_OBJ(xstring_class, Z_OBJ_P(ZEND_THIS));
 	zend_string *value;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S", &value) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S", &value) != SUCCESS) {
 		RETURN_THROWS();
 	}
 	zend_string_addref(value);
@@ -311,10 +311,10 @@ PHP_METHOD(Cbor_XString, __set_state)
 	zend_class_entry *ctx_ce = zend_get_called_scope(execute_data);
 	HashTable *ht;
 	zval value;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "h", &ht) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "h", &ht) != SUCCESS) {
 		RETURN_THROWS();
 	}
-	if (object_init_ex(&value, ctx_ce) == FAILURE) {
+	if (object_init_ex(&value, ctx_ce) != SUCCESS) {
 		if (!EG(exception)) {
 			zend_throw_error(NULL, "Unable to create an object.");
 		}
@@ -330,7 +330,7 @@ PHP_METHOD(Cbor_XString, __unserialize)
 {
 	zend_object *obj = Z_OBJ_P(ZEND_THIS);
 	HashTable *ht;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "h", &ht) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "h", &ht) != SUCCESS) {
 		RETURN_THROWS();
 	}
 	if (!xstring_restore(obj, ht)) {
@@ -407,7 +407,7 @@ PHP_METHOD(Cbor_FloatX, __construct)
 	double num;
 	zend_object *obj = Z_OBJ_P(ZEND_THIS);
 	TEST_FLOATX_CLASS(obj->ce);
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "d", &num) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "d", &num) != SUCCESS) {
 		RETURN_THROWS();
 	}
 	ZVAL_DOUBLE(&value, num);
@@ -422,7 +422,7 @@ PHP_METHOD(Cbor_FloatX, fromBinary)
 	zend_object *obj;
 	zend_string *str;
 	zval value;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S", &str) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S", &str) != SUCCESS) {
 		RETURN_THROWS();
 	}
 	TEST_FLOATX_CLASS(ctx_ce);
@@ -452,7 +452,7 @@ PHP_METHOD(Cbor_FloatX, __set_state)
 	zend_class_entry *ctx_ce = zend_get_called_scope(execute_data);
 	zend_object *obj;
 	HashTable *ht;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "h", &ht) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "h", &ht) != SUCCESS) {
 		RETURN_THROWS();
 	}
 	TEST_FLOATX_CLASS(ctx_ce);
@@ -469,7 +469,7 @@ PHP_METHOD(Cbor_FloatX, __unserialize)
 	zend_class_entry *ctx_ce = zend_get_called_scope(execute_data);
 	zend_object *obj = Z_OBJ_P(ZEND_THIS);
 	HashTable *ht;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "h", &ht) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "h", &ht) != SUCCESS) {
 		RETURN_THROWS();
 	}
 	TEST_FLOATX_CLASS(ctx_ce);
@@ -717,7 +717,7 @@ PHP_METHOD(Cbor_Tag, __construct)
 {
 	zend_long value;
 	zval *content;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lz", &value, &content) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lz", &value, &content) != SUCCESS) {
 		RETURN_THROWS();
 	}
 	zend_update_property_long(THIS_PROP("tag"), value);
@@ -730,7 +730,7 @@ PHP_METHOD(Cbor_Tag, __construct)
 PHP_METHOD(Cbor_Shareable, __construct)
 {
 	zval *value;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &value) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &value) != SUCCESS) {
 		RETURN_THROWS();
 	}
 	zend_update_property(THIS_PROP("value"), value);

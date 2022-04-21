@@ -975,7 +975,7 @@ static cbor_error enc_uri(enc_context *ctx, zval *value)
 	zend_object *obj;
 	zval str;
 	obj = Z_OBJ_P(value);
-	if (obj->handlers->cast_object(obj, &str, IS_STRING) == FAILURE) {
+	if (obj->handlers->cast_object(obj, &str, IS_STRING) != SUCCESS) {
 		assert(EG(exception));
 		return CBOR_ERROR_EXCEPTION;
 	}
