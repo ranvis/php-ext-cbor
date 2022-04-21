@@ -1,5 +1,5 @@
 --TEST--
-tags
+max_depth option
 --SKIPIF--
 <?php if (!extension_loaded("cbor")) print "skip"; ?>
 --FILE--

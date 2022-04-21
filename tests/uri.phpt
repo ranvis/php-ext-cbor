@@ -46,7 +46,7 @@ run(function () {
     cencThrows(CBOR_ERROR_UNSUPPORTED_TYPE, new MyUri('http://www.example.com'), options: ['uri' => false]);
     cencThrows(CBOR_ERROR_UTF8, new MyUri("http://example.com/\xc1\x80"));
     eq('0xd8207819687474703a2f2f6578616d706c652e636f6d2f256331253830', cenc(new MyUri("http://example.com/%c1%80")));
-    cencThrows('RuntimeException#0', new MyUri(''));
+    cencThrows(RuntimeException::class, new MyUri(''));
     eq('0x01', cenc(new MyUriCustom("")));
 });
 

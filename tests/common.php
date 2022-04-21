@@ -154,7 +154,10 @@ function xThrows(int|string $code, callable $fn): void
     } catch (Cbor\Exception $e) {
         $actual = getErrorName($e->getCode());
     } catch (Throwable $e) {
-        $actual = get_class($e) . '#' . $e->getCode();
+        $actual = get_class($e);
+        if (!is_string($code) || str_contains($code, '#')) {
+            $actual .= '#' . $e->getCode();
+        }
     }
     eq(is_int($code) ? getErrorName($code) : $code, $actual, 2);
 }
@@ -174,12 +177,7 @@ function cdecThrows(int|string $code, string $value, ...$args): void
 function throws(string $exception, callable $fn): void
 {
     TestStats::inc('assertThrows');
-    try {
-        $actual = toDump($fn());
-    } catch (Throwable $e) {
-        $actual = get_class($e);
-    }
-    eq($exception, $actual, 1);
+    xThrows($exception, $fn);
 }
 
 function getErrorName(int $code): string

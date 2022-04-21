@@ -53,9 +53,9 @@ Encodes to or decodes from a CBOR data item.
 try {
     echo bin2hex(cbor_encode(['binary', 1, 2, null])) . "\n";
     // 844662696e6172790102f6
-    var_export(cbor_decode(hex2bin('8446737472696e670102f6')));
+    var_export(cbor_decode(hex2bin('844662696e6172790102f6')));
     // array (
-    //  0 => 'string',
+    //  0 => 'binary',
     //  1 => 1,
     //  2 => 2,
     //  3 => NULL,

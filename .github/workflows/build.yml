@@ -126,12 +126,19 @@ jobs:
           nmake /nologo install
           echo ::endgroup::
 
+          echo ::group::Miscellaneous
+          REM Remove placeholders in changelog
+          perl -pi -e "$_ = '' if (/^\[Unreleased\]/../^-?$/)" CHANGELOG.md
+          dos2unix CHANGELOG.md
+          echo ::endgroup::
+
       - name: Upload
         uses: actions/upload-artifact@v3
         with:
           name: ${{env.basename}}-${{github.ref_name}}-${{matrix.php_ver}}-${{matrix.ts}}-${{matrix.isa}}.dll
           path: |
             build/ext/php_cbor.dll
+            src/CHANGELOG.md
             src/LICENSE
             src/README.md
 
@@ -146,7 +153,7 @@ jobs:
           cd ${{github.workspace}}\build\ext
           7z a ..\..\%arcName% php_cbor.dll
           cd ${{github.workspace}}\src
-          7z a ..\%arcName% README.md LICENSE stubs
+          7z a ..\%arcName% CHANGELOG.md LICENSE README.md stubs
           echo ::set-output name=arc_name::%arcName%
 
       - name: Release

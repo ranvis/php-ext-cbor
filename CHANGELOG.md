@@ -12,7 +12,7 @@
 [0.4.0]: https://github.com/ranvis/php-ext-cbor/compare/v0.3.2...v0.4.0
 ## [0.4.0] - 2022-04-20
 ### Added
-- Add encoding of `UriInterface`.
+- Add encoding of PSR-7 `UriInterface`.
 ### Changed
 - Rename `Tag::MIME` to `Tag::MIME_MSG`.
 
@@ -33,18 +33,16 @@
 [0.3.0]: https://github.com/ranvis/php-ext-cbor/releases/tag/v0.3.0
 ## [0.3.0] - 2022-04-11
 ### Added
-- Add encoding of `DateTimeInterface`.
-- Add encoding of `GMP`.
-- Add encoding of `Decimal`.
-- Add encoding of `Serializable`.
-- Add EncodeParams class.
+- Add encoding of `\DateTimeInterface`, `\GMP`, `\Decimal`.
+- Add interface `Serializable`.
+- Add `EncodeParams` class.
 - Add custom processing of half-precision float.
 - Imlement encode to compact float mode by specifying both `PHP_CBOR_FLOAT16` and `PHP_CBOR_FLOAT32`.
 - Add some constants for tags defined in spec.
 - Encode int `string` key as CBOR `integer` with `CBOR_INT_KEY`.
 - Decode of int keys of negative or outside zend_long range.
 - Add type handlers and custom serialization for CBOR types.
-- Implement `JsonSerializable` for CBOR types.
+- Implement `\JsonSerializable` for CBOR types.
 - Implement low-level encoder/decoder.
 - Implement reserved simple value.
 ### Changed

@@ -1,5 +1,5 @@
 --TEST--
-array
+self-describe flag
 --SKIPIF--
 <?php if (!extension_loaded("cbor")) print "skip"; ?>
 --FILE--

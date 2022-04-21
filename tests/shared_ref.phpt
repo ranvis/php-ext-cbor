@@ -1,5 +1,5 @@
 --TEST--
-tag stringref/stringref-namespace
+tag shared_ref
 --SKIPIF--
 <?php if (!extension_loaded("cbor")) print "skip"; ?>
 --FILE--

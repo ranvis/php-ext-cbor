@@ -1,5 +1,5 @@
 --TEST--
-array
+max_size option
 --SKIPIF--
 <?php if (!extension_loaded("cbor")) print "skip"; ?>
 --FILE--
