@@ -109,7 +109,9 @@ void php_cbor_throw_error(cbor_error error, bool has_arg, size_t arg)
 		case CBOR_ERROR_SYNTAX__BREAK_UNEXPECTED:
 			DESC_MSG("Break without indefinite type or it is too early");
 		case CBOR_ERROR_SYNTAX__INCONSISTENT_STRING_TYPE:
-			DESC_MSG("Inner string type is inconsistent with outer indefinite string");
+			DESC_MSG("Inner string type is inconsistent with outer indefinite-length string");
+		case CBOR_ERROR_SYNTAX__NESTED_INDEF_STRING:
+			DESC_MSG("Indefinite-length string cannot be nested");
 		}
 		break;
 	case CBOR_ERROR_UTF8:

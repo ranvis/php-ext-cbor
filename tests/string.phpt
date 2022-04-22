@@ -31,12 +31,16 @@ run(function () {
     cdecThrows(CBOR_ERROR_SYNTAX, '5fd901004431323334ff', CBOR_BYTE);
     // indefinite contains non-string
     cdecThrows(CBOR_ERROR_SYNTAX, '5f01ff', CBOR_BYTE);
+    // indefinite contains indefinite string
+    cdecThrows(CBOR_ERROR_SYNTAX, '5f5fffff', CBOR_BYTE);
 
     eq('0xc180', cdecHex('42c180'));
     eq('0xc180', cdecHex('62c180', CBOR_TEXT | CBOR_UNSAFE_TEXT));
     cdecThrows(CBOR_ERROR_UTF8, '62c180', CBOR_TEXT);
     cdecThrows(CBOR_ERROR_UTF8, '66eda0bdedb880', CBOR_TEXT);
     eq('0x64f09f9880', cenc('😀', CBOR_TEXT));
+    // indefinite splits UTF-8 sequence in the middle
+    cdecThrows(CBOR_ERROR_UTF8, '7f62f09f629880ff', CBOR_TEXT);
 
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, '41');
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, '5f');

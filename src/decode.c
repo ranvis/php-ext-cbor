@@ -543,6 +543,9 @@ static bool append_item(dec_context *ctx, xzval *value)
 	case SI_TYPE_TAG_HANDLED:
 		return append_item_to_tag_handled(ctx, value, item);
 	}
+	if (item->si_type & SI_TYPE_STRING_MASK) {
+		RETURN_CB_ERROR_B(E_DESC(CBOR_ERROR_SYNTAX, NESTED_INDEF_STRING));
+	}
 	RETURN_CB_ERROR_B(CBOR_ERROR_SYNTAX);
 }
 
