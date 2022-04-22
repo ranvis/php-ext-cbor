@@ -37,13 +37,11 @@
 typedef struct stack_item stack_item;
 typedef struct srns_item srns_item;
 
-typedef struct {
+typedef struct cbor_decode_context {
 	cbor_decode_args args;
 	cbor_error cb_error;
-	size_t length;
-	size_t offset;
-	size_t limit;  /* 0:unknown */
-	const uint8_t *data;
+	bool skip_self_desc;
+	cbor_fragment *mem;
 	zval root;
 	stack_item *stack_top;
 	uint32_t stack_depth;
@@ -105,7 +103,7 @@ struct srns_item {  /* srns: string ref namespace */
 	HashTable *str_table;
 };
 
-static cbor_error dec_zval(dec_context *ctx);
+static cbor_error decode_nested(dec_context *ctx);
 static cbor_error decode_cbor_data_item(const uint8_t *data, size_t len, cbor_di_decoded *out, dec_context *ctx);
 static void free_srns_item(srns_item *srns);
 
@@ -253,7 +251,7 @@ static void stack_push_xstring(dec_context *ctx, si_type_t si_type)
 		} \
 	} while (0)
 
-static void free_ctx_content(dec_context *ctx)
+static void cbor_decode_free(dec_context *ctx)
 {
 	while (ctx->stack_top) {
 		stack_item *item = stack_pop_item(ctx);
@@ -263,70 +261,123 @@ static void free_ctx_content(dec_context *ctx)
 	if (ctx->args.shared_ref) {
 		zend_array_destroy(ctx->refs);
 	}
+	zval_ptr_dtor(&ctx->root);
 }
 
-cbor_error php_cbor_decode(zend_string *data, zval *value, cbor_decode_args *args)
+static void cbor_decode_init(dec_context *ctx, const cbor_decode_args *args, cbor_fragment *mem)
+{
+	ctx->skip_self_desc = !(args->flags & CBOR_SELF_DESCRIBE);
+	ctx->stack_top = NULL;
+	ctx->stack_depth = 0;
+	ZVAL_UNDEF(&ctx->root);
+	ctx->srns = NULL;
+	if (args->shared_ref) {
+		ctx->refs = zend_new_array(0);
+	}
+	ctx->args = *args;
+	ctx->mem = mem;
+}
+
+dec_context *php_cbor_decode_new(const cbor_decode_args *args, cbor_fragment *mem)
+{
+	dec_context *ctx = emalloc(sizeof(dec_context));
+	cbor_decode_init(ctx, args, mem);
+	return ctx;
+}
+
+void php_cbor_decode_delete(dec_context *ctx)
+{
+	cbor_decode_free(ctx);
+	efree(ctx);
+}
+
+cbor_error php_cbor_decode_process(dec_context *ctx)
 {
 	cbor_error error;
-	dec_context ctx;
-	const uint8_t *ptr = (const uint8_t *)ZSTR_VAL(data);
-	size_t length = ZSTR_LEN(data);
-	ctx.stack_top = NULL;
-	ctx.stack_depth = 0;
-	ctx.offset = 0;
-	if (!(args->flags & CBOR_SELF_DESCRIBE) && length >= 3
-			&& !memcmp(ptr, CBOR_SELF_DESCRIBE_DATA, sizeof CBOR_SELF_DESCRIBE_DATA - 1)) {
-		ctx.offset = 3;
-	}
-	ZVAL_UNDEF(&ctx.root);
-	ctx.data = ptr;
-	ctx.limit = ctx.length = length;
-	ctx.srns = NULL;
-	if (args->shared_ref) {
-		ctx.refs = zend_new_array(0);
-	}
-	ctx.args = *args;
-	error = dec_zval(&ctx);
-	free_ctx_content(&ctx);
-	if (!error && ctx.offset != ctx.length) {
-		error = CBOR_ERROR_EXTRANEOUS_DATA;
-		ctx.args.error_arg = ctx.offset;
-	}
-	if (!error) {
-		if (EXPECTED(Z_TYPE(ctx.root) != IS_REFERENCE)) {
-			ZVAL_COPY_VALUE(value, &ctx.root);
-		} else {
-			zval *tmp = &ctx.root;
-			ZVAL_DEREF(tmp);
-			ZVAL_COPY_VALUE(value, tmp);
-			Z_TRY_ADDREF_P(value);
-			zval_ptr_dtor(&ctx.root);
+	if (ctx->skip_self_desc) {
+		cbor_fragment *mem = ctx->mem;
+		size_t rem_len = mem->length - mem->offset;
+		if (!rem_len) {
+			error = CBOR_ERROR_TRUNCATED_DATA;
+			goto FINALLY;
 		}
-	} else {
-		args->error_arg = ctx.args.error_arg;
-		zval_ptr_dtor(&ctx.root);
+		assert(sizeof CBOR_SELF_DESCRIBE_DATA == 4 && (uint8_t)CBOR_SELF_DESCRIBE_DATA[0] == 0xd9);
+		if (mem->ptr[mem->offset] == (uint8_t)CBOR_SELF_DESCRIBE_DATA[0]) {
+			if (rem_len < 3) {
+				error = CBOR_ERROR_TRUNCATED_DATA;
+				goto FINALLY;
+			}
+			if (!memcmp(&mem->ptr[mem->offset], CBOR_SELF_DESCRIBE_DATA, sizeof CBOR_SELF_DESCRIBE_DATA - 1)) {
+				mem->offset += 3;
+			}
+		}
+		ctx->skip_self_desc = false;
+	}
+	error = decode_nested(ctx);
+	if (ctx->skip_self_desc && error != CBOR_ERROR_TRUNCATED_DATA) {
+		ctx->skip_self_desc = false;
+	}
+FINALLY:
+	if (error) {
+		cbor_fragment *mem = ctx->mem;
+		ctx->args.error_arg = mem->base + mem->offset;
 	}
 	return error;
 }
 
-static cbor_error dec_zval(dec_context *ctx)
+void php_cbor_decode_finish(dec_context *ctx, cbor_decode_args *args, cbor_error error, zval *value)
+{
+	if (!error) {
+		if (EXPECTED(Z_TYPE(ctx->root) != IS_REFERENCE)) {
+			ZVAL_COPY_VALUE(value, &ctx->root);
+		} else {
+			zval *tmp = &ctx->root;
+			ZVAL_DEREF(tmp);
+			ZVAL_COPY_VALUE(value, tmp);
+			Z_TRY_ADDREF_P(value);
+			zval_ptr_dtor(&ctx->root);
+		}
+	} else {
+		args->error_arg = ctx->args.error_arg;
+		zval_ptr_dtor(&ctx->root);
+	}
+	ZVAL_UNDEF(&ctx->root);
+}
+
+cbor_error php_cbor_decode(zend_string *data, zval *value, cbor_decode_args *args)
+{
+	dec_context ctx;
+	cbor_fragment mem;
+	mem.offset = mem.base = 0;
+	mem.limit = mem.length = ZSTR_LEN(data);
+	mem.ptr = (const uint8_t *)ZSTR_VAL(data);
+	cbor_decode_init(&ctx, args, &mem);
+	cbor_error error = php_cbor_decode_process(&ctx);
+	if (!error && mem.offset != mem.length) {
+		error = CBOR_ERROR_EXTRANEOUS_DATA;
+		ctx.args.error_arg = mem.base + mem.offset;
+	}
+	php_cbor_decode_finish(&ctx, args, error, value);
+	cbor_decode_free(&ctx);
+	return error;
+}
+
+static cbor_error decode_nested(dec_context *ctx)
 {
 	cbor_error error;
+	cbor_fragment *mem = ctx->mem;
 	cbor_di_decoded out_data;
 	ctx->cb_error = 0;
 	do {
-		if (ctx->offset >= ctx->length) {
-			ctx->args.error_arg = ctx->offset;
+		if (mem->offset >= mem->length) {
 			return CBOR_ERROR_TRUNCATED_DATA;
 		}
-		error = decode_cbor_data_item(ctx->data + ctx->offset, ctx->length - ctx->offset, &out_data, ctx);
-		ctx->offset += out_data.read_len;
+		error = decode_cbor_data_item(mem->ptr + mem->offset, mem->length - mem->offset, &out_data, ctx);
+		mem->offset += out_data.read_len;
 		if (error) {
-			ctx->args.error_arg = ctx->offset;
 			return error;
 		}
 		if (ctx->cb_error) {
-			ctx->args.error_arg = ctx->offset;
 			return ctx->cb_error;
 		}
 	} while (ctx->stack_depth);
@@ -705,7 +756,7 @@ static void proc_array_start(dec_context *ctx, uint32_t count)
 	if (count > ctx->args.max_size) {
 		RETURN_CB_ERROR(CBOR_ERROR_UNSUPPORTED_SIZE);
 	}
-	if (ctx->limit && ctx->offset + count > ctx->limit) {
+	if (ctx->mem->limit && ctx->mem->offset + count > ctx->mem->limit) {
 		RETURN_CB_ERROR(CBOR_ERROR_TRUNCATED_DATA);
 	}
 	array_init_size(&value, ((count > SIZE_INIT_LIMIT) ? SIZE_INIT_LIMIT : (uint32_t)count));
@@ -730,7 +781,7 @@ static void proc_map_start(dec_context *ctx, uint32_t count)
 	if (count > ctx->args.max_size) {
 		RETURN_CB_ERROR(CBOR_ERROR_UNSUPPORTED_SIZE);
 	}
-	if (ctx->limit && ctx->offset + count > ctx->limit) {
+	if (ctx->mem->limit && ctx->mem->offset + count > ctx->mem->limit) {
 		RETURN_CB_ERROR(CBOR_ERROR_TRUNCATED_DATA);
 	}
 	if (ctx->args.flags & CBOR_MAP_AS_ARRAY) {

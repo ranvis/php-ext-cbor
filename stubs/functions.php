@@ -16,8 +16,8 @@
 function cbor_encode(mixed $value, int $flags = CBOR_BYTE | CBOR_KEY_BYTE, ?array $options = null): string {}
 
 /**
- * Decode CBOR string.
- * @param string $data CBOR string to decode
+ * Decode CBOR data item string.
+ * @param string $data A data item string to decode
  * @param int $flags Configuration flags
  * @param array|null $options Configuration options
  * @return mixed The decoded value

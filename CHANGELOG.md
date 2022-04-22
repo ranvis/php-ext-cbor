@@ -3,6 +3,7 @@
 [Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.0...HEAD
 ## [Unreleased]
 ### Added
+- Add `Decoder` class.
 ### Changed
 ### Removed
 ### Fixed

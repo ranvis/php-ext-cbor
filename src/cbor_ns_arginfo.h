@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 5135aa170030b13135226ee6584faae1ca33db5e */
+ * Stub hash: 45601d4aa3cb8cefdfa2b3163185ba088bcd02c9 */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Serializable_cborSerialize, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
@@ -64,6 +64,38 @@ ZEND_END_ARG_INFO()
 
 #define arginfo_class_Cbor_Shareable_jsonSerialize arginfo_class_Cbor_Serializable_cborSerialize
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Cbor_Decoder___construct, 0, 0, 0)
+	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, flags, IS_LONG, 0, "CBOR_BYTE | CBOR_KEY_BYTE")
+	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, options, IS_ARRAY, 1, "null")
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Decoder_decode, 0, 1, IS_MIXED, 0)
+	ZEND_ARG_TYPE_INFO(0, data, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Decoder_add, 0, 1, IS_VOID, 0)
+	ZEND_ARG_TYPE_INFO(0, data, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Decoder_process, 0, 0, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Decoder_reset, 0, 0, IS_VOID, 0)
+ZEND_END_ARG_INFO()
+
+#define arginfo_class_Cbor_Decoder_hasValue arginfo_class_Cbor_Decoder_process
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Decoder_getValue, 0, 0, IS_MIXED, 0)
+	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, clear, _IS_BOOL, 0, "true")
+ZEND_END_ARG_INFO()
+
+#define arginfo_class_Cbor_Decoder_isPartial arginfo_class_Cbor_Decoder_process
+
+#define arginfo_class_Cbor_Decoder_isProcessing arginfo_class_Cbor_Decoder_process
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Decoder_getBuffer, 0, 0, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
 
 ZEND_METHOD(Cbor_EncodeParams, __construct);
 ZEND_METHOD(Cbor_Undefined, __construct);
@@ -83,6 +115,16 @@ ZEND_METHOD(Cbor_FloatX, jsonSerialize);
 ZEND_METHOD(Cbor_Tag, __construct);
 ZEND_METHOD(Cbor_Shareable, __construct);
 ZEND_METHOD(Cbor_Shareable, jsonSerialize);
+ZEND_METHOD(Cbor_Decoder, __construct);
+ZEND_METHOD(Cbor_Decoder, decode);
+ZEND_METHOD(Cbor_Decoder, add);
+ZEND_METHOD(Cbor_Decoder, process);
+ZEND_METHOD(Cbor_Decoder, reset);
+ZEND_METHOD(Cbor_Decoder, hasValue);
+ZEND_METHOD(Cbor_Decoder, getValue);
+ZEND_METHOD(Cbor_Decoder, isPartial);
+ZEND_METHOD(Cbor_Decoder, isProcessing);
+ZEND_METHOD(Cbor_Decoder, getBuffer);
 
 
 static const zend_function_entry class_Cbor_Exception_methods[] = {
@@ -160,6 +202,21 @@ static const zend_function_entry class_Cbor_Tag_methods[] = {
 static const zend_function_entry class_Cbor_Shareable_methods[] = {
 	ZEND_ME(Cbor_Shareable, __construct, arginfo_class_Cbor_Shareable___construct, ZEND_ACC_PUBLIC)
 	ZEND_ME(Cbor_Shareable, jsonSerialize, arginfo_class_Cbor_Shareable_jsonSerialize, ZEND_ACC_PUBLIC)
+	ZEND_FE_END
+};
+
+
+static const zend_function_entry class_Cbor_Decoder_methods[] = {
+	ZEND_ME(Cbor_Decoder, __construct, arginfo_class_Cbor_Decoder___construct, ZEND_ACC_PUBLIC)
+	ZEND_ME(Cbor_Decoder, decode, arginfo_class_Cbor_Decoder_decode, ZEND_ACC_PUBLIC)
+	ZEND_ME(Cbor_Decoder, add, arginfo_class_Cbor_Decoder_add, ZEND_ACC_PUBLIC)
+	ZEND_ME(Cbor_Decoder, process, arginfo_class_Cbor_Decoder_process, ZEND_ACC_PUBLIC)
+	ZEND_ME(Cbor_Decoder, reset, arginfo_class_Cbor_Decoder_reset, ZEND_ACC_PUBLIC)
+	ZEND_ME(Cbor_Decoder, hasValue, arginfo_class_Cbor_Decoder_hasValue, ZEND_ACC_PUBLIC)
+	ZEND_ME(Cbor_Decoder, getValue, arginfo_class_Cbor_Decoder_getValue, ZEND_ACC_PUBLIC)
+	ZEND_ME(Cbor_Decoder, isPartial, arginfo_class_Cbor_Decoder_isPartial, ZEND_ACC_PUBLIC)
+	ZEND_ME(Cbor_Decoder, isProcessing, arginfo_class_Cbor_Decoder_isProcessing, ZEND_ACC_PUBLIC)
+	ZEND_ME(Cbor_Decoder, getBuffer, arginfo_class_Cbor_Decoder_getBuffer, ZEND_ACC_PUBLIC)
 	ZEND_FE_END
 };
 
@@ -323,6 +380,17 @@ static zend_class_entry *register_class_Cbor_Shareable(zend_class_entry *class_e
 	zend_string *property_value_name = zend_string_init("value", sizeof("value") - 1, 1);
 	zend_declare_typed_property(class_entry, property_value_name, &property_value_default_value, ZEND_ACC_PUBLIC, NULL, (zend_type) ZEND_TYPE_INIT_MASK(MAY_BE_ANY));
 	zend_string_release(property_value_name);
+
+	return class_entry;
+}
+
+static zend_class_entry *register_class_Cbor_Decoder(void)
+{
+	zend_class_entry ce, *class_entry;
+
+	INIT_NS_CLASS_ENTRY(ce, "Cbor", "Decoder", class_Cbor_Decoder_methods);
+	class_entry = zend_register_internal_class_ex(&ce, NULL);
+	class_entry->ce_flags |= ZEND_ACC_NOT_SERIALIZABLE;
 
 	return class_entry;
 }

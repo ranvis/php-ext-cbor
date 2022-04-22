@@ -66,7 +66,8 @@ try {
 ```
 
 When decoding, CBOR data item must be a single item, or emits an error.
-This means this function cannot decode CBOR sequence format defined in [RFC 8742](https://datatracker.ietf.org/doc/html/rfc8742).
+This means this function cannot decode CBOR sequences format defined in [RFC 8742](https://datatracker.ietf.org/doc/html/rfc8742).
+See `Decoder` class for sequences and progressive decoding.
 
 `$options` are:
 
@@ -113,6 +114,67 @@ Flags in `'flags_clear'` are cleared first then flags in `'flags'` are set.
 Note that you don't need to clear conflicting string flags, i.e. `CBOR_TEXT` is cleared when setting `CBOR_BYTE` and vice versa. The same applies for `CBOR_KEY_*` string flags.
 - Other `$options` values for encoding.
 You cannot change `'max_depth'` or options that makes CBOR data contextual.
+
+#### Decoder
+
+The class `Cbor\Decoder` can do what `cbor_decode()` does in a more controlled way.
+
+Instantiate `Decoder` with the optional `$flags` and `$options`, and feed CBOR data with `add()` method. `Decoder` will append passed data to the internal buffer.
+
+To process data in the buffer, call `process()`. It will return `true` if a data item is decoded. You can test it with `hasValue()` method too. Call `getValue()` to retrieve the decoded value.
+If another data item follows (CBOR sequences), call `add()` and/or `process()` again.
+
+`process()` will not return `ture` until the complete item is decoded. In that case, `isPartial()` returns `true` and you need to feed more data to complete decode.
+`getBuffer()` returns a copy of the internal buffer. Note that it doesn't contain data that is partially decoded already.
+
+**Progressive decoding**
+
+With the class, large data can be decoded progressively without loading the whole data in memory at once:
+```php
+if (($fp = fopen($filePath, 'rb')) === false) {
+    throw new RuntimeException('Cannot open file');
+}
+$decoder = new Cbor\Decoder();
+$value = null;  // decoded value is not null for simplicity
+while (!feof($fp)) {
+    $data = fread($fp, 32768);
+    if ($data === false) {
+        throw new RuntimeException('Cannot read file');
+    }
+    $decoder->add($data);
+    if ($value !== null) {
+        break;
+    }
+    if ($decoder->process()) {
+        $value = $decoder->getValue();
+    }
+}
+if (!feof($fp) || $decoder->getBuffer() !== '') {
+    throw new RuntimeException('Extraneous data.');
+}
+if ($value === null || $decoder->isPartial()) {
+    throw new RuntimeException('Data is truncated.');
+}
+fclose($fp);
+var_dump($value);
+```
+
+**Decode CBOR sequences**
+
+`Decoder` can decode CBOR sequences which `cbor_decode()` complains:
+```php
+function cbor_decode_seq(string $data, ...$args): Generator
+{
+    $decoder = new Cbor\Decoder(...$args);
+    $decoder->add($data);
+    while ($decoder->process()) {
+        yield $decoder->getValue();
+    }
+    if ($decoder->isPartial()) {
+        throw new Cbor\Exception('Data is truncated.', CBOR_ERROR_TRUNCATED_DATA);
+    }
+}
+```
 
 ### Types of CBOR and PHP
 

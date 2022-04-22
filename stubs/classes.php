@@ -168,4 +168,82 @@ final class Shareable implements \JsonSerializable
     public function __construct(mixed $value) {}
     public function jsonSerialize(): mixed {}
 }
+
+/**
+ * CBOR Decoder
+ */
+class Decoder
+{
+    /**
+     * Create CBOR decoder instance.
+     * @see cbor_decode()
+     * @param int $flags Configuration flags
+     * @param array|null $options Configuration options
+     */
+    public function __construct(int $flags = CBOR_BYTE | CBOR_KEY_BYTE, ?array $options = null);
+
+    /**
+     * Decode CBOR data item string.
+     * @param string $data A data item string to decode
+     * @return mixed The decoded value
+     * @throws Cbor\Exception
+     */
+    public function decode(string $data): mixed;
+
+    /**
+     * Append data to decoding buffer.
+     * @param string $data A part of data item string to decode
+     * @return void
+     */
+    public function add(string $data): void;
+
+    /**
+     * Decode data in the buffer.
+     *
+     * Call getValue() to retrieve decoded value.
+     * The value is replaced on next process() call.
+     * @return bool True if a decoded item is ready
+     * @throws Cbor\Exception
+     */
+    public function process(): bool;
+
+    /**
+     * Reset the decoder state.
+     * @return void
+     */
+    public function reset(): void;
+
+    /**
+     * Get the decoded value state.
+     * @return bool True if a decoded item is ready
+     */
+    public function hasValue(): bool;
+
+    /**
+     * Get the decoded data item.
+     *
+     * You should test the return value of add() or hasValue() before calling this method.
+     * @param bool $clear True to clear the value afterwards
+     * @return mixed The decoded value.
+     */
+    public function getValue(bool $clear = true): mixed;
+
+    /**
+     * Check if the data is partially decoded.
+     * @return bool True if the decoder is holding incomplete value.
+     */
+    public function isPartial(): bool;
+
+    /**
+     * Check if the decoding is on the way
+     * @return bool True if the decoder process() is in progress
+     */
+    public function isProcessing(): bool;
+
+    /**
+     * Get data in the decoding buffer.
+     * @return string A copy of the undecoded data
+     */
+    public function getBuffer(): string;
+}
 /* classes end */

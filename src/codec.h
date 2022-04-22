@@ -99,6 +99,16 @@ typedef struct {
 	uint8_t shared_ref;
 } cbor_decode_args;
 
+typedef struct {
+	size_t length;
+	size_t offset;
+	size_t limit;  /* 0:unknown */
+	size_t base;
+	const uint8_t *ptr;
+} cbor_fragment;
+
+typedef struct cbor_decode_context cbor_decode_context;
+
 void php_cbor_minit_encode();
 void php_cbor_minit_decode();
 
@@ -109,7 +119,14 @@ cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *option
 
 void php_cbor_throw_error(cbor_error error, bool has_arg, size_t arg);
 
+/* encode */
 cbor_error php_cbor_encode(zval *value, zend_string **data, const cbor_encode_args *args);
+
+/* decode */
 cbor_error php_cbor_decode(zend_string *data, zval *value, cbor_decode_args *args);
+cbor_decode_context *php_cbor_decode_new(const cbor_decode_args *args, cbor_fragment *mem);
+void php_cbor_decode_delete(cbor_decode_context *ctx);
+cbor_error php_cbor_decode_process(cbor_decode_context *ctx);
+void php_cbor_decode_finish(cbor_decode_context *ctx, cbor_decode_args *args, cbor_error error, zval *value);
 
 bool cbor_is_len_string_ref(size_t str_len, uint32_t next_index);

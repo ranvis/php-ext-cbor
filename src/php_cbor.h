@@ -39,6 +39,7 @@ extern zend_class_entry
 	*CBOR_CE(exception),
 	*CBOR_CE(serializable),
 	*CBOR_CE(encodeparams),
+	*CBOR_CE(decoder),
 	*CBOR_CE(undefined),
 	*CBOR_CE(xstring),
 	*CBOR_CE(byte),

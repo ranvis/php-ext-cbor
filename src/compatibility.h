@@ -4,6 +4,8 @@
  */
 
 #if PHP_API_VERSION < 20210902 /* <PHP8.1 */
+#define ZEND_ACC_NOT_SERIALIZABLE 0
+
 bool zend_array_is_list(zend_array *array);
 
 static zend_long php81_zend_atol(const char *s)

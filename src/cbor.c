@@ -5,10 +5,10 @@
 
 #include "cbor.h"
 #include <ext/json/php_json.h>
+#include "compatibility.h"
 #include "cbor_arginfo.h"
 #include "cbor_ns_arginfo.h"
 #include "codec.h"
-#include "compatibility.h"
 #include "tags.h"
 #include "types.h"
 
@@ -21,6 +21,7 @@ zend_class_entry
 	*CBOR_CE(exception),
 	*CBOR_CE(serializable),
 	*CBOR_CE(encodeparams),
+	*CBOR_CE(decoder),
 	*CBOR_CE(undefined),
 	*CBOR_CE(xstring),
 	*CBOR_CE(byte),
@@ -92,6 +93,7 @@ PHP_MINIT_FUNCTION(cbor)
 	REG_CLASS(exception, Exception)(zend_ce_exception);
 	REG_CLASS(serializable, Serializable)();
 	REG_CLASS(encodeparams, EncodeParams)();
+	REG_CLASS(decoder, Decoder)();
 	REG_CLASS(undefined, Undefined)(php_json_serializable_ce);
 	REG_CLASS(xstring, XString)(php_json_serializable_ce);
 	REG_CLASS(byte, Byte)(CBOR_CE(xstring));

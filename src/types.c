@@ -21,9 +21,6 @@ typedef struct {
 	zend_object std;
 } floatx_class;
 
-#define CUSTOM_OBJ(obj_type_t, obj)  ((obj_type_t *)((char *)(obj) - XtOffsetOf(obj_type_t, std)))
-#define ZVAL_CUSTOM_OBJ(obj_type_t, zv)  CUSTOM_OBJ(obj_type_t, Z_OBJ_P(zv))
-
 static zend_object_handlers undef_handlers;
 static zend_object_handlers xstring_handlers;
 static zend_object_handlers floatx_handlers;
@@ -788,4 +785,6 @@ void php_cbor_minit_types()
 	floatx_handlers.cast_object = &floatx_cast;
 	floatx_handlers.get_properties = &floatx_get_properties;
 	floatx_handlers.get_properties_for = &floatx_get_properties_for;
+
+	php_cbor_minit_decoder();
 }
