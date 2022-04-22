@@ -24,6 +24,8 @@ run(function () {
         $v = 'abc';
         $instance->value = &$v;
     });
+    // cannot set non-string
+    throws(TypeError::class, fn () => $instance->value = 1);
     // other properties
     throws(Error::class, fn () => $instance->xyz);
     throws(Error::class, fn () => $instance->xyz = 3);

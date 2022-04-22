@@ -195,7 +195,7 @@ static zval *xstring_write_property(zend_object *obj, zend_string *member, zval 
 {
 	if (zend_string_equals_literal(member, "value")) {
 		if (Z_TYPE_P(value) != IS_STRING) {
-			zend_throw_error(NULL, "The value property only accepts string.");
+			zend_type_error("The value property only accepts string.");
 			ZVAL_ERROR(value);
 		} else {
 			cbor_xstring_set_value(obj, Z_STR_P(value));
@@ -514,7 +514,7 @@ bool cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw)
 				raw = ((uint16_t)ptr[0] << 8) | ptr[1];
 			}
 		} else {
-			zend_type_error("Unexpected value type.");
+			zend_type_error("Invalid value type.");
 			return false;
 		}
 	}
