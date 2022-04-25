@@ -183,7 +183,7 @@ static zval *xstring_read_property(zend_object *obj, zend_string *member, int ty
 {
 	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
 	if (zend_string_equals_literal(member, "value")) {
-		ZVAL_STR(rv, base->str);
+		ZVAL_STR_COPY(rv, base->str);
 	} else {
 		zend_throw_error(NULL, "The custom property cannot be used.");
 		ZVAL_ERROR(rv);
@@ -237,7 +237,7 @@ static int xstring_cast(zend_object *obj, zval *retval, int type)
 	if (type != IS_STRING) {
 		return FAILURE;
 	}
-	ZVAL_STR(retval, base->str);
+	ZVAL_STR_COPY(retval, base->str);
 	return SUCCESS;
 }
 

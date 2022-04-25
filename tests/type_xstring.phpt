@@ -29,6 +29,9 @@ run(function () {
     // other properties
     throws(Error::class, fn () => $instance->xyz);
     throws(Error::class, fn () => $instance->xyz = 3);
+    // cast to string (heap allocated string)
+    $instance = new Cbor\Text(substr(rand() . 'abc', -3));
+    eq('abc', (string)$instance);
 });
 
 ?>

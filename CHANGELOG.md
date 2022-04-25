@@ -9,6 +9,7 @@
 ### Fixed
 - Fix memory leak on CBOR_ERROR_EXTRANEOUS_DATA.
 ### Security
+- Fix use-after-free on XString member access or string cast.
 ### Deprecated
 
 [0.4.0]: https://github.com/ranvis/php-ext-cbor/compare/v0.3.2...v0.4.0
