@@ -1,16 +1,22 @@
 # Changelog
 
-[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.1...HEAD
 ## [Unreleased]
 ### Added
-- Add `Decoder` class.
 ### Changed
 ### Removed
+### Fixed
+### Security
+### Deprecated
+
+[0.4.1]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.0...v0.4.1
+## [0.4.1] - 2022-04-25
+### Added
+- Add `Decoder` class.
 ### Fixed
 - Fix memory leak on CBOR_ERROR_EXTRANEOUS_DATA.
 ### Security
 - Fix use-after-free on XString member access or string cast.
-### Deprecated
 
 [0.4.0]: https://github.com/ranvis/php-ext-cbor/compare/v0.3.2...v0.4.0
 ## [0.4.0] - 2022-04-20
