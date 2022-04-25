@@ -81,6 +81,32 @@ run(function () {
 
     throws(Exception::class, fn () => serialize($decoder));
     throws(Error::class, fn () => clone $decoder);
+
+    // large data
+    $decoder->reset();
+    eq(false, $decoder->hasValue());
+    $s128k = str_repeat('0123456789abcdef', (1024 / 16) * 128);
+    $cborByteStr = pack('CN', 0x5a, strlen($s128k)) . $s128k;
+    $decoder->add(chr(0x9f)); // indef-length array
+    $decoder->add($cborByteStr);
+    $decoder->process();
+    $decoder->add($cborByteStr);
+    $decoder->process();
+    for ($i = 0; $i < 8; $i++) {
+        $decoder->add($cborByteStr);
+    }
+    $decoder->process();
+    $decoder->add($cborByteStr);
+    $decoder->add(chr(0xff)); // break
+    eq(false, $decoder->hasValue());
+    $decoder->process();
+    eq(true, $decoder->hasValue());
+    eq(false, $decoder->isPartial());
+    $result = $decoder->getValue();
+    ok(is_array($result));
+    foreach ($result as $value) {
+        ok($s128k === $value);
+    }
 });
 
 ?>

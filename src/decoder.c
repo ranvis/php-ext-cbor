@@ -8,6 +8,8 @@
 #include "codec.h"
 #include "types.h"
 
+#define IS_STR_OWNED(str)  (!ZSTR_IS_INTERNED(str) && GC_REFCOUNT(str) <= 1)  /* eval twice */
+
 typedef struct {
 	cbor_decode_args args;
 	zend_string *buffer;
@@ -88,7 +90,7 @@ static void reset_buffer_offset(decoder_class *base)
 	if (!base->mem.offset) {
 		return;
 	}
-	assert(!ZSTR_IS_INTERNED(base->buffer) && GC_REFCOUNT(base->buffer) == 1);  /* separation test */
+	assert(IS_STR_OWNED(base->buffer));  /* separation test */
 	char *ptr = ZSTR_VAL(base->buffer);
 	memmove(ptr, &ptr[base->mem.offset], base->mem.length - base->mem.offset);
 	base->mem.length -= base->mem.offset;
@@ -144,7 +146,16 @@ PHP_METHOD(Cbor_Decoder, add)
 			php_cbor_throw_error(CBOR_ERROR_UNSUPPORTED_SIZE, false, 0);
 			RETURN_THROWS();
 		}
-		zend_string_separate(base->buffer, false);
+		if (!IS_STR_OWNED(base->buffer)) {
+			/* separate to heap string, reset offset and add room to append */
+			base->mem.length -= base->mem.offset;
+			zend_string *new_str = zend_string_alloc(base->mem.length + append_len, false);
+			memcpy(ZSTR_VAL(new_str), &ZSTR_VAL(base->buffer)[base->mem.offset], base->mem.length);
+			zend_string_release(base->buffer);
+			base->buffer = new_str;
+			base->mem.base += base->mem.offset;
+			base->mem.offset = 0;
+		}
 		if (base->mem.length + append_len > ZSTR_LEN(base->buffer)) {
 			reset_buffer_offset(base);
 			size_t new_size = base->mem.length + append_len;
@@ -165,8 +176,7 @@ PHP_METHOD(Cbor_Decoder, process)
 	zval_ptr_dtor(&base->data);
 	ZVAL_UNDEF(&base->data);
 	cbor_error error = decode_buffer(base);
-	if (base->mem.offset > 512 * 1024
-			&& !ZSTR_IS_INTERNED(base->buffer) && GC_REFCOUNT(base->buffer) == 1) {
+	if (base->mem.offset > 512 * 1024 && IS_STR_OWNED(base->buffer)) {
 		/* shrink buffer if offset is large enough and not used by others */
 		reset_buffer_offset(base);
 		base->buffer = zend_string_realloc(base->buffer, base->mem.length, false);
