@@ -173,6 +173,7 @@ PHP_METHOD(Cbor_Decoder, process)
 {
 	decoder_class *base = CUSTOM_OBJ(decoder_class, Z_OBJ_P(ZEND_THIS));
 	NO_REENTRANT(base);
+	zend_parse_parameters_none();
 	zval_ptr_dtor(&base->data);
 	ZVAL_UNDEF(&base->data);
 	cbor_error error = decode_buffer(base);
@@ -192,6 +193,7 @@ PHP_METHOD(Cbor_Decoder, reset)
 {
 	decoder_class *base = CUSTOM_OBJ(decoder_class, Z_OBJ_P(ZEND_THIS));
 	NO_REENTRANT(base);
+	zend_parse_parameters_none();
 	if (base->ctx) {
 		php_cbor_decode_delete(base->ctx);
 		base->ctx = NULL;
@@ -206,6 +208,7 @@ PHP_METHOD(Cbor_Decoder, reset)
 PHP_METHOD(Cbor_Decoder, hasValue)
 {
 	decoder_class *base = CUSTOM_OBJ(decoder_class, Z_OBJ_P(ZEND_THIS));
+	zend_parse_parameters_none();
 	RETVAL_BOOL(Z_TYPE(base->data) != IS_UNDEF);
 }
 
@@ -230,18 +233,21 @@ PHP_METHOD(Cbor_Decoder, getValue)
 PHP_METHOD(Cbor_Decoder, isPartial)
 {
 	decoder_class *base = CUSTOM_OBJ(decoder_class, Z_OBJ_P(ZEND_THIS));
+	zend_parse_parameters_none();
 	RETVAL_BOOL(base->ctx != NULL);
 }
 
 PHP_METHOD(Cbor_Decoder, isProcessing)
 {
 	decoder_class *base = CUSTOM_OBJ(decoder_class, Z_OBJ_P(ZEND_THIS));
+	zend_parse_parameters_none();
 	RETVAL_BOOL(base->is_processing);
 }
 
 PHP_METHOD(Cbor_Decoder, getBuffer)
 {
 	decoder_class *base = CUSTOM_OBJ(decoder_class, Z_OBJ_P(ZEND_THIS));
+	zend_parse_parameters_none();
 	zend_string *copy = zend_string_init_fast(&ZSTR_VAL(base->buffer)[base->mem.offset], base->mem.length - base->mem.offset);
 	RETVAL_STR(copy);
 }

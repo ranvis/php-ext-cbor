@@ -135,11 +135,13 @@ PHP_METHOD(Cbor_Undefined, __set_state)
 
 PHP_METHOD(Cbor_Undefined, get)
 {
+	zend_parse_parameters_none();
 	RETVAL_OBJ(cbor_get_undef());
 }
 
 PHP_METHOD(Cbor_Undefined, jsonSerialize)
 {
+	zend_parse_parameters_none();
 	RETURN_NULL();
 }
 
@@ -346,6 +348,7 @@ zend_string *cbor_get_xstring_value(zval *ins)
 
 PHP_METHOD(Cbor_XString, jsonSerialize)
 {
+	zend_parse_parameters_none();
 	RETURN_STR(cbor_get_xstring_value(ZEND_THIS));
 }
 
@@ -478,6 +481,7 @@ PHP_METHOD(Cbor_FloatX, __unserialize)
 PHP_METHOD(Cbor_FloatX, jsonSerialize)
 {
 	zend_object *obj = Z_OBJ_P(ZEND_THIS);
+	zend_parse_parameters_none();
 	TEST_FLOATX_CLASS(obj->ce);
 	RETURN_DOUBLE(floatx_to_double(obj));
 }
@@ -737,6 +741,7 @@ PHP_METHOD(Cbor_Shareable, jsonSerialize)
 {
 	zend_object *obj = Z_OBJ_P(ZEND_THIS);
 	zval *value, zv;
+	zend_parse_parameters_none();
 	value = zend_read_property(obj->ce, obj, ZEND_STRL("value"), false, &zv);
 	RETURN_COPY(value);
 }
