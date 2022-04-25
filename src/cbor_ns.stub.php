@@ -56,7 +56,7 @@ final class Undefined implements \JsonSerializable
      */
     public static function get(): Undefined {}
 
-    //public function __clone(): self {}
+    //public function __clone() {}
     //public function __toBool(): false {}
     public function jsonSerialize(): mixed {}
 }
@@ -193,7 +193,7 @@ class Decoder
      * @param int $flags Configuration flags
      * @param array|null $options Configuration options
      */
-    public function __construct(int $flags = CBOR_BYTE | CBOR_KEY_BYTE, ?array $options = null);
+    public function __construct(int $flags = CBOR_BYTE | CBOR_KEY_BYTE, ?array $options = null) {}
 
     /*//
      * Decode CBOR data item string.
@@ -201,14 +201,14 @@ class Decoder
      * @return mixed The decoded value
      * @throws Cbor\Exception
      */
-    public function decode(string $data): mixed;
+    public function decode(string $data): mixed {}
 
     /*//
      * Append data to decoding buffer.
      * @param string $data A part of data item string to decode
      * @return void
      */
-    public function add(string $data): void;
+    public function add(string $data): void {}
 
     /*//
      * Decode data in the buffer.
@@ -218,19 +218,19 @@ class Decoder
      * @return bool True if a decoded item is ready
      * @throws Cbor\Exception
      */
-    public function process(): bool;
+    public function process(): bool {}
 
     /*//
-     * Reset the decoder state.
+     * Reset the decoder state and free up buffer memory.
      * @return void
      */
-    public function reset(): void;
+    public function reset(): void {}
 
     /*//
      * Get the decoded value state.
      * @return bool True if a decoded item is ready
      */
-    public function hasValue(): bool;
+    public function hasValue(): bool {}
 
     /*//
      * Get the decoded data item.
@@ -239,23 +239,23 @@ class Decoder
      * @param bool $clear True to clear the value afterwards
      * @return mixed The decoded value.
      */
-    public function getValue(bool $clear = true): mixed;
+    public function getValue(bool $clear = true): mixed {}
 
     /*//
      * Check if the data is partially decoded.
      * @return bool True if the decoder is holding incomplete value.
      */
-    public function isPartial(): bool;
+    public function isPartial(): bool {}
 
     /*//
      * Check if the decoding is on the way
      * @return bool True if the decoder process() is in progress
      */
-    public function isProcessing(): bool;
+    public function isProcessing(): bool {}
 
     /*//
      * Get data in the decoding buffer.
-     * @return string A copy of the undecoded data
+     * @return string A copy of the unprocessed data
      */
-    public function getBuffer(): string;
+    public function getBuffer(): string {}
 }

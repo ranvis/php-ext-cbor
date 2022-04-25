@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 45601d4aa3cb8cefdfa2b3163185ba088bcd02c9 */
+ * Stub hash: 7c96641c31e59b854cbea4686ee7f9cf58e802d8 */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Serializable_cborSerialize, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
