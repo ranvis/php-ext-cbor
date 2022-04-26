@@ -42,9 +42,9 @@ typedef struct cbor_decode_context {
 	cbor_error cb_error;
 	bool skip_self_desc;
 	cbor_fragment *mem;
-	zval root;
 	stack_item *stack_top;
 	uint32_t stack_depth;
+	zval root;
 	srns_item *srns; /* string ref namespace */
 	HashTable *refs; /* shared ref */
 } dec_context;
@@ -104,7 +104,7 @@ struct srns_item {  /* srns: string ref namespace */
 };
 
 static cbor_error decode_nested(dec_context *ctx);
-static cbor_error decode_cbor_data_item(const uint8_t *data, size_t len, cbor_di_decoded *out, dec_context *ctx);
+
 static void free_srns_item(srns_item *srns);
 
 void php_cbor_minit_decode()
@@ -202,45 +202,11 @@ static void stack_push_item(dec_context *ctx, stack_item *item)
 
 static stack_item *stack_new_item(dec_context *ctx, si_type_t si_type, uint32_t count)
 {
-	stack_item *item = (stack_item *)emalloc(sizeof(stack_item));
+	stack_item *item = emalloc(sizeof(stack_item));
 	memset(item, 0, sizeof *item);
 	item->si_type = si_type;
 	item->count = count;
 	return item;
-}
-
-static void stack_push_counted(dec_context *ctx, si_type_t si_type, zval *value, uint32_t count)
-{
-	stack_item *item = stack_new_item(ctx, si_type, count);
-	ZVAL_COPY_VALUE(&item->v.value, value);
-	stack_push_item(ctx, item);
-}
-
-static void stack_push_map(dec_context *ctx, si_type_t si_type, zval *value, uint32_t count)
-{
-	stack_item *item = stack_new_item(ctx, si_type, count);
-	ZVAL_COPY_VALUE(&item->v.map.dest, value);
-	ZVAL_UNDEF(&item->v.map.key);
-	stack_push_item(ctx, item);
-}
-
-static bool do_tag_enter(dec_context *ctx, zend_long tag_id);
-
-static void stack_push_tag(dec_context *ctx, zend_long tag_id)
-{
-	stack_item *item;
-	if (do_tag_enter(ctx, tag_id)) {
-		return;
-	}
-	item = stack_new_item(ctx, SI_TYPE_TAG, 1);
-	ZVAL_LONG(&item->v.tag_id, tag_id);
-	stack_push_item(ctx, item);
-}
-
-static void stack_push_xstring(dec_context *ctx, si_type_t si_type)
-{
-	stack_item *item = stack_new_item(ctx, si_type, 0);
-	stack_push_item(ctx, item);
 }
 
 #define FREE_LINKED_LIST(type_t, head, free_f)  do { \
@@ -269,13 +235,13 @@ static void cbor_decode_init(dec_context *ctx, const cbor_decode_args *args, cbo
 	ctx->skip_self_desc = !(args->flags & CBOR_SELF_DESCRIBE);
 	ctx->stack_top = NULL;
 	ctx->stack_depth = 0;
+	ctx->args = *args;
+	ctx->mem = mem;
 	ZVAL_UNDEF(&ctx->root);
 	ctx->srns = NULL;
 	if (args->shared_ref) {
 		ctx->refs = zend_new_array(0);
 	}
-	ctx->args = *args;
-	ctx->mem = mem;
 }
 
 dec_context *php_cbor_decode_new(const cbor_decode_args *args, cbor_fragment *mem)
@@ -384,26 +350,68 @@ static cbor_error decode_nested(dec_context *ctx)
 	return 0;
 }
 
-static void convert_xz_xint_to_string(xzval *value)
+static void stack_push_counted(dec_context *ctx, si_type_t si_type, zval *value, uint32_t count)
 {
-	char buf[24];  /* ceil(log10(2)*64) = 20 */
+	stack_item *item = stack_new_item(ctx, si_type, count);
+	ZVAL_COPY_VALUE(&item->v.value, value);
+	stack_push_item(ctx, item);
+}
+
+static void stack_push_xstring(dec_context *ctx, si_type_t si_type)
+{
+	stack_item *item = stack_new_item(ctx, si_type, 0);
+	stack_push_item(ctx, item);
+}
+
+static void stack_push_map(dec_context *ctx, si_type_t si_type, zval *value, uint32_t count)
+{
+	stack_item *item = stack_new_item(ctx, si_type, count);
+	ZVAL_COPY_VALUE(&item->v.map.dest, value);
+	ZVAL_UNDEF(&item->v.map.key);
+	stack_push_item(ctx, item);
+}
+
+static bool do_tag_enter(dec_context *ctx, zend_long tag_id);
+
+static void stack_push_tag(dec_context *ctx, zend_long tag_id)
+{
+	stack_item *item;
+	if (do_tag_enter(ctx, tag_id)) {
+		return;
+	}
+	item = stack_new_item(ctx, SI_TYPE_TAG, 1);
+	ZVAL_LONG(&item->v.tag_id, tag_id);
+	stack_push_item(ctx, item);
+}
+
+#define CBOR_INT_BUF_SIZE  24 /* ceil(log10(2)*64) = 20 */
+
+static size_t cbor_int_to_str(char *buf, uint64_t value, bool is_negative)
+{
 	size_t len;
-	assert(XZ_ISXXINT_P(value));
-	if (Z_TYPE_P(value) == IS_X_UINT) {
-		len = snprintf(buf, sizeof buf, "%" PRIu64, XZ_XINT_P(value));
+	if (!is_negative) {
+		len = snprintf(buf, CBOR_INT_BUF_SIZE, "%" PRIu64, value);
 	} else {
-		uint64_t n_value = XZ_XINT_P(value);
+		uint64_t n_value = value;
 		bool fix;
 		n_value++;
 		if ((fix = !n_value) != 0) {
 			n_value--;
 		}
-		len = snprintf(buf, sizeof buf, "-%" PRIu64, n_value);
-		assert(len >= 1 && len < sizeof buf);
+		len = snprintf(buf, CBOR_INT_BUF_SIZE, "-%" PRIu64, n_value);
+		assert(len >= 1 && len < CBOR_INT_BUF_SIZE);
 		if (fix) {
 			buf[len - 1]++;  /* "-18446744073709551615" => "...6" */
 		}
 	}
+	return len;
+}
+
+static void convert_xz_xint_to_string(xzval *value)
+{
+	assert(XZ_ISXXINT_P(value));
+	char buf[CBOR_INT_BUF_SIZE];
+	size_t len = cbor_int_to_str(buf, XZ_XINT_P(value), Z_TYPE_P(value) != IS_X_UINT);
 	ZVAL_STRINGL(value, buf, len);
 }
 
@@ -879,15 +887,8 @@ static void proc_boolean(dec_context *ctx, bool val)
 	append_item(ctx, &value);
 }
 
-static void proc_indef_break(dec_context *ctx)
+static void proc_indef_break(dec_context *ctx, stack_item *item)
 {
-	stack_item *item = stack_pop_item(ctx);
-	if (UNEXPECTED(item == NULL)) {
-		THROW_CB_ERROR(E_DESC(CBOR_ERROR_SYNTAX, BREAK_UNDERFLOW));
-	}
-	if (UNEXPECTED(!item->si_type)) {
-		THROW_CB_ERROR(E_DESC(CBOR_ERROR_SYNTAX, BREAK_UNEXPECTED));
-	}
 	if (item->si_type & SI_TYPE_STRING_MASK) {
 		bool is_text = item->si_type == SI_TYPE_TEXT;
 		zval value;
@@ -902,8 +903,7 @@ static void proc_indef_break(dec_context *ctx)
 		assert(item->si_type == SI_TYPE_ARRAY || item->si_type == SI_TYPE_MAP);
 		append_item(ctx, &item->v.value);
 	}
-FINALLY:
-	stack_free_item(item);
+FINALLY: ;
 }
 
 bool cbor_is_len_string_ref(size_t str_len, uint32_t next_index)
@@ -1166,115 +1166,4 @@ static bool do_tag_enter(dec_context *ctx, zend_long tag_id)
 	return false;
 }
 
-#define SET_READ_ERROR(result)  do { \
-		if (!result) { \
-			error = out->req_len ? CBOR_ERROR_TRUNCATED_DATA \
-				: CBOR_ERROR_MALFORMED_DATA; \
-			goto FINALLY; \
-		} \
-	} while (0)
-
-static cbor_error decode_cbor_data_item(const uint8_t *data, size_t len, cbor_di_decoded *out, dec_context *ctx)
-{
-	cbor_error error = 0;
-	uint8_t type = cbor_di_get_type(data, len);
-	out->read_len = 1;
-	out->req_len = 0;
-	switch (type) {
-	case DI_UINT:
-		SET_READ_ERROR(cbor_di_read_int(data, len, out));
-		if (!DI_IS_DOUBLE(*out)) {
-			proc_uint32(ctx, out->v.i32);
-		} else {
-			proc_uint64(ctx, out->v.i64);
-		}
-		break;
-	case DI_NINT:
-		SET_READ_ERROR(cbor_di_read_int(data, len, out));
-		if (!DI_IS_DOUBLE(*out)) {
-			proc_nint32(ctx, out->v.i32);
-		} else {
-			proc_nint64(ctx, out->v.i64);
-		}
-		break;
-	case DI_BSTR:
-		SET_READ_ERROR(cbor_di_read_str(data, len, out));
-		if (out->v.str.val) {
-			proc_byte_string(ctx, out->v.str.val, out->v.str.len);
-		} else {
-			proc_byte_string_start(ctx);
-		}
-		break;
-	case DI_TSTR:
-		SET_READ_ERROR(cbor_di_read_str(data, len, out));
-		if (out->v.str.val) {
-			proc_text_string(ctx, out->v.str.val, out->v.str.len);
-		} else {
-			proc_text_string_start(ctx);
-		}
-		break;
-	case DI_ARRAY:
-		SET_READ_ERROR(cbor_di_read_list(data, len, out));
-		if (!out->v.ext.is_indef) {
-			if (out->v.i64 > 0xffffffff) {
-				return CBOR_ERROR_UNSUPPORTED_SIZE;
-			}
-			proc_array_start(ctx, (uint32_t)out->v.i64);
-		} else {
-			proc_indef_array_start(ctx);
-		}
-		break;
-	case DI_MAP:
-		SET_READ_ERROR(cbor_di_read_list(data, len, out));
-		if (!out->v.ext.is_indef) {
-			if (out->v.i64 > 0xffffffff) {
-				return CBOR_ERROR_UNSUPPORTED_SIZE;
-			}
-			proc_map_start(ctx, (uint32_t)out->v.i64);
-		} else {
-			proc_indef_map_start(ctx);
-		}
-		break;
-	case DI_TAG:
-		SET_READ_ERROR(cbor_di_read_int(data, len, out));
-		proc_tag(ctx, !DI_IS_DOUBLE(*out) ? out->v.i32 : out->v.i64);
-		break;
-	case DI_FALSE:
-	case DI_TRUE:
-		proc_boolean(ctx, type == DI_TRUE);
-		break;
-	case DI_NULL:
-		proc_null(ctx);
-		break;
-	case DI_UNDEF:
-		proc_undefined(ctx);
-		break;
-	case DI_SIMPLE:
-		SET_READ_ERROR(cbor_di_read_int(data, len, out));
-		if (out->v.i32 <= DI_INFO_MAX) {
-			/* not-well-formed range is not used (RFC 8949 3.3) */
-			return CBOR_ERROR_MALFORMED_DATA;
-		}
-		return E_DESC(CBOR_ERROR_UNSUPPORTED_TYPE, SIMPLE);
-	case DI_FLOAT16:
-		SET_READ_ERROR(cbor_di_read_float(data, len, out));
-		proc_float16(ctx, out->v.f16);
-		break;
-	case DI_FLOAT32:
-		SET_READ_ERROR(cbor_di_read_float(data, len, out));
-		proc_float32(ctx, out->v.i32);
-		break;
-	case DI_FLOAT64:
-		SET_READ_ERROR(cbor_di_read_float(data, len, out));
-		proc_float64(ctx, out->v.f64);
-		break;
-	case DI_BREAK:
-		proc_indef_break(ctx);
-		break;
-	default:
-		out->read_len = 0;
-		return CBOR_ERROR_MALFORMED_DATA;
-	}
-FINALLY:
-	return error;
-}
+#include "decode_base.c"
