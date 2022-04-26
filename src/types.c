@@ -6,7 +6,7 @@
 #include "cbor.h"
 #include "types.h"
 
-#define DEF_THIS_PROP(name, prop_literal)  CBOR_CE(name), Z_OBJ_P(ZEND_THIS), ZEND_STRL(prop_literal)
+#define DEF_THIS(name, prop_literal)  CBOR_CE(name), Z_OBJ_P(ZEND_THIS)
 
 typedef struct {
 	zend_string *str;
@@ -25,7 +25,7 @@ static zend_object_handlers undef_handlers;
 static zend_object_handlers xstring_handlers;
 static zend_object_handlers floatx_handlers;
 
-#define THIS_PROP(prop_literal)  DEF_THIS_PROP(tag, prop_literal)
+#define THIS()  DEF_THIS(tag, prop_literal)
 
 PHP_METHOD(Cbor_EncodeParams, __construct)
 {
@@ -33,11 +33,11 @@ PHP_METHOD(Cbor_EncodeParams, __construct)
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "za", &value, &params) != SUCCESS) {
 		RETURN_THROWS();
 	}
-	zend_update_property(THIS_PROP("value"), value);
-	zend_update_property(THIS_PROP("params"), params);
+	zend_update_property_ex(THIS(), ZSTR_KNOWN(ZEND_STR_VALUE), value);
+	zend_update_property(THIS(), ZEND_STRL("params"), params);
 }
 
-#undef THIS_PROP
+#undef THIS
 
 /* PHP has IS_UNDEF type, but it is semantically different from CBOR's "undefined" value. */
 
@@ -145,7 +145,7 @@ PHP_METHOD(Cbor_Undefined, jsonSerialize)
 	RETURN_NULL();
 }
 
-#define THIS_PROP(prop_literal)  DEF_THIS_PROP(xstring, prop_literal)
+#define THIS()  DEF_THIS(xstring, prop_literal)
 
 zend_object *cbor_xstring_create(zend_class_entry *ce)
 {
@@ -263,7 +263,7 @@ static zend_array *xstring_get_properties_for(zend_object *obj, zend_prop_purpos
 	props = zend_new_array(1);
 	ZVAL_STR_COPY(&value, base->str);
 	if (view) {
-		zend_hash_str_add_new(props, ZEND_STRL("value"), &value);
+		zend_hash_add_new(props, ZSTR_KNOWN(ZEND_STR_VALUE), &value);
 	} else {
 		zend_hash_next_index_insert(props, &value);
 	}
@@ -352,7 +352,7 @@ PHP_METHOD(Cbor_XString, jsonSerialize)
 	RETURN_STR(cbor_get_xstring_value(ZEND_THIS));
 }
 
-#undef THIS_PROP
+#undef THIS
 
 zend_object *cbor_floatx_create(zend_class_entry *ce)
 {
@@ -362,7 +362,7 @@ zend_object *cbor_floatx_create(zend_class_entry *ce)
 	return &base->std;
 }
 
-#define THIS_PROP(prop_literal)  DEF_THIS_PROP(floatx, prop_literal)
+#define THIS()  DEF_THIS(floatx, prop_literal)
 
 static double floatx_to_double(zend_object *obj)
 {
@@ -632,7 +632,7 @@ static zend_array *floatx_get_properties_for(zend_object *obj, zend_prop_purpose
 			value = cbor_from_float16(base->v.binary16);
 		}
 		ZVAL_DOUBLE(&zv, value);
-		zend_hash_str_add_new(props, ZEND_STRL("value"), &zv);
+		zend_hash_add_new(props, ZSTR_KNOWN(ZEND_STR_VALUE), &zv);
 	} else {
 		char bin[4];
 		size_t len = cbor_floatx_get_value(obj, bin);
@@ -711,8 +711,8 @@ uint16_t cbor_to_float16(float value)
 	return binary16;
 }
 
-#undef THIS_PROP
-#define THIS_PROP(prop_literal)  DEF_THIS_PROP(tag, prop_literal)
+#undef THIS
+#define THIS()  DEF_THIS(tag, prop_literal)
 
 PHP_METHOD(Cbor_Tag, __construct)
 {
@@ -721,12 +721,12 @@ PHP_METHOD(Cbor_Tag, __construct)
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lz", &value, &content) != SUCCESS) {
 		RETURN_THROWS();
 	}
-	zend_update_property_long(THIS_PROP("tag"), value);
-	zend_update_property(THIS_PROP("content"), content);
+	zend_update_property_long(THIS(), ZEND_STRL("tag"), value);
+	zend_update_property(THIS(), ZEND_STRL("content"), content);
 }
 
-#undef THIS_PROP
-#define THIS_PROP(prop_literal)  DEF_THIS_PROP(shareable, prop_literal)
+#undef THIS
+#define THIS()  DEF_THIS(shareable, prop_literal)
 
 PHP_METHOD(Cbor_Shareable, __construct)
 {
@@ -734,7 +734,7 @@ PHP_METHOD(Cbor_Shareable, __construct)
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &value) != SUCCESS) {
 		RETURN_THROWS();
 	}
-	zend_update_property(THIS_PROP("value"), value);
+	zend_update_property_ex(THIS(), ZSTR_KNOWN(ZEND_STR_VALUE), value);
 }
 
 PHP_METHOD(Cbor_Shareable, jsonSerialize)
@@ -742,11 +742,11 @@ PHP_METHOD(Cbor_Shareable, jsonSerialize)
 	zend_object *obj = Z_OBJ_P(ZEND_THIS);
 	zval *value, zv;
 	zend_parse_parameters_none();
-	value = zend_read_property(obj->ce, obj, ZEND_STRL("value"), false, &zv);
+	value = zend_read_property_ex(obj->ce, obj, ZSTR_KNOWN(ZEND_STR_VALUE), false, &zv);
 	RETURN_COPY(value);
 }
 
-#undef THIS_PROP
+#undef THIS
 
 void php_cbor_minit_types()
 {

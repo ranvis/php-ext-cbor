@@ -602,7 +602,7 @@ static cbor_error enc_encodeparams(enc_context *ctx, zval *ins)
 	if (Z_IS_RECURSIVE_P(ins)) {
 		ENC_RESULT(CBOR_ERROR_RECURSION);
 	}
-	value = zend_read_property(CBOR_CE(encodeparams), Z_OBJ_P(ins), PROP_L("value"), false, &tmp_value);
+	value = zend_read_property_ex(CBOR_CE(encodeparams), Z_OBJ_P(ins), ZSTR_KNOWN(ZEND_STR_VALUE), false, &tmp_value);
 	params = zend_read_property(CBOR_CE(encodeparams), Z_OBJ_P(ins), PROP_L("params"), false, &tmp_params);
 	if (!value || !params) {
 		ENC_RESULT(CBOR_ERROR_INTERNAL);
@@ -736,7 +736,7 @@ static cbor_error enc_shareable(enc_context *ctx, zval *value)
 	if (error != CBOR_STATUS_VALUE_FOLLOWS) {
 		return error;
 	}
-	value = zend_read_property(CBOR_CE(shareable), Z_OBJ_P(value), PROP_L("value"), false, &tmp_v);
+	value = zend_read_property_ex(CBOR_CE(shareable), Z_OBJ_P(value), ZSTR_KNOWN(ZEND_STR_VALUE), false, &tmp_v);
 	if (!value) {
 		return CBOR_ERROR_INTERNAL;
 	}
