@@ -36,6 +36,7 @@
 
 typedef struct stack_item stack_item;
 typedef struct srns_item srns_item;
+typedef struct decode_vt decode_vt;
 
 typedef struct cbor_decode_context {
 	cbor_decode_args args;
@@ -44,10 +45,25 @@ typedef struct cbor_decode_context {
 	cbor_fragment *mem;
 	stack_item *stack_top;
 	uint32_t stack_depth;
-	zval root;
-	srns_item *srns; /* string ref namespace */
-	HashTable *refs; /* shared ref */
+	const decode_vt *vt;
+	union dec_ctx_vt_switch {
+		struct {
+			zval root;
+			srns_item *srns; /* string ref namespace */
+			HashTable *refs; /* shared ref */
+		} zv;
+	} u;
 } dec_context;
+
+struct decode_vt {
+	int si_size;
+	void (*ctx_init)(dec_context *ctx);
+	void (*ctx_free)(dec_context *ctx);
+	cbor_error (*dec_item)(const uint8_t *data, size_t len, cbor_di_decoded *out, dec_context *ctx);
+	cbor_error (*dec_finish)(dec_context *ctx, cbor_decode_args *args, cbor_error error, zval *value);
+	void (*si_free)(stack_item *item);
+	void (*si_push)(dec_context *ctx, stack_item *item, stack_item *parent_item);
+};
 
 typedef enum {
 	SI_TYPE_STRING_MASK = 0x10,
@@ -63,16 +79,24 @@ typedef enum {
 	DATA_TYPE_STRING = 1,
 } data_type_t;
 
-typedef bool (tag_handler_enter_t)(dec_context *ctx, stack_item *item);
-typedef void (tag_handler_data_t)(dec_context *ctx, stack_item *item, data_type_t type, zval *value);
-typedef void (tag_handler_child_t)(dec_context *ctx, stack_item *item, stack_item *self);
-typedef xzval *(tag_handler_exit_t)(dec_context *ctx, xzval *value, stack_item *item, zval *tmp_v);
-typedef void (tag_handler_free_t)(stack_item *item);
-
 struct stack_item {
 	stack_item *next_item;
+	const decode_vt *vt;
 	si_type_t si_type;
 	uint32_t count;
+	/* ... */
+};
+
+typedef struct stack_item_zv stack_item_zv;
+
+typedef bool (tag_handler_enter_t)(dec_context *ctx, stack_item_zv *item);
+typedef void (tag_handler_data_t)(dec_context *ctx, stack_item_zv *item, data_type_t type, zval *value);
+typedef void (tag_handler_child_t)(dec_context *ctx, stack_item_zv *item, stack_item_zv *self);
+typedef xzval *(tag_handler_exit_t)(dec_context *ctx, xzval *value, stack_item_zv *item, zval *tmp_v);
+typedef void (tag_handler_free_t)(stack_item_zv *item);
+
+struct stack_item_zv {
+	stack_item base;
 	tag_handler_data_t *tag_handler_data;
 	tag_handler_child_t *tag_handler_child[2];
 	tag_handler_exit_t *tag_handler_exit;
@@ -98,6 +122,23 @@ struct stack_item {
 	} v;
 };
 
+static void zv_ctx_init(dec_context *ctx);
+static void zv_ctx_free(dec_context *ctx);
+static cbor_error zv_dec_item(const uint8_t *data, size_t len, cbor_di_decoded *out, dec_context *ctx);
+static cbor_error zv_dec_finish(dec_context *ctx, cbor_decode_args *args, cbor_error error, zval *value);
+static void zv_si_free(stack_item *item);
+static void zv_si_push(dec_context *ctx, stack_item *item, stack_item *parent_item);
+
+static const decode_vt dec_zv_vt = {
+	sizeof(stack_item_zv),
+	&zv_ctx_init,
+	&zv_ctx_free,
+	&zv_dec_item,
+	&zv_dec_finish,
+	&zv_si_free,
+	&zv_si_push,
+};
+
 struct srns_item {  /* srns: string ref namespace */
 	srns_item *prev_item;
 	HashTable *str_table;
@@ -113,7 +154,7 @@ void php_cbor_minit_decode()
 
 /* just in case, defined as a macro, as function pointer is theoretically incompatible with data pointer */
 #define DECLARE_SI_SET_HANDLER_VEC(member)  \
-	static bool register_handler_vec_##member(stack_item *item, member##_t *handler) \
+	static bool register_handler_vec_##member(stack_item_zv *item, member##_t *handler) \
 	{ \
 		int i, count = sizeof item->member / sizeof item->member[0]; \
 		for (i = 0; i < count && item->member[i]; i++) { \
@@ -136,8 +177,8 @@ void php_cbor_minit_decode()
 #define SI_SET_HANDLER(member, si, handler)  si->member = handler
 #define SI_CALL_HANDLER(si, member, ...)  (*si->member)(__VA_ARGS__)
 #define SI_CALL_HANDLER_VEC(member, si, ...)  do { \
-		for (int i = 0; i < sizeof si->member / sizeof si->member[0] && si->member[i]; i++) { \
-			(*si->member[i])(__VA_ARGS__); \
+		for (int i = 0; i < sizeof (si)->member / sizeof (si)->member[0] && (si)->member[i]; i++) { \
+			(*(si)->member[i])(__VA_ARGS__); \
 		} \
 	} while (0)
 
@@ -155,21 +196,7 @@ static void stack_free_item(stack_item *item)
 	if (item == NULL) {
 		return;
 	}
-	if (item->si_type & SI_TYPE_STRING_MASK) {
-		smart_str_free(&item->v.str);
-	} else if (item->si_type == SI_TYPE_MAP) {
-		zval_ptr_dtor(&item->v.map.dest);
-		XZVAL_PURIFY(&item->v.map.key);
-		zval_ptr_dtor(&item->v.map.key);
-	} else if (item->si_type == SI_TYPE_TAG) {
-		/* nothing */
-	} else if (item->si_type == SI_TYPE_TAG_HANDLED) {
-		if (item->tag_handler_free) {
-			(*item->tag_handler_free)(item);
-		}
-	} else if (item->si_type) {
-		zval_ptr_dtor(&item->v.value);
-	}
+	item->vt->si_free(item);
 	assert(item->next_item == NULL);
 	efree(item);
 }
@@ -192,18 +219,17 @@ static void stack_push_item(dec_context *ctx, stack_item *item)
 		stack_free_item(item);
 		RETURN_CB_ERROR(CBOR_ERROR_DEPTH);
 	}
-	if (parent_item) {
-		SI_CALL_CHILD_HANDLER(parent_item, ctx, item, parent_item);
-	}
+	ctx->vt->si_push(ctx, item, parent_item);
 	ctx->stack_depth++;
 	item->next_item = ctx->stack_top;
 	ctx->stack_top = item;
 }
 
-static stack_item *stack_new_item(dec_context *ctx, si_type_t si_type, uint32_t count)
+static void *stack_new_item(dec_context *ctx, si_type_t si_type, uint32_t count)
 {
-	stack_item *item = emalloc(sizeof(stack_item));
-	memset(item, 0, sizeof *item);
+	stack_item *item = emalloc(ctx->vt->si_size);
+	memset(item, 0, ctx->vt->si_size);
+	item->vt = ctx->vt;
 	item->si_type = si_type;
 	item->count = count;
 	return item;
@@ -223,11 +249,7 @@ static void cbor_decode_free(dec_context *ctx)
 		stack_item *item = stack_pop_item(ctx);
 		stack_free_item(item);
 	}
-	FREE_LINKED_LIST(srns_item, ctx->srns, free_srns_item);
-	if (ctx->args.shared_ref) {
-		zend_array_destroy(ctx->refs);
-	}
-	zval_ptr_dtor(&ctx->root);
+	ctx->vt->ctx_free(ctx);
 }
 
 static void cbor_decode_init(dec_context *ctx, const cbor_decode_args *args, cbor_fragment *mem)
@@ -237,11 +259,8 @@ static void cbor_decode_init(dec_context *ctx, const cbor_decode_args *args, cbo
 	ctx->stack_depth = 0;
 	ctx->args = *args;
 	ctx->mem = mem;
-	ZVAL_UNDEF(&ctx->root);
-	ctx->srns = NULL;
-	if (args->shared_ref) {
-		ctx->refs = zend_new_array(0);
-	}
+	ctx->vt = &dec_zv_vt;
+	ctx->vt->ctx_init(ctx);
 }
 
 dec_context *php_cbor_decode_new(const cbor_decode_args *args, cbor_fragment *mem)
@@ -291,23 +310,9 @@ FINALLY:
 	return error;
 }
 
-void php_cbor_decode_finish(dec_context *ctx, cbor_decode_args *args, cbor_error error, zval *value)
+cbor_error php_cbor_decode_finish(dec_context *ctx, cbor_decode_args *args, cbor_error error, zval *value)
 {
-	if (!error) {
-		if (EXPECTED(Z_TYPE(ctx->root) != IS_REFERENCE)) {
-			ZVAL_COPY_VALUE(value, &ctx->root);
-		} else {
-			zval *tmp = &ctx->root;
-			ZVAL_DEREF(tmp);
-			ZVAL_COPY_VALUE(value, tmp);
-			Z_TRY_ADDREF_P(value);
-			zval_ptr_dtor(&ctx->root);
-		}
-	} else {
-		args->error_arg = ctx->args.error_arg;
-		zval_ptr_dtor(&ctx->root);
-	}
-	ZVAL_UNDEF(&ctx->root);
+	return ctx->vt->dec_finish(ctx, args, error, value);
 }
 
 cbor_error php_cbor_decode(zend_string *data, zval *value, cbor_decode_args *args)
@@ -323,7 +328,7 @@ cbor_error php_cbor_decode(zend_string *data, zval *value, cbor_decode_args *arg
 		error = CBOR_ERROR_EXTRANEOUS_DATA;
 		ctx.args.error_arg = mem.base + mem.offset;
 	}
-	php_cbor_decode_finish(&ctx, args, error, value);
+	error = php_cbor_decode_finish(&ctx, args, error, value);
 	cbor_decode_free(&ctx);
 	return error;
 }
@@ -338,7 +343,7 @@ static cbor_error decode_nested(dec_context *ctx)
 		if (mem->offset >= mem->length) {
 			return CBOR_ERROR_TRUNCATED_DATA;
 		}
-		error = decode_cbor_data_item(mem->ptr + mem->offset, mem->length - mem->offset, &out_data, ctx);
+		error = ctx->vt->dec_item(mem->ptr + mem->offset, mem->length - mem->offset, &out_data, ctx);
 		mem->offset += out_data.read_len;
 		if (error) {
 			return error;
@@ -348,40 +353,6 @@ static cbor_error decode_nested(dec_context *ctx)
 		}
 	} while (ctx->stack_depth);
 	return 0;
-}
-
-static void stack_push_counted(dec_context *ctx, si_type_t si_type, zval *value, uint32_t count)
-{
-	stack_item *item = stack_new_item(ctx, si_type, count);
-	ZVAL_COPY_VALUE(&item->v.value, value);
-	stack_push_item(ctx, item);
-}
-
-static void stack_push_xstring(dec_context *ctx, si_type_t si_type)
-{
-	stack_item *item = stack_new_item(ctx, si_type, 0);
-	stack_push_item(ctx, item);
-}
-
-static void stack_push_map(dec_context *ctx, si_type_t si_type, zval *value, uint32_t count)
-{
-	stack_item *item = stack_new_item(ctx, si_type, count);
-	ZVAL_COPY_VALUE(&item->v.map.dest, value);
-	ZVAL_UNDEF(&item->v.map.key);
-	stack_push_item(ctx, item);
-}
-
-static bool do_tag_enter(dec_context *ctx, zend_long tag_id);
-
-static void stack_push_tag(dec_context *ctx, zend_long tag_id)
-{
-	stack_item *item;
-	if (do_tag_enter(ctx, tag_id)) {
-		return;
-	}
-	item = stack_new_item(ctx, SI_TYPE_TAG, 1);
-	ZVAL_LONG(&item->v.tag_id, tag_id);
-	stack_push_item(ctx, item);
 }
 
 #define CBOR_INT_BUF_SIZE  24 /* ceil(log10(2)*64) = 20 */
@@ -415,9 +386,110 @@ static void convert_xz_xint_to_string(xzval *value)
 	ZVAL_STRINGL(value, buf, len);
 }
 
-static bool append_item(dec_context *ctx, xzval *value);
+static void zv_ctx_init(dec_context *ctx)
+{
+	ZVAL_UNDEF(&ctx->u.zv.root);
+	ctx->u.zv.srns = NULL;
+	if (ctx->args.shared_ref) {
+		ctx->u.zv.refs = zend_new_array(0);
+	}
+}
 
-static bool append_item_to_array(dec_context *ctx, xzval *value, stack_item *item)
+static void zv_ctx_free(dec_context *ctx)
+{
+	FREE_LINKED_LIST(srns_item, ctx->u.zv.srns, free_srns_item);
+	if (ctx->args.shared_ref) {
+		zend_array_destroy(ctx->u.zv.refs);
+	}
+	zval_ptr_dtor(&ctx->u.zv.root);
+}
+
+static void zv_si_free(stack_item *item_)
+{
+	stack_item_zv *item = (stack_item_zv *)item_;
+	if (item->base.si_type & SI_TYPE_STRING_MASK) {
+		smart_str_free(&item->v.str);
+	} else if (item->base.si_type == SI_TYPE_MAP) {
+		zval_ptr_dtor(&item->v.map.dest);
+		XZVAL_PURIFY(&item->v.map.key);
+		zval_ptr_dtor(&item->v.map.key);
+	} else if (item->base.si_type == SI_TYPE_TAG) {
+		/* nothing */
+	} else if (item->base.si_type == SI_TYPE_TAG_HANDLED) {
+		if (item->tag_handler_free) {
+			(*item->tag_handler_free)(item);
+		}
+	} else if (item->base.si_type) {
+		zval_ptr_dtor(&item->v.value);
+	}
+}
+
+static void zv_si_push(dec_context *ctx, stack_item *item, stack_item *parent_item)
+{
+	if (parent_item) {
+		SI_CALL_CHILD_HANDLER((stack_item_zv *)parent_item, ctx, (stack_item_zv *)item, (stack_item_zv *)parent_item);
+	}
+}
+
+static cbor_error zv_dec_finish(dec_context *ctx, cbor_decode_args *args, cbor_error error, zval *value)
+{
+	if (!error) {
+		if (EXPECTED(Z_TYPE(ctx->u.zv.root) != IS_REFERENCE)) {
+			ZVAL_COPY_VALUE(value, &ctx->u.zv.root);
+		} else {
+			zval *tmp = &ctx->u.zv.root;
+			ZVAL_DEREF(tmp);
+			ZVAL_COPY_VALUE(value, tmp);
+			Z_TRY_ADDREF_P(value);
+			zval_ptr_dtor(&ctx->u.zv.root);
+		}
+	} else {
+		args->error_arg = ctx->args.error_arg;
+		zval_ptr_dtor(&ctx->u.zv.root);
+	}
+	ZVAL_UNDEF(&ctx->u.zv.root);
+	return error;
+}
+
+static void zv_stack_push_counted(dec_context *ctx, si_type_t si_type, zval *value, uint32_t count)
+{
+	stack_item_zv *item = stack_new_item(ctx, si_type, count);
+	ZVAL_COPY_VALUE(&item->v.value, value);
+	stack_push_item(ctx, &item->base);
+}
+
+static void zv_stack_push_xstring(dec_context *ctx, si_type_t si_type)
+{
+	stack_item_zv *item = stack_new_item(ctx, si_type, 0);
+	stack_push_item(ctx, &item->base);
+}
+
+static void zv_stack_push_map(dec_context *ctx, si_type_t si_type, zval *value, uint32_t count)
+{
+	stack_item_zv *item = stack_new_item(ctx, si_type, count);
+	ZVAL_COPY_VALUE(&item->v.map.dest, value);
+	ZVAL_UNDEF(&item->v.map.key);
+	stack_push_item(ctx, &item->base);
+}
+
+static void zv_stack_push_tag(dec_context *ctx, zend_long tag_id)
+{
+	stack_item_zv *item = stack_new_item(ctx, SI_TYPE_TAG, 1);
+	ZVAL_LONG(&item->v.tag_id, tag_id);
+	stack_push_item(ctx, &item->base);
+}
+
+static bool zv_append(dec_context *ctx, xzval *value);
+
+static bool zv_append_counted(dec_context *ctx, zval *value)
+{
+	stack_item *item = stack_pop_item(ctx);
+	bool result = zv_append(ctx, value);
+	stack_free_item(item);
+	return result;
+}
+
+static bool zv_append_to_array(dec_context *ctx, xzval *value, stack_item_zv *item)
 {
 	if (XZ_ISXXINT_P(value)) {
 		RETURN_CB_ERROR_B(E_DESC(CBOR_ERROR_UNSUPPORTED_VALUE, INT_RANGE));
@@ -426,18 +498,14 @@ static bool append_item_to_array(dec_context *ctx, xzval *value, stack_item *ite
 		RETURN_CB_ERROR_B(CBOR_ERROR_INTERNAL);
 	}
 	Z_TRY_ADDREF_P(value);
-	if (item->count && --item->count == 0) {
-		bool result;
+	if (item->base.count && --item->base.count == 0) {
 		assert(ctx->stack_top == item);
-		stack_pop_item(ctx);
-		result = append_item(ctx, &item->v.value);
-		stack_free_item(item);
-		return result;
+		return zv_append_counted(ctx, &item->v.value);
 	}
 	return true;
 }
 
-static bool append_item_to_map(dec_context *ctx, xzval *value, stack_item *item)
+static bool zv_append_to_map(dec_context *ctx, xzval *value, stack_item_zv *item)
 {
 	if (Z_ISUNDEF(item->v.map.key)) {
 		switch (Z_TYPE_P(value)) {
@@ -530,18 +598,14 @@ static bool append_item_to_map(dec_context *ctx, xzval *value, stack_item *item)
 	XZVAL_PURIFY(&item->v.map.key);
 	zval_ptr_dtor(&item->v.map.key);
 	ZVAL_UNDEF(&item->v.map.key);
-	if (item->count && --item->count == 0) {
-		bool result;
+	if (item->base.count && --item->base.count == 0) {
 		assert(ctx->stack_top == item);
-		stack_pop_item(ctx);
-		result = append_item(ctx, &item->v.map.dest);
-		stack_free_item(item);
-		return result;
+		return zv_append_counted(ctx, &item->v.map.dest);
 	}
 	return true;
 }
 
-static bool append_item_to_tag(dec_context *ctx, xzval *value, stack_item *item)
+static bool zv_append_to_tag(dec_context *ctx, xzval *value, stack_item_zv *item)
 {
 	zval container;
 	bool result;
@@ -555,13 +619,13 @@ static bool append_item_to_tag(dec_context *ctx, xzval *value, stack_item *item)
 	assert(ctx->stack_top == item);
 	stack_pop_item(ctx);
 	assert(Z_TYPE(item->v.tag_id) == IS_LONG);
-	stack_free_item(item);
-	result = append_item(ctx, &container);
+	stack_free_item(&item->base);
+	result = zv_append(ctx, &container);
 	zval_ptr_dtor(&container);
 	return result;
 }
 
-static bool append_item_to_tag_handled(dec_context *ctx, xzval *value, stack_item *item)
+static bool zv_append_to_tag_handled(dec_context *ctx, xzval *value, stack_item_zv *item)
 {
 	zval tmp_v;
 	xzval *orig_v = value;
@@ -573,36 +637,36 @@ static bool append_item_to_tag_handled(dec_context *ctx, xzval *value, stack_ite
 		value = (*item->tag_handler_exit)(ctx, value, item, &tmp_v);
 		/* exit handler may return the new value, that caller frees */
 	}
-	result = !ctx->cb_error && append_item(ctx, value);
+	result = !ctx->cb_error && zv_append(ctx, value);
 	if (value != orig_v) {
 		zval_ptr_dtor(value);
 	}
-	stack_free_item(item);
+	stack_free_item(&item->base);
 	return result;
 }
 
-static bool append_item(dec_context *ctx, xzval *value)
+static bool zv_append(dec_context *ctx, xzval *value)
 {
-	stack_item *item = ctx->stack_top;
+	stack_item_zv *item = (stack_item_zv *)ctx->stack_top;
 	if (item == NULL) {
 		if (XZ_ISXXINT_P(value)) {
 			RETURN_CB_ERROR_B(E_DESC(CBOR_ERROR_UNSUPPORTED_VALUE, INT_RANGE));
 		}
 		Z_TRY_ADDREF_P(value);
-		ZVAL_COPY_VALUE(&ctx->root, value);
+		ZVAL_COPY_VALUE(&ctx->u.zv.root, value);
 		return true;
 	}
-	switch (item->si_type) {
+	switch (item->base.si_type) {
 	case SI_TYPE_ARRAY:
-		return append_item_to_array(ctx, value, item);
+		return zv_append_to_array(ctx, value, item);
 	case SI_TYPE_MAP:
-		return append_item_to_map(ctx, value, item);
+		return zv_append_to_map(ctx, value, item);
 	case SI_TYPE_TAG:
-		return append_item_to_tag(ctx, value, item);
+		return zv_append_to_tag(ctx, value, item);
 	case SI_TYPE_TAG_HANDLED:
-		return append_item_to_tag_handled(ctx, value, item);
+		return zv_append_to_tag_handled(ctx, value, item);
 	}
-	if (item->si_type & SI_TYPE_STRING_MASK) {
+	if (item->base.si_type & SI_TYPE_STRING_MASK) {
 		RETURN_CB_ERROR_B(E_DESC(CBOR_ERROR_SYNTAX, NESTED_INDEF_STRING));
 	}
 	RETURN_CB_ERROR_B(CBOR_ERROR_SYNTAX);
@@ -621,7 +685,7 @@ static bool append_item(dec_context *ctx, xzval *value)
 #error unimplemented
 #endif
 
-static void proc_uint32(dec_context *ctx, uint32_t val)
+static void zv_proc_uint32(dec_context *ctx, uint32_t val)
 {
 	xzval value;
 	if (TEST_OVERFLOW_XINT32(val)) {
@@ -629,10 +693,10 @@ static void proc_uint32(dec_context *ctx, uint32_t val)
 	} else {
 		ZVAL_LONG(&value, val);
 	}
-	append_item(ctx, &value);
+	zv_append(ctx, &value);
 }
 
-static void proc_uint64(dec_context *ctx, uint64_t val)
+static void zv_proc_uint64(dec_context *ctx, uint64_t val)
 {
 	xzval value;
 	if (TEST_OVERFLOW_XINT64(val)) {
@@ -640,10 +704,10 @@ static void proc_uint64(dec_context *ctx, uint64_t val)
 	} else {
 		ZVAL_LONG(&value, (zend_long)val);
 	}
-	append_item(ctx, &value);
+	zv_append(ctx, &value);
 }
 
-static void proc_nint32(dec_context *ctx, uint32_t val)
+static void zv_proc_nint32(dec_context *ctx, uint32_t val)
 {
 	xzval value;
 	if (TEST_OVERFLOW_XINT32(val)) {
@@ -651,10 +715,10 @@ static void proc_nint32(dec_context *ctx, uint32_t val)
 	} else {
 		ZVAL_LONG(&value, -(zend_long)val - 1);
 	}
-	append_item(ctx, &value);
+	zv_append(ctx, &value);
 }
 
-static void proc_nint64(dec_context *ctx, uint64_t val)
+static void zv_proc_nint64(dec_context *ctx, uint64_t val)
 {
 	zval value;
 	if (TEST_OVERFLOW_XINT64(val)) {
@@ -662,7 +726,7 @@ static void proc_nint64(dec_context *ctx, uint64_t val)
 	} else {
 		ZVAL_LONG(&value, -(zend_long)val - 1);
 	}
-	append_item(ctx, &value);
+	zv_append(ctx, &value);
 }
 
 static bool create_value_object(zval *container, zval *value, zend_class_entry *ce)
@@ -674,15 +738,15 @@ static bool create_value_object(zval *container, zval *value, zend_class_entry *
 	return true;
 }
 
-static bool append_string_item(dec_context *ctx, zval *value, bool is_text, bool is_indef)
+static bool zv_append_string_item(dec_context *ctx, zval *value, bool is_text, bool is_indef)
 {
 	zval container;
 	int type_flag = is_text ? CBOR_TEXT : CBOR_BYTE;
 	zend_class_entry *string_ce = is_text ? CBOR_CE(text) : CBOR_CE(byte);
-	stack_item *item = ctx->stack_top;
+	stack_item_zv *item = (stack_item_zv *)ctx->stack_top;
 	bool result;
 	ZVAL_NULL(&container);
-	if (item && item->si_type == SI_TYPE_MAP && Z_ISUNDEF(item->v.map.key)) {  /* is map key */
+	if (item && item->base.si_type == SI_TYPE_MAP && Z_ISUNDEF(item->v.map.key)) {  /* is map key */
 		bool is_valid_type = is_text ? (ctx->args.flags & CBOR_KEY_TEXT) : (ctx->args.flags & CBOR_KEY_BYTE);
 		if (!is_valid_type) {
 			cbor_error error = is_text ? E_DESC(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, TEXT) : E_DESC(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, BYTE);
@@ -699,17 +763,17 @@ static bool append_string_item(dec_context *ctx, zval *value, bool is_text, bool
 	if (!is_indef && item && item->tag_handler_data) {
 		(*item->tag_handler_data)(ctx, item, DATA_TYPE_STRING, value);
 	}
-	result = append_item(ctx, value);
+	result = zv_append(ctx, value);
 	if (!Z_ISNULL(container)) {
 		zval_ptr_dtor(&container);
 	}
 	return result;
 }
 
-static void do_xstring(dec_context *ctx, const char *val, uint64_t length, bool is_text)
+static void zv_do_xstring(dec_context *ctx, const char *val, uint64_t length, bool is_text)
 {
 	zval value;
-	stack_item *item = ctx->stack_top;
+	stack_item_zv *item = (stack_item_zv *)ctx->stack_top;
 #if UINT64_MAX > SIZE_MAX
 	if (length > SIZE_MAX) {
 		RETURN_CB_ERROR(CBOR_ERROR_UNSUPPORTED_SIZE);
@@ -719,10 +783,10 @@ static void do_xstring(dec_context *ctx, const char *val, uint64_t length, bool 
 			&& !is_utf8((uint8_t *)val, (size_t)length)) {
 		RETURN_CB_ERROR(CBOR_ERROR_UTF8);
 	}
-	if (item != NULL && item->si_type & SI_TYPE_STRING_MASK) {
+	if (item != NULL && item->base.si_type & SI_TYPE_STRING_MASK) {
 		/* indefinite-length string */
 		si_type_t str_si_type = is_text ? SI_TYPE_TEXT : SI_TYPE_BYTE;
-		if (item->si_type == str_si_type) {
+		if (item->base.si_type == str_si_type) {
 			if (length) {
 				if (UNEXPECTED(length > SIZE_MAX - smart_str_get_len(&item->v.str))) {
 					RETURN_CB_ERROR(CBOR_ERROR_UNSUPPORTED_SIZE);
@@ -734,31 +798,31 @@ static void do_xstring(dec_context *ctx, const char *val, uint64_t length, bool 
 		RETURN_CB_ERROR(E_DESC(CBOR_ERROR_SYNTAX, INCONSISTENT_STRING_TYPE));
 	}
 	ZVAL_STRINGL_FAST(&value, (const char *)val, (size_t)length);
-	append_string_item(ctx, &value, is_text, false);
+	zv_append_string_item(ctx, &value, is_text, false);
 	zval_ptr_dtor(&value);
 }
 
-static void proc_text_string(dec_context *ctx, const char *val, uint64_t length)
+static void zv_proc_text_string(dec_context *ctx, const char *val, uint64_t length)
 {
-	do_xstring(ctx, val, length, true);
+	zv_do_xstring(ctx, val, length, true);
 }
 
-static void proc_text_string_start(dec_context *ctx)
+static void zv_proc_text_string_start(dec_context *ctx)
 {
-	stack_push_xstring(ctx, SI_TYPE_TEXT);
+	zv_stack_push_xstring(ctx, SI_TYPE_TEXT);
 }
 
-static void proc_byte_string(dec_context *ctx, const char *val, uint64_t length)
+static void zv_proc_byte_string(dec_context *ctx, const char *val, uint64_t length)
 {
-	do_xstring(ctx, val, length, false);
+	zv_do_xstring(ctx, val, length, false);
 }
 
-static void proc_byte_string_start(dec_context *ctx)
+static void zv_proc_byte_string_start(dec_context *ctx)
 {
-	stack_push_xstring(ctx, SI_TYPE_BYTE);
+	zv_stack_push_xstring(ctx, SI_TYPE_BYTE);
 }
 
-static void proc_array_start(dec_context *ctx, uint32_t count)
+static void zv_proc_array_start(dec_context *ctx, uint32_t count)
 {
 	zval value;
 	if (count > ctx->args.max_size) {
@@ -769,21 +833,21 @@ static void proc_array_start(dec_context *ctx, uint32_t count)
 	}
 	array_init_size(&value, ((count > SIZE_INIT_LIMIT) ? SIZE_INIT_LIMIT : (uint32_t)count));
 	if (count) {
-		stack_push_counted(ctx, SI_TYPE_ARRAY, &value, (uint32_t)count);
+		zv_stack_push_counted(ctx, SI_TYPE_ARRAY, &value, (uint32_t)count);
 	} else {
-		append_item(ctx, &value);
+		zv_append(ctx, &value);
 		zval_ptr_dtor(&value);
 	}
 }
 
-static void proc_indef_array_start(dec_context *ctx)
+static void zv_proc_indef_array_start(dec_context *ctx)
 {
 	zval value;
 	array_init(&value);
-	stack_push_counted(ctx, SI_TYPE_ARRAY, &value, 0);
+	zv_stack_push_counted(ctx, SI_TYPE_ARRAY, &value, 0);
 }
 
-static void proc_map_start(dec_context *ctx, uint32_t count)
+static void zv_proc_map_start(dec_context *ctx, uint32_t count)
 {
 	zval value;
 	if (count > ctx->args.max_size) {
@@ -798,14 +862,14 @@ static void proc_map_start(dec_context *ctx, uint32_t count)
 		ZVAL_OBJ(&value, zend_objects_new(zend_standard_class_def));
 	}
 	if (count) {
-		stack_push_map(ctx, SI_TYPE_MAP, &value, (uint32_t)count);
+		zv_stack_push_map(ctx, SI_TYPE_MAP, &value, (uint32_t)count);
 	} else {
-		append_item(ctx, &value);
+		zv_append(ctx, &value);
 		zval_ptr_dtor(&value);
 	}
 }
 
-static void proc_indef_map_start(dec_context *ctx)
+static void zv_proc_indef_map_start(dec_context *ctx)
 {
 	zval value;
 	if (ctx->args.flags & CBOR_MAP_AS_ARRAY) {
@@ -813,18 +877,22 @@ static void proc_indef_map_start(dec_context *ctx)
 	} else {
 		ZVAL_OBJ(&value, zend_objects_new(zend_standard_class_def));
 	}
-	stack_push_map(ctx, SI_TYPE_MAP, &value, 0);
+	zv_stack_push_map(ctx, SI_TYPE_MAP, &value, 0);
 }
 
-static void proc_tag(dec_context *ctx, uint64_t val)
+static bool zv_do_tag_enter(dec_context *ctx, zend_long tag_id);
+
+static void zv_proc_tag(dec_context *ctx, uint64_t val)
 {
 	if (val > ZEND_LONG_MAX) {
 		RETURN_CB_ERROR(E_DESC(CBOR_ERROR_UNSUPPORTED_VALUE, INT_RANGE));
 	}
-	stack_push_tag(ctx, (zend_long)val);
+	if (!zv_do_tag_enter(ctx, (zend_long)val)) {
+		zv_stack_push_tag(ctx, (zend_long)val);
+	}
 }
 
-static void do_floatx(dec_context *ctx, uint32_t raw, int bits)
+static void zv_do_floatx(dec_context *ctx, uint32_t raw, int bits)
 {
 	zval container, value;
 	zend_object *obj;
@@ -838,70 +906,71 @@ static void do_floatx(dec_context *ctx, uint32_t raw, int bits)
 		} else {
 			ZVAL_DOUBLE(&value, cbor_from_float16((uint16_t)raw));
 		}
-		append_item(ctx, &value);
+		zv_append(ctx, &value);
 		return;
 	}
 	obj = cbor_floatx_create(float_ce);
 	cbor_floatx_set_value(obj, NULL, raw);  /* always succeeds */
 	ZVAL_OBJ(&container, obj);
-	append_item(ctx, &container);
+	zv_append(ctx, &container);
 	zval_ptr_dtor(&container);
 }
 
-static void proc_float16(dec_context *ctx, uint16_t val)
+static void zv_proc_float16(dec_context *ctx, uint16_t val)
 {
-	do_floatx(ctx, val, 16);
+	zv_do_floatx(ctx, val, 16);
 }
 
-static void proc_float32(dec_context *ctx, uint32_t val)
+static void zv_proc_float32(dec_context *ctx, uint32_t val)
 {
-	do_floatx(ctx, val, 32);
+	zv_do_floatx(ctx, val, 32);
 }
 
-static void proc_float64(dec_context *ctx, double val)
+static void zv_proc_float64(dec_context *ctx, double val)
 {
 	zval value;
 	ZVAL_DOUBLE(&value, val);
-	append_item(ctx, &value);
+	zv_append(ctx, &value);
 }
 
-static void proc_null(dec_context *ctx)
+static void zv_proc_null(dec_context *ctx)
 {
 	zval value;
 	ZVAL_NULL(&value);
-	append_item(ctx, &value);
+	zv_append(ctx, &value);
 }
 
-static void proc_undefined(dec_context *ctx)
+static void zv_proc_undefined(dec_context *ctx)
 {
 	zval value;
 	ZVAL_OBJ(&value, cbor_get_undef());
 	Z_ADDREF(value);
-	append_item(ctx, &value);
+	zv_append(ctx, &value);
 }
 
-static void proc_boolean(dec_context *ctx, bool val)
+static void zv_proc_boolean(dec_context *ctx, bool val)
 {
 	zval value;
 	ZVAL_BOOL(&value, val);
-	append_item(ctx, &value);
+	zv_append(ctx, &value);
 }
 
-static void proc_indef_break(dec_context *ctx, stack_item *item)
+static void zv_proc_indef_break(dec_context *ctx, stack_item *item_)
 {
-	if (item->si_type & SI_TYPE_STRING_MASK) {
-		bool is_text = item->si_type == SI_TYPE_TEXT;
+	stack_item_zv *item = (stack_item_zv *)item_;
+	if (item->base.si_type & SI_TYPE_STRING_MASK) {
+		bool is_text = item->base.si_type == SI_TYPE_TEXT;
 		zval value;
 		ZVAL_STR(&value, smart_str_extract(&item->v.str));
-		append_string_item(ctx, &value, is_text, true);
+		zv_append_string_item(ctx, &value, is_text, true);
 		zval_ptr_dtor(&value);
 	} else {  /* SI_TYPE_ARRAY, SI_TYPE_MAP, SI_TYPE_TAG, SI_TYPE_TAG_HANDLED */
-		if (UNEXPECTED(item->count != 0)  /* definite-length */
-				|| (item->si_type == SI_TYPE_MAP && UNEXPECTED(!Z_ISUNDEF(item->v.map.key)))) {  /* value is expected */
+		if (UNEXPECTED(item->base.count != 0)  /* definite-length */
+				|| (item->base.si_type == SI_TYPE_MAP && UNEXPECTED(!Z_ISUNDEF(item->v.map.key)))) {  /* value is expected */
 			THROW_CB_ERROR(E_DESC(CBOR_ERROR_SYNTAX, BREAK_UNEXPECTED));
 		}
-		assert(item->si_type == SI_TYPE_ARRAY || item->si_type == SI_TYPE_MAP);
-		append_item(ctx, &item->v.value);
+		assert(item->base.si_type == SI_TYPE_ARRAY || item->base.si_type == SI_TYPE_MAP);
+		zv_append(ctx, &item->v.value);
 	}
 FINALLY: ;
 }
@@ -923,10 +992,10 @@ bool cbor_is_len_string_ref(size_t str_len, uint32_t next_index)
 	return str_len >= threshold;
 }
 
-static void tag_handler_str_ref_ns_data(dec_context *ctx, stack_item *item, data_type_t type, zval *value)
+static void tag_handler_str_ref_ns_data(dec_context *ctx, stack_item_zv *item, data_type_t type, zval *value)
 {
 	if (type == DATA_TYPE_STRING) {
-		HashTable *str_table = ctx->srns->str_table;
+		HashTable *str_table = ctx->u.zv.srns->str_table;
 		size_t str_len;
 		if (Z_TYPE_P(value) == IS_STRING) {
 			str_len = Z_STRLEN_P(value);
@@ -944,9 +1013,9 @@ static void tag_handler_str_ref_ns_data(dec_context *ctx, stack_item *item, data
 	}
 }
 
-static void tag_handler_str_ref_ns_child(dec_context *ctx, stack_item *item, stack_item *self)
+static void tag_handler_str_ref_ns_child(dec_context *ctx, stack_item_zv *item, stack_item_zv *self)
 {
-	if (item->si_type & SI_TYPE_STRING_MASK) {
+	if (item->base.si_type & SI_TYPE_STRING_MASK) {
 		/* chunks of indefinite length string */
 		return;
 	}
@@ -954,10 +1023,10 @@ static void tag_handler_str_ref_ns_child(dec_context *ctx, stack_item *item, sta
 	SI_SET_DATA_HANDLER(item, &tag_handler_str_ref_ns_data);
 }
 
-static xzval *tag_handler_str_ref_ns_exit(dec_context *ctx, xzval *value, stack_item *item, zval *tmp_v)
+static xzval *tag_handler_str_ref_ns_exit(dec_context *ctx, xzval *value, stack_item_zv *item, zval *tmp_v)
 {
-	srns_item *srns = ctx->srns;
-	ctx->srns = srns->prev_item;
+	srns_item *srns = ctx->u.zv.srns;
+	ctx->u.zv.srns = srns->prev_item;
 	item->v.tag_h.v.srns_detached = srns;
 	return value;
 }
@@ -968,14 +1037,14 @@ static void free_srns_item(srns_item *srns)
 	efree(srns);
 }
 
-static void tag_handler_str_ref_ns_free(stack_item *item)
+static void tag_handler_str_ref_ns_free(stack_item_zv *item)
 {
 	if (item->v.tag_h.v.srns_detached) {
 		free_srns_item(item->v.tag_h.v.srns_detached);
 	}
 }
 
-static bool tag_handler_str_ref_ns_enter(dec_context *ctx, stack_item *item)
+static bool tag_handler_str_ref_ns_enter(dec_context *ctx, stack_item_zv *item)
 {
 	srns_item *srns = emalloc(sizeof *srns);
 	SI_SET_DATA_HANDLER(item, &tag_handler_str_ref_ns_data);
@@ -984,12 +1053,12 @@ static bool tag_handler_str_ref_ns_enter(dec_context *ctx, stack_item *item)
 	SI_SET_FREE_HANDLER(item, &tag_handler_str_ref_ns_free);
 	item->v.tag_h.v.srns_detached = NULL;
 	srns->str_table = zend_new_array(0);
-	srns->prev_item = ctx->srns;
-	ctx->srns = srns;
+	srns->prev_item = ctx->u.zv.srns;
+	ctx->u.zv.srns = srns;
 	return true;
 }
 
-static xzval *tag_handler_str_ref_exit(dec_context *ctx, xzval *value, stack_item *item, zval *tmp_v)
+static xzval *tag_handler_str_ref_exit(dec_context *ctx, xzval *value, stack_item_zv *item, zval *tmp_v)
 {
 	zend_long index;
 	zval *str;
@@ -1000,7 +1069,7 @@ static xzval *tag_handler_str_ref_exit(dec_context *ctx, xzval *value, stack_ite
 	if (index < 0) {
 		RETURN_CB_ERROR_V(value, E_DESC(CBOR_ERROR_TAG_VALUE, STR_REF_RANGE));
 	}
-	if ((str = zend_hash_index_find(ctx->srns->str_table, index)) == NULL) {
+	if ((str = zend_hash_index_find(ctx->u.zv.srns->str_table, index)) == NULL) {
 		RETURN_CB_ERROR_V(value, E_DESC(CBOR_ERROR_TAG_VALUE, STR_REF_RANGE));
 	}
 	assert(Z_TYPE_P(value) == IS_LONG);
@@ -1009,22 +1078,22 @@ static xzval *tag_handler_str_ref_exit(dec_context *ctx, xzval *value, stack_ite
 	return tmp_v;
 }
 
-static bool tag_handler_str_ref_enter(dec_context *ctx, stack_item *item)
+static bool tag_handler_str_ref_enter(dec_context *ctx, stack_item_zv *item)
 {
 	SI_SET_EXIT_HANDLER(item, &tag_handler_str_ref_exit);
-	if (!ctx->srns) {
+	if (!ctx->u.zv.srns) {
 		/* outer stringref-namespace is expected */
 		RETURN_CB_ERROR_B(E_DESC(CBOR_ERROR_TAG_SYNTAX, STR_REF_NO_NS));
 	}
 	return true;
 }
 
-static void tag_handler_shareable_child(dec_context *ctx, stack_item *item, stack_item *self)
+static void tag_handler_shareable_child(dec_context *ctx, stack_item_zv *item, stack_item_zv *self)
 {
 	zval *real_v, tmp_v;
-	assert(self->si_type == SI_TYPE_TAG_HANDLED);
+	assert(self->base.si_type == SI_TYPE_TAG_HANDLED);
 	assert(Z_TYPE(self->v.tag_h.v.shareable.value) == IS_NULL);
-	if (item->si_type == SI_TYPE_MAP && Z_TYPE(item->v.map.dest) == IS_OBJECT) {
+	if (item->base.si_type == SI_TYPE_MAP && Z_TYPE(item->v.map.dest) == IS_OBJECT) {
 		real_v = &item->v.map.dest;
 		ZVAL_COPY_VALUE(&self->v.tag_h.v.shareable.value, real_v);
 	} else {
@@ -1042,7 +1111,7 @@ static void tag_handler_shareable_child(dec_context *ctx, stack_item *item, stac
 			RETURN_CB_ERROR(E_DESC(CBOR_ERROR_TAG_TYPE, SHARE_INCOMPATIBLE));
 		}
 	}
-	if (zend_hash_index_update(ctx->refs, self->v.tag_h.v.shareable.index, real_v) == NULL) {
+	if (zend_hash_index_update(ctx->u.zv.refs, self->v.tag_h.v.shareable.index, real_v) == NULL) {
 		zval_ptr_dtor(real_v);
 		RETURN_CB_ERROR(CBOR_ERROR_INTERNAL);
 	} else {
@@ -1050,7 +1119,7 @@ static void tag_handler_shareable_child(dec_context *ctx, stack_item *item, stac
 	}
 }
 
-static xzval *tag_handler_shareable_exit(dec_context *ctx, xzval *value, stack_item *item, zval *tmp_v)
+static xzval *tag_handler_shareable_exit(dec_context *ctx, xzval *value, stack_item_zv *item, zval *tmp_v)
 {
 	zval *real_v;
 	if (XZ_ISXXINT_P(value)) {
@@ -1075,7 +1144,7 @@ static xzval *tag_handler_shareable_exit(dec_context *ctx, xzval *value, stack_i
 		} else {
 			RETURN_CB_ERROR_V(value, E_DESC(CBOR_ERROR_TAG_TYPE, SHARE_INCOMPATIBLE));
 		}
-		if (zend_hash_index_update(ctx->refs, item->v.tag_h.v.shareable.index, real_v) == NULL) {
+		if (zend_hash_index_update(ctx->u.zv.refs, item->v.tag_h.v.shareable.index, real_v) == NULL) {
 			if (real_v != value) {
 				zval_ptr_dtor(real_v);
 			}
@@ -1097,23 +1166,23 @@ static xzval *tag_handler_shareable_exit(dec_context *ctx, xzval *value, stack_i
 	return real_v;
 }
 
-static bool tag_handler_shareable_enter(dec_context *ctx, stack_item *item)
+static bool tag_handler_shareable_enter(dec_context *ctx, stack_item_zv *item)
 {
-	if (ctx->stack_top && ctx->stack_top->si_type == SI_TYPE_TAG_HANDLED && ctx->stack_top->v.tag_h.tag_id == CBOR_TAG_SHAREABLE) {
+	if (ctx->stack_top && ctx->stack_top->si_type == SI_TYPE_TAG_HANDLED && ((stack_item_zv *)ctx->stack_top)->v.tag_h.tag_id == CBOR_TAG_SHAREABLE) {
 		/* nested shareable */
 		RETURN_CB_ERROR_B(E_DESC(CBOR_ERROR_TAG_SYNTAX, SHARE_NESTED));
 	}
 	SI_SET_CHILD_HANDLER(item, &tag_handler_shareable_child);
 	SI_SET_EXIT_HANDLER(item, &tag_handler_shareable_exit);
 	ZVAL_NULL(&item->v.tag_h.v.shareable.value); /* cannot be undef if adding to HashTable */
-	item->v.tag_h.v.shareable.index = zend_hash_num_elements(ctx->refs);
-	if (zend_hash_next_index_insert(ctx->refs, &item->v.tag_h.v.shareable.value) == NULL) {
+	item->v.tag_h.v.shareable.index = zend_hash_num_elements(ctx->u.zv.refs);
+	if (zend_hash_next_index_insert(ctx->u.zv.refs, &item->v.tag_h.v.shareable.value) == NULL) {
 		RETURN_CB_ERROR_B(CBOR_ERROR_INTERNAL);
 	}
 	return true;
 }
 
-static xzval *tag_handler_shared_ref_exit(dec_context *ctx, zval *value, stack_item *item, zval *tmp_v)
+static xzval *tag_handler_shared_ref_exit(dec_context *ctx, zval *value, stack_item_zv *item, zval *tmp_v)
 {
 	zend_long index;
 	zval *ref_v;
@@ -1124,7 +1193,7 @@ static xzval *tag_handler_shared_ref_exit(dec_context *ctx, zval *value, stack_i
 	if (index < 0) {
 		RETURN_CB_ERROR_V(value, E_DESC(CBOR_ERROR_TAG_VALUE, SHARE_RANGE));
 	}
-	if ((ref_v = zend_hash_index_find(ctx->refs, index)) == NULL) {
+	if ((ref_v = zend_hash_index_find(ctx->u.zv.refs, index)) == NULL) {
 		/* the spec doesn't prohibit referencing future shareable, but it is unlikely */
 		RETURN_CB_ERROR_V(value, E_DESC(CBOR_ERROR_TAG_VALUE, SHARE_RANGE));
 	}
@@ -1133,13 +1202,13 @@ static xzval *tag_handler_shared_ref_exit(dec_context *ctx, zval *value, stack_i
 	return ref_v;  /* returning hash structure */
 }
 
-static bool tag_handler_shared_ref_enter(dec_context *ctx, stack_item *item)
+static bool tag_handler_shared_ref_enter(dec_context *ctx, stack_item_zv *item)
 {
 	SI_SET_EXIT_HANDLER(item, &tag_handler_shared_ref_exit);
 	return true;
 }
 
-static bool do_tag_enter(dec_context *ctx, zend_long tag_id)
+static bool zv_do_tag_enter(dec_context *ctx, zend_long tag_id)
 {
 	/* must return true if pushed to stack or an error occurred */
 	tag_handler_enter_t *handler = NULL;
@@ -1153,17 +1222,18 @@ static bool do_tag_enter(dec_context *ctx, zend_long tag_id)
 		handler = &tag_handler_shared_ref_enter;
 	}
 	if (handler) {
-		stack_item *item = stack_new_item(ctx, SI_TYPE_TAG_HANDLED, 1);
+		stack_item_zv *item = stack_new_item(ctx, SI_TYPE_TAG_HANDLED, 1);
 		item->v.tag_h.tag_id = tag_id;
 		if (!(*handler)(ctx, item)) {
 			ASSERT_ERROR_SET();
-			stack_free_item(item);
+			stack_free_item(&item->base);
 			return true;
 		}
-		stack_push_item(ctx, item);
+		stack_push_item(ctx, &item->base);
 		return true;
 	}
 	return false;
 }
 
+#define METHOD(name) zv_##name
 #include "decode_base.c"
