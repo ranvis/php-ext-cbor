@@ -6,6 +6,7 @@
 ### Changed
 ### Removed
 ### Fixed
+- Stub: 'uri' option was missing.
 ### Security
 ### Deprecated
 

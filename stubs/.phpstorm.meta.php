@@ -23,6 +23,7 @@ CBOR_SELF_DESCRIBE | CBOR_BYTE | CBOR_TEXT | CBOR_INT_KEY | CBOR_KEY_BYTE | CBOR
         'datetime' => true,
         'bignum' => true,
         'decimal' => true,
+        'uri' => true,
     ]);
     registerArgumentsSet('CborDecodeOptions', [
         'max_depth' => 64,
