@@ -352,14 +352,13 @@ static cbor_error enc_string_len(enc_context *ctx, const char *value, size_t len
 static bool convert_string_to_int(zend_string *str, uint64_t *value, bool *is_negative)
 {
 	char buf[24];
-	char *ptr, *head_ptr, *end_ptr;
-	size_t len = ZSTR_LEN(str);
-	bool is_minus, fix = false;
+	char *ptr, *head_ptr;
 	head_ptr = ptr = ZSTR_VAL(str);
 	if (*head_ptr < '-' || *head_ptr > '9') {  /* "", etc. */
 		assert('-' < '0' && '0' < '9');
 		return false;
 	}
+	size_t len = ZSTR_LEN(str);
 	if (len > 1 + 20) {  /* sign = 1, ceil(log10(2)*64) = 20 */
 		return false;
 	}
@@ -368,9 +367,10 @@ static bool convert_string_to_int(zend_string *str, uint64_t *value, bool *is_ne
 		*is_negative = false;
 		return len == 1;  /* "0" or error */
 	}
-	is_minus = *head_ptr == '-';
+	bool negative_fix = false;
+	bool is_minus = *head_ptr == '-';
 	if (is_minus) {
-		if ((fix = head_ptr[len - 1] == '6') != 0) {
+		if ((negative_fix = head_ptr[len - 1] == '6') != 0) {
 			assert(len + 1 < sizeof buf);
 			memcpy(buf, head_ptr, len + 1);
 			head_ptr = ptr = buf;
@@ -381,17 +381,24 @@ static bool convert_string_to_int(zend_string *str, uint64_t *value, bool *is_ne
 			return false;
 		}
 	}
-	errno = 0;
-#if ULLONG_MAX != UINT64_MAX
-#error "strtoull() may fail for uint64_t."
-#endif
-	*value = (uint64_t)strtoull(ptr, &end_ptr, 10);
-	if (end_ptr != head_ptr + len || errno) {  /* not well-formed or overflow */
+	/* signed decimal string to uint64_t */
+	uint64_t dec_value = 0;
+	for (int i = 0;; i++) {
+		int ch_dec = (uint8_t)*ptr - '0';
+		if (ch_dec < 0 || ch_dec > 9
+				|| (i > 18 && dec_value > (UINT64_C(0xffffffffffffffff) - ch_dec) / 10)) {
+			break;
+		}
+		dec_value = dec_value * 10 + ch_dec;
+		*ptr++;
+	}
+	if (ptr != head_ptr + len) {
 		return false;
 	}
-	if (is_minus && !fix) {
-		(*value)--;
+	if (is_minus && !negative_fix) {
+		dec_value--;
 	}
+	*value = dec_value;
 	*is_negative = is_minus;
 	return true;
 }

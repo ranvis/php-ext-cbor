@@ -8,6 +8,7 @@
 ### Removed
 ### Fixed
 - Stub: 'uri' option was missing.
+- Fix `CBOR_INT_KEY` overhead on encoding.
 ### Security
 ### Deprecated
 
