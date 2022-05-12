@@ -1,5 +1,5 @@
 --TEST--
-Decode RFC8949 examples
+Decode RFC 8949 examples
 --SKIPIF--
 <?php if (!extension_loaded("cbor")) print "skip"; ?>
 --FILE--

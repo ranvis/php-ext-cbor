@@ -1,5 +1,5 @@
 --TEST--
-RFC8949 F.1. not well-formed
+RFC 8949 F.1. not well-formed
 --SKIPIF--
 <?php if (!extension_loaded("cbor")) print "skip"; ?>
 --FILE--

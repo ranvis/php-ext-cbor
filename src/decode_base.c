@@ -87,7 +87,8 @@ static cbor_error METHOD(dec_item)(const uint8_t *data, size_t len, cbor_di_deco
 			/* not-well-formed range is not used (RFC 8949 3.3) */
 			return CBOR_ERROR_MALFORMED_DATA;
 		}
-		return E_DESC(CBOR_ERROR_UNSUPPORTED_TYPE, SIMPLE);
+		METHOD(proc_simple)(ctx, out->v.i32);
+		break;
 	case DI_FLOAT16:
 		SET_READ_ERROR(cbor_di_read_float(data, len, out));
 		METHOD(proc_float16)(ctx, out->v.f16);
@@ -119,3 +120,5 @@ static cbor_error METHOD(dec_item)(const uint8_t *data, size_t len, cbor_di_deco
 FINALLY:
 	return error;
 }
+
+#undef METHOD

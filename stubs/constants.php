@@ -71,18 +71,23 @@ const CBOR_MAP_AS_ARRAY = (1 << 6);
 const CBOR_MAP_NO_DUP_KEY = (1 << 7);
 
 /**
- * Encode: Store PHP floats (which should be in double-precision, IEEE 754 binary64) as half-precision floats (IEEE 754 binary16)
+ * Encode: Store PHP floats (which should be in double-precision, IEEE 754 binary64) as half-precision floats (IEEE 754 binary16).
  *
- * Decode: Accept half-precision floats as PHP float instead of Cbor\Float16
+ * Decode: Accept half-precision floats as PHP float instead of Cbor\Float16.
  */
 const CBOR_FLOAT16 = (1 << 8);
 
 /**
- * Encode: Store PHP floats as single-precision floats (IEEE 754 binary32)
+ * Encode: Store PHP floats as single-precision floats (IEEE 754 binary32).
  *
- * Decode: Accept single-precision floats as PHP float instead of Cbor\Float32
+ * Decode: Accept single-precision floats as PHP float instead of Cbor\Float32.
  */
 const CBOR_FLOAT32 = (1 << 9);
+
+/**
+ * Decode: Decode data to Extended Diagnostic Notation string.
+ */
+const CBOR_EDN = (1 << 14);
 /* flags end */
 
 /* errors start */

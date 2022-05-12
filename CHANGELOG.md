@@ -3,6 +3,7 @@
 [Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.1...HEAD
 ## [Unreleased]
 ### Added
+- Add `CBOR_EDN` flag to decode to Extended Diagnostic Notation string.
 ### Changed
 ### Removed
 ### Fixed
@@ -15,7 +16,7 @@
 ### Added
 - Add `Decoder` class.
 ### Fixed
-- Fix memory leak on CBOR_ERROR_EXTRANEOUS_DATA.
+- Fix memory leak on `CBOR_ERROR_EXTRANEOUS_DATA` error.
 ### Security
 - Fix use-after-free on XString member access or string cast.
 

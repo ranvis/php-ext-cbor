@@ -57,3 +57,30 @@ bool cbor_is_utf8(const uint8_t *str, size_t len)
 	}
 	return state == UTF8_ACCEPT;
 }
+
+uint32_t cbor_next_utf8(const uint8_t **str, const uint8_t *end)
+{
+	uint32_t state = 0;
+	uint32_t codepoint = 0;
+	const uint8_t *ptr = *str;
+	if (ptr != end && *ptr < 0x80) {
+		++*str;
+		return *ptr;
+	}
+	while (ptr != end) {
+		uint8_t byte = *ptr++;
+		uint8_t type = utf8d[byte];
+		codepoint = (state != UTF8_ACCEPT)
+			? (byte & 0x3f) | (codepoint << 6)
+			: (0xff >> type) & byte;
+		state = utf8d[256 + state + type];
+		if (UNEXPECTED(state == UTF8_REJECT)) {
+			break;
+		}
+		if (state == UTF8_ACCEPT) {
+			*str = ptr;
+			return codepoint;
+		}
+	}
+	return 0xffffffff;
+}

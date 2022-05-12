@@ -119,6 +119,11 @@ cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *option
 	args->max_size = 65536;
 	args->string_ref = true;
 	args->shared_ref = 0;
+	args->edn.indent = 0;
+	args->edn.indent_char = 0;
+	args->edn.space = true;
+	args->edn.byte_space = 0;
+	args->edn.byte_wrap = 0;
 	if (options == NULL) {
 		return 0;
 	}
@@ -126,6 +131,59 @@ cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *option
 	CHECK_ERROR(uint32_option(&args->max_size, ZEND_STRL("max_size"), 0, 0xffffffff, options));
 	CHECK_ERROR(bool_option(&args->string_ref, ZEND_STRL("string_ref"), options));
 	CHECK_ERROR(bool_n_option(&args->shared_ref, ZEND_STRL("shared_ref"), "shareable\0unsafe_ref\0", options));
+	if (args->flags & CBOR_EDN) {
+		zval *opt_val;
+		opt_val = zend_hash_str_find_deref(options, ZEND_STRL("indent"));
+		if (opt_val) {
+			if (Z_TYPE_P(opt_val) == IS_FALSE) {
+				args->edn.indent = 0;
+				args->edn.indent_char = 0;
+			} else if (Z_TYPE_P(opt_val) == IS_LONG) {
+				zend_long value = Z_LVAL_P(opt_val);
+				if (value < 0 || value > 16) {
+					CHECK_ERROR(CBOR_ERROR_INVALID_OPTIONS);
+				}
+				args->edn.indent = (uint8_t)value;
+				args->edn.indent_char = ' ';
+			} else if (Z_TYPE_P(opt_val) == IS_STRING) {
+				zend_string *value = Z_STR_P(opt_val);
+				if (ZSTR_LEN(value) != 1 || *ZSTR_VAL(value) != '\t') {
+					CHECK_ERROR(CBOR_ERROR_INVALID_OPTIONS);
+				}
+				args->edn.indent = 1;
+				args->edn.indent_char = '\t';
+			} else {
+				CHECK_ERROR(CBOR_ERROR_INVALID_OPTIONS);
+			}
+		}
+		CHECK_ERROR(bool_option(&args->edn.space, ZEND_STRL("space"), options));
+		opt_val = zend_hash_str_find_deref(options, ZEND_STRL("byte_space"));
+		if (opt_val) {
+			if (Z_TYPE_P(opt_val) == IS_LONG) {
+				zend_long value = Z_LVAL_P(opt_val);
+				if (value < 0 || value > 63) {
+					CHECK_ERROR(CBOR_ERROR_INVALID_OPTIONS);
+				}
+				args->edn.byte_space = (uint8_t)value;
+			} else {
+				CHECK_ERROR(CBOR_ERROR_INVALID_OPTIONS);
+			}
+		}
+		opt_val = zend_hash_str_find_deref(options, ZEND_STRL("byte_wrap"));
+		if (opt_val) {
+			if (Z_TYPE_P(opt_val) == IS_FALSE) {
+				args->edn.byte_wrap = 0;
+			} else if (Z_TYPE_P(opt_val) == IS_LONG) {
+				zend_long value = Z_LVAL_P(opt_val);
+				if (value <= 0 || value > 1024) {
+					CHECK_ERROR(CBOR_ERROR_INVALID_OPTIONS);
+				}
+				args->edn.byte_wrap = (uint16_t)value;
+			} else {
+				CHECK_ERROR(CBOR_ERROR_INVALID_OPTIONS);
+			}
+		}
+	}
 FINALLY:
 	return error;
 }

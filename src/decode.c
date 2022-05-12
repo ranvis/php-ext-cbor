@@ -33,6 +33,7 @@
 		goto FINALLY; \
 	} while (false)
 #define ASSERT_ERROR_SET()  assert(ctx->cb_error)
+#define ASSERT_STACK_ITEM_IS_TOP(item)  assert(ctx->stack_top == (stack_item *)item)
 
 typedef struct stack_item stack_item;
 typedef struct srns_item srns_item;
@@ -52,6 +53,10 @@ typedef struct cbor_decode_context {
 			srns_item *srns; /* string ref namespace */
 			HashTable *refs; /* shared ref */
 		} zv;
+		struct {
+			smart_str str;
+			int indent_level;
+		} edn;
 	} u;
 } dec_context;
 
@@ -63,6 +68,7 @@ struct decode_vt {
 	cbor_error (*dec_finish)(dec_context *ctx, cbor_decode_args *args, cbor_error error, zval *value);
 	void (*si_free)(stack_item *item);
 	void (*si_push)(dec_context *ctx, stack_item *item, stack_item *parent_item);
+	void (*si_pop)(dec_context *ctx, stack_item *item);
 };
 
 typedef enum {
@@ -128,8 +134,9 @@ static cbor_error zv_dec_item(const uint8_t *data, size_t len, cbor_di_decoded *
 static cbor_error zv_dec_finish(dec_context *ctx, cbor_decode_args *args, cbor_error error, zval *value);
 static void zv_si_free(stack_item *item);
 static void zv_si_push(dec_context *ctx, stack_item *item, stack_item *parent_item);
+static void zv_si_pop(dec_context *ctx, stack_item *item);
 
-static const decode_vt dec_zv_vt = {
+static const decode_vt zv_dec_vt = {
 	sizeof(stack_item_zv),
 	&zv_ctx_init,
 	&zv_ctx_free,
@@ -137,6 +144,26 @@ static const decode_vt dec_zv_vt = {
 	&zv_dec_finish,
 	&zv_si_free,
 	&zv_si_push,
+	&zv_si_pop,
+};
+
+static void edn_ctx_init(dec_context *ctx);
+static void edn_ctx_free(dec_context *ctx);
+static cbor_error edn_dec_item(const uint8_t *data, size_t len, cbor_di_decoded *out, dec_context *ctx);
+static cbor_error edn_dec_finish(dec_context *ctx, cbor_decode_args *args, cbor_error error, zval *value);
+static void edn_si_free(stack_item *item);
+static void edn_si_push(dec_context *ctx, stack_item *item, stack_item *parent_item);
+static void edn_si_pop(dec_context *ctx, stack_item *item);
+
+static const decode_vt edn_dec_vt = {
+	sizeof(stack_item_zv),
+	&edn_ctx_init,
+	&edn_ctx_free,
+	&edn_dec_item,
+	&edn_dec_finish,
+	&edn_si_free,
+	&edn_si_push,
+	&edn_si_pop,
 };
 
 struct srns_item {  /* srns: string ref namespace */
@@ -208,6 +235,7 @@ static stack_item *stack_pop_item(dec_context *ctx)
 		ctx->stack_top = item->next_item;
 		item->next_item = NULL;
 		ctx->stack_depth--;
+		ctx->vt->si_pop(ctx, item);
 	}
 	return item;
 }
@@ -259,7 +287,11 @@ static void cbor_decode_init(dec_context *ctx, const cbor_decode_args *args, cbo
 	ctx->stack_depth = 0;
 	ctx->args = *args;
 	ctx->mem = mem;
-	ctx->vt = &dec_zv_vt;
+	if (args->flags & CBOR_EDN) {
+		ctx->vt = &edn_dec_vt;
+	} else {
+		ctx->vt = &zv_dec_vt;
+	}
 	ctx->vt->ctx_init(ctx);
 }
 
@@ -431,6 +463,10 @@ static void zv_si_push(dec_context *ctx, stack_item *item, stack_item *parent_it
 	}
 }
 
+static void zv_si_pop(dec_context *ctx, stack_item *item)
+{
+}
+
 static cbor_error zv_dec_finish(dec_context *ctx, cbor_decode_args *args, cbor_error error, zval *value)
 {
 	if (!error) {
@@ -499,7 +535,7 @@ static bool zv_append_to_array(dec_context *ctx, xzval *value, stack_item_zv *it
 	}
 	Z_TRY_ADDREF_P(value);
 	if (item->base.count && --item->base.count == 0) {
-		assert(ctx->stack_top == item);
+		ASSERT_STACK_ITEM_IS_TOP(item);
 		return zv_append_counted(ctx, &item->v.value);
 	}
 	return true;
@@ -599,7 +635,7 @@ static bool zv_append_to_map(dec_context *ctx, xzval *value, stack_item_zv *item
 	zval_ptr_dtor(&item->v.map.key);
 	ZVAL_UNDEF(&item->v.map.key);
 	if (item->base.count && --item->base.count == 0) {
-		assert(ctx->stack_top == item);
+		ASSERT_STACK_ITEM_IS_TOP(item);
 		return zv_append_counted(ctx, &item->v.map.dest);
 	}
 	return true;
@@ -616,7 +652,7 @@ static bool zv_append_to_tag(dec_context *ctx, xzval *value, stack_item_zv *item
 		RETURN_CB_ERROR_B(CBOR_ERROR_INTERNAL);
 	}
 	zend_call_known_instance_method_with_2_params(CBOR_CE(tag)->constructor, Z_OBJ(container), NULL, &item->v.tag_id, value);
-	assert(ctx->stack_top == item);
+	ASSERT_STACK_ITEM_IS_TOP(item);
 	stack_pop_item(ctx);
 	assert(Z_TYPE(item->v.tag_id) == IS_LONG);
 	stack_free_item(&item->base);
@@ -630,7 +666,7 @@ static bool zv_append_to_tag_handled(dec_context *ctx, xzval *value, stack_item_
 	zval tmp_v;
 	xzval *orig_v = value;
 	bool result;
-	assert(ctx->stack_top == item);
+	ASSERT_STACK_ITEM_IS_TOP(item);
 	stack_pop_item(ctx);
 	if (item->tag_handler_exit)  {
 		assert(!ctx->cb_error);
@@ -948,6 +984,11 @@ static void zv_proc_undefined(dec_context *ctx)
 	zv_append(ctx, &value);
 }
 
+static void zv_proc_simple(dec_context *ctx, uint32_t val)
+{
+	RETURN_CB_ERROR(E_DESC(CBOR_ERROR_UNSUPPORTED_TYPE, SIMPLE));
+}
+
 static void zv_proc_boolean(dec_context *ctx, bool val)
 {
 	zval value;
@@ -1237,3 +1278,5 @@ static bool zv_do_tag_enter(dec_context *ctx, zend_long tag_id)
 
 #define METHOD(name) zv_##name
 #include "decode_base.c"
+
+#include "decode_edn.c"

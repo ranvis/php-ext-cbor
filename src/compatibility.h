@@ -16,4 +16,7 @@ static zend_long php81_zend_atol(const char *s)
 }
 #undef ZEND_ATOL
 #define ZEND_ATOL(s)  php81_zend_atol(s)
+
+#define ZEND_DOUBLE_MAX_LENGTH  PHP_DOUBLE_MAX_LENGTH
+#define zend_gcvt  php_gcvt
 #endif

@@ -9,6 +9,7 @@ This extension makes it possible to encode/decode CBOR data defined in [RFC 8949
 - [Installation](#installation)
 - [Quick Guide](#quick-guide)
   - [Functions](#functions)
+  - [Diagnostic Notation](#diagnostic-notation)
   - [Classes](#classes)
   - [Types of CBOR and PHP](#types-of-cbor-and-php)
 - [Supported Tags](#supported-tags)
@@ -90,6 +91,35 @@ See "Supported Tags" below for the following options:
 
 - `datetime`, `bignum`, `decimal`:
   - Encode: default: `true`; values: `bool`
+
+### Diagnostic Notation
+
+With the decoding flag `CBOR_EDN`, CBOR data is transformed to Extended Diagnostic Notation (EDN) `string`. (It does _not_ decode EDN.)
+This can be used to inspect CBOR data if something is wrong.
+
+```php
+var_dump(cbor_decode(hex2bin('83010243030405'), CBOR_EDN)); // string(17) "[1, 2, h'030405']"
+```
+The `$flags` and `$options` for decoding are ignored here (except `CBOR_SELF_DESCRIBE`).
+
+Formatting `$options` may be specified:
+
+- `indent` (default: `false`; values: `false` | `0`..`16` | `"\t"`)
+  Number of space characters for indentation.
+  `false` for no pretty-printing (one-line).
+  `"\t"` to use a single tab character.
+
+- `'space'` (default: `true`; values: `bool`)
+  Whether to insert a space character after separator to improve readability.
+
+- `'byte_space'` (default: `0`; values: `0`..`63`)
+  Add space for every 1/2/4/8/16/32 bytes of `byte string`.
+  For example, if `5` (i.e. `1 | 4`) is specified, `h'112233445566...'` will be `h'11 22 33 44  55 66 ...'`.
+
+- `'byte_wrap'` (default: `false`; values: `false` | `1`..`1024`)
+  Break down `byte string` into multiple `h'...'` notation for every specified length.
+
+Note that when `CBOR_EDN` is specified, the function will not raise a data error (such as invalid UTF-8 sequences). It will instead print error in the result string as a comment.
 
 ### Classes
 

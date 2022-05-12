@@ -72,8 +72,10 @@ typedef enum {
 
 enum {
 	OPT_TRUE = 1,
+
 	/* string ref */
 	OPT_EXPLICIT = 2,
+
 	/* shared ref */
 	OPT_SHAREABLE = 2,
 	OPT_UNSAFE_REF = 3,
@@ -97,6 +99,13 @@ typedef struct {
 	size_t error_arg;
 	bool string_ref;
 	uint8_t shared_ref;
+	struct {
+		uint8_t indent;
+		char indent_char;
+		bool space;
+		uint8_t byte_space;
+		uint16_t byte_wrap;
+	} edn;
 } cbor_decode_args;
 
 typedef struct {

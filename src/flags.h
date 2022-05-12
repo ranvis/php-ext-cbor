@@ -69,18 +69,23 @@
 #define CBOR_MAP_NO_DUP_KEY   (1 << 7)
 
 /**
- * Encode: Store PHP floats (which should be in double-precision, IEEE 754 binary64) as half-precision floats (IEEE 754 binary16)
+ * Encode: Store PHP floats (which should be in double-precision, IEEE 754 binary64) as half-precision floats (IEEE 754 binary16).
  *
- * Decode: Accept half-precision floats as PHP float instead of Cbor\Float16
+ * Decode: Accept half-precision floats as PHP float instead of Cbor\Float16.
  */
 #define CBOR_FLOAT16          (1 << 8)
 
 /**
- * Encode: Store PHP floats as single-precision floats (IEEE 754 binary32)
+ * Encode: Store PHP floats as single-precision floats (IEEE 754 binary32).
  *
- * Decode: Accept single-precision floats as PHP float instead of Cbor\Float32
+ * Decode: Accept single-precision floats as PHP float instead of Cbor\Float32.
  */
 #define CBOR_FLOAT32          (1 << 9)
+
+/**
+ * Decode: Decode data to Extended Diagnostic Notation string.
+ */
+#define CBOR_EDN              (1 << 14)
 
 /**
  * Encode: Store length of arrays/maps as indefinite if number of elements are large enough. While it makes encoded stream shorter by a byte or two per group, decoding can have a little overhead due to inefficient memory allocations.
