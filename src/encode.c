@@ -931,7 +931,7 @@ static cbor_error enc_decimal(enc_context *ctx, zval *value)
 		if (exp_len - 1 >= MAX_LENGTH_OF_LONG) {  /* skip 'E', exclude max length to avoid overflow */
 			ENC_RESULT(CBOR_ERROR_UNSUPPORTED_VALUE);
 		}
-		exp = ZEND_ATOL(c_ptr + 1);
+		exp = atoi(c_ptr + 1);
 		len -= exp_len;
 	}
 	bin_str = decode_dec_str(r_ptr, len);
