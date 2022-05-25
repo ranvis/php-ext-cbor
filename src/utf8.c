@@ -43,10 +43,11 @@ static const uint8_t utf8d[] = {
 bool cbor_is_utf8(const uint8_t *str, size_t len)
 {
 	uint32_t state = 0;
-	while (len && *str < 0x80) {
-		str++, len--;
+	const uint8_t *end = str + len;
+	while (str < end && *str < 0x80) {
+		str++;
 	}
-	while (len--) {
+	while (str < end) {
 		uint8_t type = utf8d[*str++];
 		state = utf8d[256 + state + type];
 #if 0
@@ -63,11 +64,11 @@ uint32_t cbor_next_utf8(const uint8_t **str, const uint8_t *end)
 	uint32_t state = 0;
 	uint32_t codepoint = 0;
 	const uint8_t *ptr = *str;
-	if (ptr != end && *ptr < 0x80) {
-		++*str;
-		return *ptr;
+	if (ptr < end && (codepoint = *ptr) < 0x80) {
+		*str = ptr + 1;
+		return codepoint;
 	}
-	while (ptr != end) {
+	while (ptr < end) {
 		uint8_t byte = *ptr++;
 		uint8_t type = utf8d[byte];
 		codepoint = (state != UTF8_ACCEPT)
