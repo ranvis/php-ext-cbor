@@ -44,7 +44,7 @@ typedef struct cbor_decode_context {
 	cbor_error cb_error;
 	bool skip_self_desc;
 	cbor_fragment *mem;
-	stack_item *stack_top;
+	stack_item *stack_top, *stack_pool;
 	uint32_t stack_depth;
 	const decode_vt *vt;
 	union dec_ctx_vt_switch {
@@ -218,14 +218,15 @@ DECLARE_SI_SET_HANDLER_VEC(tag_handler_child)
 
 #define SI_CALL_CHILD_HANDLER(si, ...)  SI_CALL_HANDLER_VEC(tag_handler_child, si, __VA_ARGS__)
 
-static void stack_free_item(stack_item *item)
+static void stack_free_item(dec_context *ctx, stack_item *item)
 {
 	if (item == NULL) {
 		return;
 	}
 	item->vt->si_free(item);
 	assert(item->next_item == NULL);
-	efree(item);
+	item->next_item = ctx->stack_pool;
+	ctx->stack_pool = item;
 }
 
 static stack_item *stack_pop_item(dec_context *ctx)
@@ -244,7 +245,7 @@ static void stack_push_item(dec_context *ctx, stack_item *item)
 {
 	stack_item *parent_item = ctx->stack_top;
 	if (ctx->stack_depth >= ctx->args.max_depth) {
-		stack_free_item(item);
+		stack_free_item(ctx, item);
 		RETURN_CB_ERROR(CBOR_ERROR_DEPTH);
 	}
 	ctx->vt->si_push(ctx, item, parent_item);
@@ -255,7 +256,12 @@ static void stack_push_item(dec_context *ctx, stack_item *item)
 
 static void *stack_new_item(dec_context *ctx, si_type_t si_type, uint32_t count)
 {
-	stack_item *item = emalloc(ctx->vt->si_size);
+	stack_item *item = ctx->stack_pool;
+	if (item) {
+		ctx->stack_pool = item->next_item;
+	} else {
+		item = emalloc(ctx->vt->si_size);
+	}
 	memset(item, 0, ctx->vt->si_size);
 	item->vt = ctx->vt;
 	item->si_type = si_type;
@@ -275,7 +281,13 @@ static void cbor_decode_free(dec_context *ctx)
 {
 	while (ctx->stack_top) {
 		stack_item *item = stack_pop_item(ctx);
-		stack_free_item(item);
+		stack_free_item(ctx, item);
+	}
+	stack_item *ptr = ctx->stack_pool;
+	while (ptr) {
+		stack_item *next = ptr->next_item;
+		efree(ptr);
+		ptr = next;
 	}
 	ctx->vt->ctx_free(ctx);
 }
@@ -283,7 +295,7 @@ static void cbor_decode_free(dec_context *ctx)
 static void cbor_decode_init(dec_context *ctx, const cbor_decode_args *args, cbor_fragment *mem)
 {
 	ctx->skip_self_desc = !(args->flags & CBOR_SELF_DESCRIBE);
-	ctx->stack_top = NULL;
+	ctx->stack_top = ctx->stack_pool = NULL;
 	ctx->stack_depth = 0;
 	ctx->args = *args;
 	ctx->mem = mem;
@@ -521,7 +533,7 @@ static bool zv_append_counted(dec_context *ctx, zval *value)
 {
 	stack_item *item = stack_pop_item(ctx);
 	bool result = zv_append(ctx, value);
-	stack_free_item(item);
+	stack_free_item(ctx, item);
 	return result;
 }
 
@@ -655,7 +667,7 @@ static bool zv_append_to_tag(dec_context *ctx, xzval *value, stack_item_zv *item
 	ASSERT_STACK_ITEM_IS_TOP(item);
 	stack_pop_item(ctx);
 	assert(Z_TYPE(item->v.tag_id) == IS_LONG);
-	stack_free_item(&item->base);
+	stack_free_item(ctx, &item->base);
 	result = zv_append(ctx, &container);
 	zval_ptr_dtor(&container);
 	return result;
@@ -677,7 +689,7 @@ static bool zv_append_to_tag_handled(dec_context *ctx, xzval *value, stack_item_
 	if (value != orig_v) {
 		zval_ptr_dtor(value);
 	}
-	stack_free_item(&item->base);
+	stack_free_item(ctx, &item->base);
 	return result;
 }
 
@@ -1267,7 +1279,7 @@ static bool zv_do_tag_enter(dec_context *ctx, zend_long tag_id)
 		item->v.tag_h.tag_id = tag_id;
 		if (!(*handler)(ctx, item)) {
 			ASSERT_ERROR_SET();
-			stack_free_item(&item->base);
+			stack_free_item(ctx, &item->base);
 			return true;
 		}
 		stack_push_item(ctx, &item->base);

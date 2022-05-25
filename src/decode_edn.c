@@ -155,7 +155,7 @@ static bool edn_append_counted(dec_context *ctx, const char *str, size_t len)
 {
 	stack_item *item = stack_pop_item(ctx);
 	bool result = edn_append(ctx, str, len);
-	stack_free_item(item);
+	stack_free_item(ctx, item);
 	return result;
 }
 
@@ -196,7 +196,7 @@ static bool edn_append_to_tag(dec_context *ctx, stack_item_edn *item)
 {
 	ASSERT_STACK_ITEM_IS_TOP(item);
 	stack_pop_item(ctx);
-	stack_free_item(&item->base);
+	stack_free_item(ctx, &item->base);
 	return edn_append(ctx, ZEND_STRL(")"));
 }
 
