@@ -1,14 +1,17 @@
 // vim:ft=javascript
 
-ARG_ENABLE("cbor", "enable cbor support", "no");
+ARG_ENABLE('cbor', "enable cbor support", 'no');
 
 (function () {
 
-	if (PHP_CBOR == "no") {
+	if (PHP_CBOR == 'no') {
 		return;
 	}
 
 	var src = 'src/cbor.c src/compatibility.c src/decode.c src/decoder.c src/di_encoder.c src/di_decoder.c src/encode.c src/functions.c src/options.c src/types.c src/utf8.c'.replace(/\//g, '\\'); // path sep must be \
-	EXTENSION("cbor", src, PHP_CBOR_SHARED, "/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 /W4 /wd4100");
-
+	EXTENSION('cbor', src, PHP_CBOR_SHARED, '/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 /W4 /wd4100');
+	if (MODE_PHPIZE) {
+		ADD_FLAG('CFLAGS_CBOR', '/GL');
+		ADD_FLAG('LDFLAGS_CBOR', '/LTCG');
+	}
 })();
