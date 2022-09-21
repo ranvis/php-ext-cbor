@@ -195,7 +195,7 @@ PHP_RSHUTDOWN_FUNCTION(cbor)
 PHP_MINFO_FUNCTION(cbor)
 {
 	php_info_print_table_start();
-	php_info_print_table_header(2, "CBOR support", "enabled");
+	php_info_print_table_row(2, "CBOR support", "enabled");
 	php_info_print_table_row(2, "Module version", PHP_CBOR_VERSION);
 	php_info_print_table_end();
 
