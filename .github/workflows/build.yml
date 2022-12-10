@@ -162,4 +162,4 @@ jobs:
         with:
           #draft: true
           #prerelease: true
-          files: ${{github.workspace}}/${{steps.archive.outputs.arc_name}}
+          files: ${{github.workspace}}\${{steps.archive.outputs.arc_name}}
