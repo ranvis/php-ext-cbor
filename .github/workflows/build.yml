@@ -28,7 +28,7 @@ jobs:
       matrix:
         isa: [x86, x64]
         ts: [nts, ts]
-        php_ver: ['8.0', '8.1']
+        php_ver: ['8.0', '8.1', '8.2']
 
     steps:
       - name: Cache PHP SDK - Get base action
