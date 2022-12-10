@@ -18,16 +18,14 @@ static zend_always_inline bool xz_isxxint(xzval *z) {
 #define XZ_ISXXINT(z)  XZ_ISXXINT_P(&(z))
 
 #ifdef WORDS_BIGENDIAN
-#define HI value.ww.w1
-#define LO value.ww.w2
+#define WW_HI value.ww.w1
+#define WW_LO value.ww.w2
 #else
-#define HI value.ww.w2
-#define LO value.ww.w1
+#define WW_HI value.ww.w2
+#define WW_LO value.ww.w1
 #endif
-#define XZ_XINT(z)  (((uint64_t)(z).HI << 32) | (z).LO)
-#define XZ_XINT_SET(z, v)  (z)->HI = (uint32_t)(v >> 32), (z)->LO = (uint32_t)v
-#undef WW_HI
-#undef WW_LO
+#define XZ_XINT(z)  (((uint64_t)(z).WW_HI << 32) | (z).WW_LO)
+#define XZ_XINT_SET(z, v)  (z)->WW_HI = (uint32_t)(v >> 32), (z)->WW_LO = (uint32_t)v
 
 #define XZ_XINT_P(zp)  XZ_XINT(*(zp))
 

@@ -332,12 +332,12 @@ cbor_error php_cbor_decode_process(dec_context *ctx)
 		}
 		assert(sizeof CBOR_SELF_DESCRIBE_DATA == 4 && (uint8_t)CBOR_SELF_DESCRIBE_DATA[0] == 0xd9);
 		if (mem->ptr[mem->offset] == (uint8_t)CBOR_SELF_DESCRIBE_DATA[0]) {
-			if (rem_len < 3) {
+			if (rem_len < sizeof CBOR_SELF_DESCRIBE_DATA - 1) {
 				error = CBOR_ERROR_TRUNCATED_DATA;
 				goto FINALLY;
 			}
 			if (!memcmp(&mem->ptr[mem->offset], CBOR_SELF_DESCRIBE_DATA, sizeof CBOR_SELF_DESCRIBE_DATA - 1)) {
-				mem->offset += 3;
+				mem->offset += sizeof CBOR_SELF_DESCRIBE_DATA - 1;
 			}
 		}
 		ctx->skip_self_desc = false;
