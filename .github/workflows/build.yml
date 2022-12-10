@@ -154,7 +154,7 @@ jobs:
           7z a ..\..\%arcName% php_cbor.dll
           cd ${{github.workspace}}\src
           7z a ..\%arcName% CHANGELOG.md LICENSE README.md stubs
-          echo ::set-output name=arc_name::%arcName%
+          echo arc_name=%arcName% >> $GITHUB_OUTPUT
 
       - name: Release
         if: github.ref_type == 'tag'
