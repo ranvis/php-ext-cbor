@@ -148,8 +148,8 @@ jobs:
         shell: cmd
         run: |
           set arcName=${{env.basename}}-${{github.ref_name}}-${{matrix.php_ver}}-${{matrix.ts}}-${{matrix.isa}}.zip
-          #set files=build\ext\php_cbor.dll src\README.md src\LICENSE
-          #zip -j9 %arcName% %files%
+          REM set files=build\ext\php_cbor.dll src\README.md src\LICENSE
+          REM zip -j9 %arcName% %files%
           cd ${{github.workspace}}\build\ext
           7z a ${{github.workspace}}\%arcName% php_cbor.dll
           cd ${{github.workspace}}\src
@@ -162,4 +162,4 @@ jobs:
         with:
           #draft: true
           #prerelease: true
-          files: ${{github.workspace}}\${{steps.archive.outputs.arc_name}}
+          files: ${{steps.archive.outputs.arc_name}}
