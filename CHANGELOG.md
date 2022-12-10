@@ -1,16 +1,21 @@
 # Changelog
 
-[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.2...HEAD
 ## [Unreleased]
 ### Added
-- Add `CBOR_EDN` flag to decode to Extended Diagnostic Notation string.
 ### Changed
 ### Removed
 ### Fixed
-- Stub: 'uri' option was missing.
-- Fix `CBOR_INT_KEY` overhead on encoding.
 ### Security
 ### Deprecated
+
+[0.4.2]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.1...v0.4.2
+## [0.4.2] - 2022-12-10
+### Added
+- Add `CBOR_EDN` flag to decode to Extended Diagnostic Notation string.
+### Fixed
+- Stub: 'uri' option was missing.
+- Fix `CBOR_INT_KEY` overhead on encoding.
 
 [0.4.1]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.0...v0.4.1
 ## [0.4.1] - 2022-04-25
