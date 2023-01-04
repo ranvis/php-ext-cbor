@@ -371,7 +371,7 @@ Option:
   - Encode: default: `true`; values: `bool`
 
 Constant:
-- `Cbor\Tag::CBOR_TAG_DATETIME`
+- `Cbor\Tag::DATETIME`
 
 If the option is enabled, an instance of `DateTimeInterface` is encoded as a `text string` with a {date/time} tag.
 
@@ -382,8 +382,8 @@ Option:
   - Encode: default: `true`; values: `bool`
 
 Constants:
-- `Cbor\Tag::CBOR_TAG_BIGNUM_U`
-- `Cbor\Tag::CBOR_TAG_BIGNUM_N`
+- `Cbor\Tag::BIGNUM_U`
+- `Cbor\Tag::BIGNUM_N`
 
 If the option is enabled, an instance of `GMP` is encoded as a `byte string` with {bignum} tag.
 
@@ -394,7 +394,7 @@ Option:
   - Encode: default: `true`; values: `bool`
 
 Constant:
-- `Cbor\Tag::CBOR_TAG_DECIMAL`
+- `Cbor\Tag::DECIMAL`
 
 If the option is enabled, an instance of `Decimal` is encoded as an `array` of integer mantissa and exponent with {decimal} tag.
 
@@ -407,6 +407,6 @@ Option:
   - Encode: default: `true`; values: `bool`
 
 Constant:
-- `Cbor\Tag::CBOR_TAG_URI`
+- `Cbor\Tag::URI`
 
 If the option is enabled, an instance of class that implements PSR-7 `UriInterface` is encoded as a `text string` with {uri} tag.
