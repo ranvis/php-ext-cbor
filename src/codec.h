@@ -71,6 +71,8 @@ typedef enum {
 #define E_DESC(e, d)  ((e) | (e##__##d << CBOR_ERROR_DESC_SHIFT))
 
 enum {
+	LEN_DEFAULT = -1,
+
 	OPT_TRUE = 1,
 
 	/* string ref */
@@ -96,6 +98,8 @@ typedef struct {
 	uint32_t flags;
 	uint32_t max_depth;
 	uint32_t max_size;
+	zend_long offset;
+	zend_long length;
 	size_t error_arg;
 	bool string_ref;
 	uint8_t shared_ref;

@@ -193,9 +193,13 @@ class Decoder
     /**
      * Append data to decoding buffer.
      * @param string $data A part of data item string to decode
+     * @param int $offset Offset of the string to start decoding from.
+     * A negative value means offset from the end of the string.
+     * @param ?int $length Length of the string from the offset
+     * A negative value means offset from the end of the string.
      * @return void
      */
-    public function add(string $data): void {}
+    public function add(string $data, int $offset = 0, ?int $length = null): void {}
 
     /**
      * Decode data in the buffer.

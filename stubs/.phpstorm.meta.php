@@ -31,6 +31,8 @@ CBOR_SELF_DESCRIBE | CBOR_BYTE | CBOR_TEXT | CBOR_INT_KEY | CBOR_KEY_BYTE
     registerArgumentsSet('CborDecodeOptions', [
         'max_depth' => 64,
         'max_size' => 65536,
+        'offset' => 0,
+        'length' => null,
         'string_ref' => true,
         'shared_ref' => false,
 

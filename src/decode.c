@@ -361,19 +361,34 @@ cbor_error php_cbor_decode_finish(dec_context *ctx, cbor_decode_args *args, cbor
 
 cbor_error php_cbor_decode(zend_string *data, zval *value, cbor_decode_args *args)
 {
+	cbor_error error = 0;
 	dec_context ctx;
 	cbor_fragment mem;
-	mem.offset = mem.base = 0;
-	mem.limit = mem.length = ZSTR_LEN(data);
-	mem.ptr = (const uint8_t *)ZSTR_VAL(data);
-	cbor_decode_init(&ctx, args, &mem);
-	cbor_error error = php_cbor_decode_process(&ctx);
-	if (!error && mem.offset != mem.length) {
-		error = CBOR_ERROR_EXTRANEOUS_DATA;
-		ctx.args.error_arg = mem.base + mem.offset;
+	mem.offset = args->offset;
+	mem.length = ZSTR_LEN(data);
+	if (mem.offset > mem.length) {
+		error = CBOR_ERROR_TRUNCATED_DATA;
+		args->error_arg = mem.length;
+	} else if (args->length != LEN_DEFAULT) {
+		if ((size_t)args->length > mem.length || mem.offset > mem.length - args->length) {
+			error = CBOR_ERROR_TRUNCATED_DATA;
+			args->error_arg = mem.length;
+		}
+		mem.length = mem.offset + args->length;
 	}
-	error = php_cbor_decode_finish(&ctx, args, error, value);
-	cbor_decode_free(&ctx);
+	mem.base = 0;
+	mem.limit = mem.length;
+	mem.ptr = (const uint8_t *)ZSTR_VAL(data);
+	if (!error) {
+		cbor_decode_init(&ctx, args, &mem);
+		error = php_cbor_decode_process(&ctx);
+		if (!error && mem.offset != mem.length) {
+			error = CBOR_ERROR_EXTRANEOUS_DATA;
+			ctx.args.error_arg = mem.base + mem.offset;
+		}
+		error = php_cbor_decode_finish(&ctx, args, error, value);
+		cbor_decode_free(&ctx);
+	}
 	return error;
 }
 

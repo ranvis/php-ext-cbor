@@ -3,6 +3,8 @@
 [Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.2...HEAD
 ## [Unreleased]
 ### Added
+- Add `'offset'` and `'length'` options to cbor_decode().
+- Add `$offset` and `$length` parameters to Cbor\Decoder::add().
 ### Changed
 ### Removed
 ### Fixed

@@ -59,6 +59,26 @@ static cbor_error bool_n_option(uint8_t *opt_value, const char *name, size_t nam
 	return 0;
 }
 
+static cbor_error long_option(zend_long *opt_value, const char *name, size_t name_len, zend_long min, zend_long max, HashTable *options, bool nullable)
+{
+	zval *value = zend_hash_str_find_deref(options, name, name_len);
+	zend_long long_value;
+	if (value == NULL) {
+		return 0;
+	}
+	if (nullable && Z_TYPE_P(value) == IS_NULL) {
+		return 0;
+	} else if (Z_TYPE_P(value) != IS_LONG) {
+		return CBOR_ERROR_INVALID_OPTIONS;
+	}
+	long_value = Z_LVAL_P(value);
+	if (long_value < min || long_value > max) {
+		return CBOR_ERROR_INVALID_OPTIONS;
+	}
+	*opt_value = long_value;
+	return 0;
+}
+
 static cbor_error uint32_option(uint32_t *opt_value, const char *name, size_t name_len, uint32_t min, uint32_t max, HashTable *options)
 {
 	zval *value = zend_hash_str_find_deref(options, name, name_len);
@@ -117,6 +137,8 @@ cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *option
 	cbor_error error = 0;
 	args->max_depth = 64;
 	args->max_size = 65536;
+	args->offset = 0;
+	args->length = LEN_DEFAULT;
 	args->string_ref = true;
 	args->shared_ref = 0;
 	args->edn.indent = 0;
@@ -129,6 +151,9 @@ cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *option
 	}
 	CHECK_ERROR(uint32_option(&args->max_depth, ZEND_STRL("max_depth"), 0, 10000, options));
 	CHECK_ERROR(uint32_option(&args->max_size, ZEND_STRL("max_size"), 0, 0xffffffff, options));
+	CHECK_ERROR(long_option(&args->offset, ZEND_STRL("offset"), 0, ZEND_LONG_MAX, options, false));
+	/* no negative length like substr() */
+	CHECK_ERROR(long_option(&args->length, ZEND_STRL("length"), 0, ZEND_LONG_MAX, options, true));
 	CHECK_ERROR(bool_option(&args->string_ref, ZEND_STRL("string_ref"), options));
 	CHECK_ERROR(bool_n_option(&args->shared_ref, ZEND_STRL("shared_ref"), "shareable\0unsafe_ref\0", options));
 	if (args->flags & CBOR_EDN) {

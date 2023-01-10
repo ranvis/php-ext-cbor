@@ -125,23 +125,49 @@ PHP_METHOD(Cbor_Decoder, add)
 {
 	decoder_class *base = CUSTOM_OBJ(decoder_class, Z_OBJ_P(ZEND_THIS));
 	zend_string *data;
+	zend_long data_off = 0;
+	zend_long data_len = 0;
+	bool is_len_null = true;
 	NO_REENTRANT(base);
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S", &data) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|ll!", &data, &data_off, &data_len, &is_len_null) != SUCCESS) {
 		RETURN_THROWS();
 	}
-	if (!ZSTR_LEN(data)) {
+	size_t append_len = ZSTR_LEN(data);
+	if (data_off < 0) {
+		data_off += append_len;
+		data_off = max(0, data_off);
+	}
+	data_off = min((zend_ulong)data_off, append_len);
+	if (!is_len_null) {
+		if (!data_len) {
+			return;
+		} else if (data_len < 0) {
+			data_len += append_len;
+			data_len = max(0, max(0, data_len) - data_off);
+		} else if ((zend_ulong)data_len >= append_len - data_off) {
+			is_len_null = true;
+		}
+	}
+	if ((zend_ulong)data_off >= append_len) {
 		return;
 	}
-	if (base->mem.offset == base->mem.length) {
+	if (base->mem.offset == base->mem.length && !data_off && is_len_null) {
 		zend_string_release(base->buffer);
 		base->buffer = data;
 		base->mem.base += base->mem.offset;
 		base->mem.offset = 0;
-		base->mem.length = ZSTR_LEN(data);
+		base->mem.length = append_len;
 		zend_string_addref(base->buffer);
 		/* delay separation, to make it memory-efficient as caller can give up the string soon after this */
 	} else {
-		size_t append_len = ZSTR_LEN(data);
+		const char *src = ZSTR_VAL(data);
+		if (data_off) {
+			src += data_off;
+			append_len -= data_off;
+		}
+		if (!is_len_null) {
+			append_len = min((zend_ulong)data_len, append_len);
+		}
 		if (append_len > SIZE_MAX - base->mem.length) {
 			php_cbor_throw_error(CBOR_ERROR_UNSUPPORTED_SIZE, false, 0);
 			RETURN_THROWS();
@@ -164,7 +190,7 @@ PHP_METHOD(Cbor_Decoder, add)
 			}
 		}
 		char *ptr = ZSTR_VAL(base->buffer);
-		memcpy(&ptr[base->mem.length], ZSTR_VAL(data), append_len);
+		memcpy(&ptr[base->mem.length], src, append_len);
 		base->mem.length += append_len;
 	}
 }

@@ -80,6 +80,14 @@ See `Decoder` class for sequences and progressive decoding.
 - `'max_size'`: (default:`65536`; range: `0`..`0xffffffff`)
   Maximum number of elements to process for definite-length array and map when decoding.
 
+- `'offset'` (default:`0`; range: `0`..`PHP_INT_MAX`)
+  Decode: Offset of the data to start decoding from. Offset cannot go beyond the length of the data.
+
+- `'length'` (default:`null`; range: `null` | `0`..`PHP_INT_MAX`)
+  Decode: Length of the data to decode from the offset. `null` means the whole remaining data. Length cannot go beyond the available length of the data.
+
+  Although you cannot decode an empty string, `0` is valid as an option value.
+
 See "Supported Tags" below for the following options:
 
 - `'string_ref'`:
@@ -155,6 +163,9 @@ Unknown or unsupported key names are silently ignored.
 The class `Cbor\Decoder` can do what `cbor_decode()` does in a more controlled way.
 
 Instantiate `Decoder` with the optional `$flags` and `$options`, then feed CBOR data with `add()` method. `Decoder` will append passed data to the internal buffer.
+
+The `'offset'` and `'length'` options have no effects for this class. You may specify those as parameters of `add()` instead.
+The parameters act like those of `substr()` PHP function.
 
 To process data in the buffer, call `process()`. It will return `true` if a data item is decoded. You can test it with `hasValue()` method too. Call `getValue()` to retrieve the decoded value.
 If another data item follows (CBOR sequences), call `add()` and/or `process()` again.
