@@ -14,7 +14,7 @@
 ### Added
 - Add `CBOR_EDN` flag to decode to Extended Diagnostic Notation string.
 ### Fixed
-- Stub: 'uri' option was missing.
+- Stub: `'uri'` option was missing.
 - Fix `CBOR_INT_KEY` overhead on encoding.
 
 [0.4.1]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.0...v0.4.1
@@ -56,8 +56,8 @@
 - Add custom processing of half-precision float.
 - Imlement encode to compact float mode by specifying both `PHP_CBOR_FLOAT16` and `PHP_CBOR_FLOAT32`.
 - Add some constants for tags defined in spec.
-- Encode int `string` key as CBOR `integer` with `CBOR_INT_KEY`.
-- Decode of int keys of negative or outside zend_long range.
+- Encode integer `string` key as CBOR `integer` with `CBOR_INT_KEY`.
+- Decode of `integer` keys of negative or outside PHP `int` range.
 - Add type handlers and custom serialization for CBOR types.
 - Implement `\JsonSerializable` for CBOR types.
 - Implement low-level encoder/decoder.
@@ -75,12 +75,12 @@
 
 ## 0.2.2a2 - 2022-03-16
 ### Fixed
-- Fix crash on encoding `Shareable` with `shared_ref` off.
+- Fix crash on encoding `Shareable` with `'shared_ref'` off.
 
 ## 0.2.2a1 - 2022-03-15
 ### Added
-- Add `shared_ref` encode/decode option.
-- Add `shared_ref` => 'unsafe_ref' option value.
+- Add `'shared_ref'` encode/decode option.
+- Add `'shared_ref'` => `'unsafe_ref'` option value.
 ### Changed
 - Disable reference value sharing by default.
 ### Fixed
@@ -90,7 +90,7 @@
 
 ## 0.2.1a1 - 2022-03-12
 ### Added
-- Add `string_ref` encode option.
+- Add `'string_ref'` encode option.
 ### Changed
 - Rename namespace tag to `CBOR_TAG_STRING_REF_NS` from `CBOR_TAG_STRING_REF_NAMESPACE`.
 - Rename `Tag->data` to `Tag->content`.
@@ -98,7 +98,7 @@
 ## 0.2.0a2 - 2022-03-11
 ### Added
 - Implement `FloatX` cast to `float`.
-- Add `string_ref` decode option.
+- Add `'string_ref'` decode option.
 ### Fixed
 - Fix error code of broken map.
 - Fix depth calculation.
@@ -109,7 +109,7 @@
 ### Added
 - Add `PHP_CBOR_MAP_AS_ARRAY` decode flag to decode CBOR `map` into PHP `array`.
 ### Changed
-- Replace depth argument with `max_depth` option array item.
+- Replace depth argument with `'max_depth'` option array item.
 ### Fixed
 - Fix error code when allowed depth is too large.
 ### Security

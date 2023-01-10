@@ -73,41 +73,41 @@ See `Decoder` class for sequences and progressive decoding.
 
 `$options` array elements are:
 
-- `max_depth` (default:`64`; range: `0`..`10000`)
+- `'max_depth'` (default:`64`; range: `0`..`10000`)
   Maximum number of nesting level to process.
   To handle arrays/maps/tags, at least 1 depth is required.
 
-- `max_size`: (default:`65536`; range: `0`..`0xffffffff`)
+- `'max_size'`: (default:`65536`; range: `0`..`0xffffffff`)
   Maximum number of elements to process for definite-length array and map when decoding.
 
 See "Supported Tags" below for the following options:
 
-- `string_ref`:
+- `'string_ref'`:
   - Encode: default: `false`; values: `bool` | `'explicit'`
   - Decode: default: `true`; values: `bool`
 
-- `shared_ref`:
+- `'shared_ref'`:
   - Encode: default: `false`; values: `bool` | `'unsafe_ref'`
   - Decode: default: `true`; values: `bool` | `'shareable'` | `'unsafe_ref'`
 
-- `datetime`, `bignum`, `decimal`:
+- `'datetime'`, `'bignum'`, `'decimal'`:
   - Encode: default: `true`; values: `bool`
 
 Unknown key names are silently ignored.
 
 ### Diagnostic Notation
 
-With the decoding flag `CBOR_EDN`, CBOR data is transformed to Extended Diagnostic Notation (EDN) `string`. (It does _not_ decode EDN.)
-This can be used to inspect CBOR data if something is wrong.
+With the decoding flag `CBOR_EDN`, CBOR data is decoded to Extended Diagnostic Notation (EDN) `string`. (It does _not_ decode EDN string.)
+This can be used to inspect CBOR data if something is wrong with it.
 
 ```php
 var_dump(cbor_decode(hex2bin('83010243030405'), CBOR_EDN)); // string(17) "[1, 2, h'030405']"
 ```
-The `$flags` and `$options` for decoding are ignored here (except `CBOR_SELF_DESCRIBE`).
+`$flags` except `CBOR_SELF_DESCRIBE` and `$options` for decoding are ignored for this mode.
 
 Formatting `$options` may be specified:
 
-- `indent` (default: `false`; values: `false` | `0`..`16` | `"\t"`)
+- `'indent'` (default: `false`; values: `false` | `0`..`16` | `"\t"`)
   Number of space characters for indentation.
   `false` for no pretty-printing (one-line).
   `"\t"` to use a single tab character.
@@ -122,21 +122,21 @@ Formatting `$options` may be specified:
 - `'byte_wrap'` (default: `false`; values: `false` | `1`..`1024`)
   Break down `byte string` into multiple `h'...'` notation for every specified length.
 
-Note that when `CBOR_EDN` is specified, the function will not raise a data error (such as invalid UTF-8 sequences). It will instead print error in the result string as a comment.
+Note that when `CBOR_EDN` is specified, the function will not throw an exception for data error (such as invalid UTF-8 sequences). It will instead print error in the result string as a comment.
 
 ### Classes
 
 #### Serializable
 
-When encoding classes that implements `Cbor\Serializable`, the encoder will call `cborSerialize()`.
+When encoding classes that implement `Cbor\Serializable`, the encoder will call `cborSerialize()`.
 Implementors may return data structure to serialize the instance, or throw an Exception to stop serializing.
-Classes that does not implement this interface cannot be serialized (aside from `stdClass` plain object).
+Classes that does not implement this interface generally cannot be serialized (aside from `stdClass` plain object).
 
 Although some classes such as PSR-7 `UriInterface` are serializable by default as described below, `Serializable` can take precedence.
 
 #### EncodeParams
 
-When the encoder encounters an `Cbor\EncodeParams` instance, it encodes `$value` instance variable with the specified `$params` flags and options added to the current flags and options. After encoding inner `$value`, those parameters are back to the previous state.
+When the encoder encounters a `Cbor\EncodeParams` instance, it encodes `$value` instance variable with the specified `$params` flags and options added to the current flags and options. After encoding inner `$value`, those parameters are back to the previous state.
 This can be useful when you want to enforce specific parameters partially.
 
 `$params` array elements are:
@@ -243,8 +243,6 @@ CBOR `array` is translated to PHP `array`.
 
 If PHP `array` has holes or `string` keys (i.e. the array is not a "list"), it is encoded to CBOR `map`.
 
-Number of elements in an array must be under 2**32.
-
 #### Maps
 
 CBOR `map` is translated to PHP `stdClass` object.
@@ -254,7 +252,7 @@ Keys must be of CBOR `string` type.
 
 The extension may accept CBOR `integer` key if `CBOR_INT_KEY` flag is passed. Likewise with the flag, it will encode PHP `int` key (including integer numeric `string` keys in the range of CBOR `integer`) as CBOR `integer` key.
 
-Number of properties in an object must be under 2**32.
+If `CBOR_MAP_NO_DUP_KEY` flag is specified on decoding, a duplicated key will throw an exception instead of overriding the former value. This may happen on valid CBOR `map`; e.g. all of unsigned integer `1`, text string `"1"`, and byte string `b'31'` may be the same key for PHP.
 
 #### Tags
 
@@ -263,7 +261,7 @@ CBOR `tag` is translated to PHP `Cbor\Tag(int $tag, mixed $content)` object.
 Tag is a marker to mark data (including another tag) as some type using an `unsigned integer`.
 You can consult [CBOR tag registry](https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml) for valid tags.
 
-Tags consume one `max_level` for each nesting.
+Tags consume one `'max_level'` for each nesting.
 
 Also see "Supported Tags" below.
 
@@ -303,12 +301,12 @@ $isCbor = str_starts_with($data, CBOR_TAG_SELF_DESCRIBE_DATA);
 On encoding if the flag is set, the tag is prepended to the encoded data.
 On decoding if the flag is _not_ set, the tag is skipped even if one exists. If the flag _is_ set, the tag is _retained_ in the decoded value, meaning you need to test if the root is this tag to extract the real content.
 
-If the tag is to be prepended/skipped, it is handled specially and not counted as a `max_depth` level.
+If the tag is to be prepended/skipped, it is handled specially and not counted as a `'max_depth'` level.
 
 ### tag(256): stringref-namespace, tag(25): stringref
 
 Option:
-- `string_ref`:
+- `'string_ref'`:
   - Encode: default: `false`; values: `bool` | `'explicit'`
   - Decode: default: `true`; values: `bool`
 
@@ -325,9 +323,9 @@ On decode, the use of tag can save memory of decoded value because PHP can share
 
 For decoding, the option is enabled as `true` by default, while encoding it should be specified explicitly.
 
-If `true` is specified on encoding, data is always wrapped with {stringref-namespace} tag. It initializes the string index (like compression dictionary) for the content inside the tag.
-The {stringref-namespace} tag added implicitly is handled specially and not counted as `max_depth` level.
-`'explicit'` makes {stringref} active but the root namespace is not implicitly created, meaning {stringref} is not created on its own.
+If `true` is specified on encoding, data is always wrapped with {stringref-namespace} tag. It initializes the string index table (like compression dictionary) for the content inside the tag.
+The {stringref-namespace} tag added implicitly is handled specially and not counted as `'max_depth'` level.
+Similarly, `'explicit'` makes {stringref} active but the root namespace is not implicitly created, meaning {stringref} is not created on its own.
 
 The use of this tag makes CBOR contextual.
 CBOR data that use {stringref} can be embedded in other CBOR. But data that doesn't use it cannot always be embedded safely in {stringref} CBOR, because it will corrupt reference indices of the following strings.
@@ -339,7 +337,7 @@ It is recommended to explicity enable `string_ref` option on decoding if you are
 ### tag(28): shareable, tag(29): sharedref
 
 Option:
-- `shared_ref`:
+- `'shared_ref'`:
   - Encode: default: `false`; values: `bool` | `'unsafe_ref'`
   - Decode: default: `true`; values: `bool` | `'shareable'` | `'unsafe_ref'`
 
@@ -367,7 +365,7 @@ The use of this tag makes CBOR contextual.
 ### tag(0): date/time string
 
 Option:
-- `datetime`:
+- `'datetime'`:
   - Encode: default: `true`; values: `bool`
 
 Constant:
@@ -378,7 +376,7 @@ If the option is enabled, an instance of `DateTimeInterface` is encoded as a `te
 ### tag(2) tag(3): bignum
 
 Option:
-- `bignum`:
+- `'bignum'`:
   - Encode: default: `true`; values: `bool`
 
 Constants:
@@ -387,10 +385,12 @@ Constants:
 
 If the option is enabled, an instance of `GMP` is encoded as a `byte string` with {bignum} tag.
 
+Note: If the value is within CBOR `integer` range, it is encoded as an `integer`. (preferred serialization)
+
 ### tag(4) decimal
 
 Option:
-- `decimal`:
+- `'decimal'`:
   - Encode: default: `true`; values: `bool`
 
 Constant:
@@ -403,7 +403,7 @@ Although the precision is retained, the maximum precision specified on instance 
 ### tag(32) uri
 
 Option:
-- `uri`:
+- `'uri'`:
   - Encode: default: `true`; values: `bool`
 
 Constant:
