@@ -44,6 +44,8 @@ run(function () {
     eq('0xa12000', cenc((object)['-1' => 0], CBOR_KEY_BYTE | CBOR_INT_KEY));
     eq('0xa10000', cenc((object)['0' => 0], CBOR_KEY_BYTE | CBOR_INT_KEY));
     eq('0xa143302e3000', cenc((object)['0.0' => 0], CBOR_KEY_BYTE | CBOR_INT_KEY));
+    eq('0xa142303000', cenc((object)['00' => 0], CBOR_KEY_BYTE | CBOR_INT_KEY));
+    eq('0xa142300000', cenc((object)["0\0" => 0], CBOR_KEY_BYTE | CBOR_INT_KEY));
     eq('0xa142303100', cenc((object)['01' => 0], CBOR_KEY_BYTE | CBOR_INT_KEY));
     eq('0xa14330786600', cenc((object)['0xf' => 0], CBOR_KEY_BYTE | CBOR_INT_KEY));
     eq('0xa1422d3000', cenc((object)['-0' => 0], CBOR_KEY_BYTE | CBOR_INT_KEY));

@@ -15,6 +15,8 @@ run(function () {
     eq('0x20', cenc(gmp_init('-1')));
     eq('0x1bfedcba9876543210', cenc(gmp_init('0xfedcba9876543210')));
     eq('0x3bfedcba9876543210', cenc(gmp_init('-0xfedcba9876543211')));
+    eq('0x1bffffffffffffffff', cenc(gmp_init('0xffffffffffffffff')));
+    eq('0x3bffffffffffffffff', cenc(gmp_init('-0x10000000000000000')));
     eq('0xc249010000000000000000', cenc(gmp_init('0x10000000000000000')));
     eq('0xc2581d02fde529a3274c649cfeb4b180adb5cb9602a9e0638ab2000000000000', cenc(gmp_fact(52)));
 

@@ -8,7 +8,7 @@ self-describe flag
 require_once __DIR__ . '/common.php';
 
 run(function () {
-    $nullWithSd = 'd9d9f7' . bin2hex(chr(0xf6));
+    $nullWithSd = 'd9d9f7' . 'f6';
 
     eq(null, cdec('f6'));
     // skip self-describe tag

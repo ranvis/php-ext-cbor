@@ -62,7 +62,7 @@ h\'2222222222222222 33333333\'', cdec($data, CBOR_EDN, ['byte_space' => 8, 'byte
     cdecThrows(CBOR_ERROR_INVALID_OPTIONS, $data, CBOR_EDN, ['byte_wrap' => 0]);
 
     // self-describe flag
-    $data = 'd9d9f7' . bin2hex(chr(0xf6));
+    $data = 'd9d9f7' . 'f6';
     eq('null', cdec($data, CBOR_EDN));
     eq('55799(null)', cdec($data, CBOR_EDN | CBOR_SELF_DESCRIBE));
     $data = 'd9d9f7480001020304050607';
