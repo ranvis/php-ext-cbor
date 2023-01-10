@@ -1,10 +1,10 @@
 --TEST--
 decimal tag
 --SKIPIF--
-<?php if (
-    !extension_loaded("cbor")
-    || !extension_loaded("decimal")
-) print "skip"; ?>
+<?php
+if (!extension_loaded('cbor')) echo 'skip  extension is not loaded';
+elseif (!extension_loaded('decimal')) echo 'skip  Decimal extension is not loaded';
+?>
 --FILE--
 <?php
 

@@ -1,10 +1,10 @@
 --TEST--
 Decode RFC 8949 examples
 --SKIPIF--
-<?php if (
-    !extension_loaded("cbor")
-    || !extension_loaded("mbstring")
-) print "skip"; ?>
+<?php
+if (!extension_loaded('cbor')) echo 'skip  extension is not loaded';
+elseif (!extension_loaded('mbstring')) echo 'skip  mbstring extension is not loaded';
+?>
 --FILE--
 <?php
 

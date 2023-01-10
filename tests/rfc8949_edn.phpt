@@ -1,7 +1,7 @@
 --TEST--
 Diagnostic notation, RFC 8949 examples
 --SKIPIF--
-<?php if (!extension_loaded("cbor")) print "skip"; ?>
+<?php if (!extension_loaded('cbor')) echo 'skip  extension is not loaded'; ?>
 --FILE--
 <?php
 

@@ -1,7 +1,7 @@
 --TEST--
 RFC 8949 F.1. not well-formed
 --SKIPIF--
-<?php if (!extension_loaded("cbor")) print "skip"; ?>
+<?php if (!extension_loaded('cbor')) echo 'skip  extension is not loaded'; ?>
 --FILE--
 <?php
 

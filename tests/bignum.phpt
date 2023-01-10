@@ -1,10 +1,10 @@
 --TEST--
 bignum tag
 --SKIPIF--
-<?php if (
-    !extension_loaded("cbor")
-    || !extension_loaded("gmp")
-) print "skip"; ?>
+<?php
+if (!extension_loaded('cbor')) echo 'skip  extension is not loaded';
+elseif (!extension_loaded('gmp')) echo 'skip  GMP extension is not loaded';
+?>
 --FILE--
 <?php
 

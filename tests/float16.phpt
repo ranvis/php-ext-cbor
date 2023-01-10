@@ -1,11 +1,11 @@
 --TEST--
 half-float values
 --SKIPIF--
-<?php if (
-    !extension_loaded("cbor")
-    // assumes IEEE 754 floating-point, binary32
-    || bin2hex(pack('G', INF)) !== '7f800000'
-) print "skip"; ?>
+<?php
+if (!extension_loaded('cbor')) echo 'skip  extension is not loaded';
+// assumes IEEE 754 floating-point, binary32
+elseif (bin2hex(pack('G', INF)) !== '7f800000') echo 'skip  unknown float implementation';
+?>
 --FILE--
 <?php
 
