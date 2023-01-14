@@ -5,6 +5,7 @@
 
 #include "cbor.h"
 #include "types.h"
+#include "compatibility.h"
 
 #define DEF_THIS(name, prop_literal)  CBOR_CE(name), Z_OBJ_P(ZEND_THIS)
 
@@ -91,7 +92,7 @@ static void undef_unset_property(zend_object *obj, zend_string *member, void **c
 	zend_throw_error(NULL, "%s cannot unset properties.", ZSTR_VAL(obj->ce->name));
 }
 
-static int undef_cast(zend_object *obj, zval *retval, int type)
+static zend_result_82 undef_cast(zend_object *obj, zval *retval, int type)
 {
 	if (type != _IS_BOOL) {
 		return FAILURE;
@@ -233,7 +234,7 @@ static void xstring_unset_property(zend_object *obj, zend_string *member, void *
 	zend_throw_error(NULL, "The property cannot be unset.");
 }
 
-static int xstring_cast(zend_object *obj, zval *retval, int type)
+static zend_result_82 xstring_cast(zend_object *obj, zval *retval, int type)
 {
 	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
 	if (type != IS_STRING) {
@@ -376,7 +377,7 @@ static double floatx_to_double(zend_object *obj)
 	return value;
 }
 
-static int floatx_cast(zend_object *obj, zval *retval, int type)
+static zend_result_82 floatx_cast(zend_object *obj, zval *retval, int type)
 {
 	if (type != IS_DOUBLE) {
 		/* IS_STRING cast may not be necessarily desirable. */

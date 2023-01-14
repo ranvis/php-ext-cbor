@@ -3,6 +3,12 @@
  * @license BSD-2-Clause
  */
 
+#if PHP_API_VERSION < 20220829 /* <PHP8.2 */
+typedef int zend_result_82;
+#else
+typedef zend_result zend_result_82;
+#endif
+
 #if PHP_API_VERSION < 20210902 /* <PHP8.1 */
 #define ZEND_ACC_NOT_SERIALIZABLE 0
 
