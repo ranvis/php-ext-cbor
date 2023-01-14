@@ -151,6 +151,9 @@ cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *option
 	}
 	CHECK_ERROR(uint32_option(&args->max_depth, ZEND_STRL("max_depth"), 0, 10000, options));
 	CHECK_ERROR(uint32_option(&args->max_size, ZEND_STRL("max_size"), 0, 0xffffffff, options));
+	if (args->max_size > HT_MAX_SIZE) {
+		args->max_size = HT_MAX_SIZE; /* clamp silently */
+	}
 	CHECK_ERROR(long_option(&args->offset, ZEND_STRL("offset"), 0, ZEND_LONG_MAX, options, false));
 	/* no negative length like substr() */
 	CHECK_ERROR(long_option(&args->length, ZEND_STRL("length"), 0, ZEND_LONG_MAX, options, true));
