@@ -78,7 +78,9 @@ See `Decoder` class for sequences and progressive decoding.
   To handle arrays/maps/tags, at least 1 depth is required.
 
 - `'max_size'`: (default:`65536`; range: `0`..`0xffffffff`)
-  Maximum number of elements to process for definite-length array and map when decoding.
+  Decode: Maximum number of elements for array and map to be processed.
+
+  Depending on the actual limit set by PHP, the value may be lowered.
 
 - `'offset'` (default:`0`; range: `0`..`PHP_INT_MAX`)
   Decode: Offset of the data to start decoding from. Offset cannot go beyond the length of the data.

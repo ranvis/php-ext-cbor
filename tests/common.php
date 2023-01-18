@@ -155,7 +155,9 @@ function xThrows(int|string $code, callable $fn): void
         $actual = getErrorName($e->getCode());
     } catch (Throwable $e) {
         $actual = get_class($e);
-        if (!is_string($code) || str_contains($code, '#')) {
+        if (is_int($code) && $e instanceof Error) {
+            $actual .= ': ' . $e->getMessage();
+        } elseif (!is_string($code) || str_contains($code, '#')) {
             $actual .= '#' . $e->getCode();
         }
     }

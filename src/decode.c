@@ -111,7 +111,7 @@ struct stack_item_zv {
 		zval value;
 		smart_str str;
 		struct si_value_map_t {
-			zval dest;
+			zval dest; /* extra: count of added elements for indefinite-length */
 			zval key;
 		} map;
 		zval tag_id;
@@ -532,6 +532,7 @@ static void zv_stack_push_map(dec_context *ctx, si_type_t si_type, zval *value, 
 	stack_item_zv *item = stack_new_item(ctx, si_type, count);
 	ZVAL_COPY_VALUE(&item->v.map.dest, value);
 	ZVAL_UNDEF(&item->v.map.key);
+	Z_EXTRA(item->v.map.dest) = 0;
 	stack_push_item(ctx, &item->base);
 }
 
@@ -557,6 +558,10 @@ static bool zv_append_to_array(dec_context *ctx, xzval *value, stack_item_zv *it
 	if (XZ_ISXXINT_P(value)) {
 		RETURN_CB_ERROR_B(E_DESC(CBOR_ERROR_UNSUPPORTED_VALUE, INT_RANGE));
 	}
+	if (!item->base.count && zend_hash_num_elements(Z_ARRVAL(item->v.value)) >= ctx->args.max_size) {
+		/* max size of indefinite-length array is enforced on append */
+		RETURN_CB_ERROR_B(CBOR_ERROR_UNSUPPORTED_SIZE);
+	}
 	if (add_next_index_zval(&item->v.value, value) != SUCCESS) {
 		RETURN_CB_ERROR_B(CBOR_ERROR_INTERNAL);
 	}
@@ -571,6 +576,10 @@ static bool zv_append_to_array(dec_context *ctx, xzval *value, stack_item_zv *it
 static bool zv_append_to_map(dec_context *ctx, xzval *value, stack_item_zv *item)
 {
 	if (Z_ISUNDEF(item->v.map.key)) {
+		if (!item->base.count && ++Z_EXTRA(item->v.map.dest) > ctx->args.max_size) {
+			/* max size of indefinite-length map is enforced on append */
+			RETURN_CB_ERROR_B(CBOR_ERROR_UNSUPPORTED_SIZE);
+		}
 		switch (Z_TYPE_P(value)) {
 		case IS_LONG:
 		case IS_X_UINT:
