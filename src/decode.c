@@ -114,9 +114,9 @@ struct stack_item_zv {
 			zval dest; /* extra: count of added elements for indefinite-length */
 			zval key;
 		} map;
-		zval tag_id;
+		zend_long tag_id;
 		struct si_value_tag_handled_t {
-			zend_ulong tag_id;
+			zend_long id;
 			union si_value_tag_h_value_t{
 				srns_item *srns_detached;
 				struct si_tag_shareable_t {
@@ -539,7 +539,7 @@ static void zv_stack_push_map(dec_context *ctx, si_type_t si_type, zval *value, 
 static void zv_stack_push_tag(dec_context *ctx, zend_long tag_id)
 {
 	stack_item_zv *item = stack_new_item(ctx, SI_TYPE_TAG, 1);
-	ZVAL_LONG(&item->v.tag_id, tag_id);
+	item->v.tag_id = tag_id;
 	stack_push_item(ctx, &item->base);
 }
 
@@ -687,10 +687,11 @@ static bool zv_append_to_tag(dec_context *ctx, xzval *value, stack_item_zv *item
 	if (object_init_ex(&container, CBOR_CE(tag)) != SUCCESS) {
 		RETURN_CB_ERROR_B(CBOR_ERROR_INTERNAL);
 	}
-	zend_call_known_instance_method_with_2_params(CBOR_CE(tag)->constructor, Z_OBJ(container), NULL, &item->v.tag_id, value);
+	zval tag_id;
+	ZVAL_LONG(&tag_id, item->v.tag_id);
+	zend_call_known_instance_method_with_2_params(CBOR_CE(tag)->constructor, Z_OBJ(container), NULL, &tag_id, value);
 	ASSERT_STACK_ITEM_IS_TOP(item);
 	stack_pop_item(ctx);
-	assert(Z_TYPE(item->v.tag_id) == IS_LONG);
 	stack_free_item(ctx, &item->base);
 	result = zv_append(ctx, &container);
 	zval_ptr_dtor(&container);
@@ -1245,7 +1246,7 @@ static xzval *tag_handler_shareable_exit(dec_context *ctx, xzval *value, stack_i
 
 static bool tag_handler_shareable_enter(dec_context *ctx, stack_item_zv *item)
 {
-	if (ctx->stack_top && ctx->stack_top->si_type == SI_TYPE_TAG_HANDLED && ((stack_item_zv *)ctx->stack_top)->v.tag_h.tag_id == CBOR_TAG_SHAREABLE) {
+	if (ctx->stack_top && ctx->stack_top->si_type == SI_TYPE_TAG_HANDLED && ((stack_item_zv *)ctx->stack_top)->v.tag_h.id == CBOR_TAG_SHAREABLE) {
 		/* nested shareable */
 		RETURN_CB_ERROR_B(E_DESC(CBOR_ERROR_TAG_SYNTAX, SHARE_NESTED));
 	}
@@ -1300,7 +1301,7 @@ static bool zv_do_tag_enter(dec_context *ctx, zend_long tag_id)
 	}
 	if (handler) {
 		stack_item_zv *item = stack_new_item(ctx, SI_TYPE_TAG_HANDLED, 1);
-		item->v.tag_h.tag_id = tag_id;
+		item->v.tag_h.id = tag_id;
 		if (!(*handler)(ctx, item)) {
 			ASSERT_ERROR_SET();
 			stack_free_item(ctx, &item->base);
