@@ -61,6 +61,15 @@ h\'2222222222222222 33333333\'', cdec($data, CBOR_EDN, ['byte_space' => 8, 'byte
     cdecThrows(CBOR_ERROR_INVALID_OPTIONS, $data, CBOR_EDN, ['byte_space' => false]);
     cdecThrows(CBOR_ERROR_INVALID_OPTIONS, $data, CBOR_EDN, ['byte_wrap' => 0]);
 
+    // text strings
+    eq('"\n" h\'000d0a\'', cdec('640a000d0a', CBOR_EDN));
+    // invalid UTF-8 sequences
+    eq('"abc" h\'81c2\' "d"', cdec('6661626381c264', CBOR_EDN));
+    eq('"" h\'818283\' "abc"', cdec('66818283616263', CBOR_EDN));
+    eq('"" h\'8182830a\' "bc"', cdec('668182830a6263', CBOR_EDN));
+    eq('"" h\'818283\' "a\n\b"', cdec('66818283610a08', CBOR_EDN));
+    eq('"" h\'818283\'', cdec('63818283', CBOR_EDN));
+
     // self-describe flag
     $data = 'd9d9f7' . 'f6';
     eq('null', cdec($data, CBOR_EDN));

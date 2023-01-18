@@ -105,7 +105,7 @@ Unknown key names are silently ignored.
 
 ### Diagnostic Notation
 
-With the decoding flag `CBOR_EDN`, CBOR data is decoded to Extended Diagnostic Notation (EDN) `string`. (It does _not_ decode EDN string.)
+With the decoding flag `CBOR_EDN`, CBOR data (in binary) is decoded to Extended Diagnostic Notation (EDN) `string` defined in [RFC 8610 appendix G](https://datatracker.ietf.org/doc/html/rfc8610#appendix-G). (It does _not_ decode EDN string.)
 This can be used to inspect CBOR data if something is wrong with it.
 
 ```php
@@ -121,7 +121,7 @@ Formatting `$options` may be specified:
   `"\t"` to use a single tab character.
 
 - `'space'` (default: `true`; values: `bool`)
-  Whether to insert a space character after separator to improve readability.
+  Whether to insert a space character after separators to improve readability.
 
 - `'byte_space'` (default: `0`; values: `0`..`63`)
   Add space for every 1/2/4/8/16/32 bytes of `byte string`.
@@ -130,7 +130,9 @@ Formatting `$options` may be specified:
 - `'byte_wrap'` (default: `false`; values: `false` | `1`..`1024`)
   Break down `byte string` into multiple `h'...'` notation for every specified length.
 
-Note that when `CBOR_EDN` is specified, the function will not throw an exception for data error (such as invalid UTF-8 sequences). It will instead print error in the result string as a comment.
+Note that when `CBOR_EDN` is specified, the function will not throw an exception for data error (such as truncated data). It will instead print an error in the returned string as a comment.
+
+Invalid UTF-8 sequences are represented as byte string fragments inside text string, along with consecutive ASCII control characters.
 
 ### Classes
 

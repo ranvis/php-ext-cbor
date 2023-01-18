@@ -8,6 +8,7 @@
 ### Changed
 ### Removed
 ### Fixed
+- Fix redundant representation of EDN string if text string has some sort of invalid UTF-8 sequences.
 ### Security
 ### Deprecated
 

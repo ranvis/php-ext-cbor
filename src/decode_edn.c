@@ -27,8 +27,6 @@ typedef struct stack_item_edn {
 #define APPEND_NL()     edn_append_nl(ctx, false)
 #define APPEND_NL_SP()  edn_append_nl(ctx, true)
 #define APPEND_SP()  edn_append_space(ctx)
-#define APPEND_TSTR_BSTR()  edn_append_tstr_bstr(ctx)
-#define APPEND_BSTR_TSTR()  edn_append_bstr_tstr(ctx)
 #define IS_ASCII_CNTL(c)  ((c) < 0x20 || (c) == 0x7f) /* multi-eval */
 
 static void edn_append_space(dec_context *ctx)
@@ -277,18 +275,28 @@ static void edn_do_xstring(dec_context *ctx, const char *val, uint64_t length, b
 		}
 	}
 	char hex_buf[3];
-#define APPEND_ESC_SEQ(c)  do { \
-		if (!in_text) { \
-			APPEND_BSTR_TSTR(); \
+#define TO_BSTR() do { \
+		if (in_text) { \
+			in_text = false; \
+			edn_append_tstr_bstr(ctx); \
 		} \
-		edn_append_esc(&ctx->u.edn.str, (c)); \
-		str++; \
+	} while (0)
+#define TO_TSTR() do { \
+		if (!in_text) { \
+			in_text = true; \
+			edn_append_bstr_tstr(ctx); \
+		} \
+	} while (0)
+#define APPEND_ESC_SEQ(c)  do { \
+		esc_seq_char = c; \
+		goto DO_APPEND_ESC_SEQ; \
 	} while (0)
 	const uint8_t *str = (const uint8_t *)val;
 	if (is_text) {
 		APPEND_CHAR('"');
 		const uint8_t *end = str + length;
 		bool in_text = true;
+		char esc_seq_char;
 		while (str < end) {
 			if (!in_text) {
 				if (IS_ASCII_CNTL(*str)) {
@@ -296,8 +304,6 @@ static void edn_do_xstring(dec_context *ctx, const char *val, uint64_t length, b
 					str++;
 					continue;
 				}
-				in_text = true;
-				APPEND_BSTR_TSTR();
 			}
 			switch (*str) {
 			case '\\': APPEND_ESC_SEQ('\\'); break;
@@ -307,15 +313,19 @@ static void edn_do_xstring(dec_context *ctx, const char *val, uint64_t length, b
 			case '\f': APPEND_ESC_SEQ('f'); break;
 			case '\n': APPEND_ESC_SEQ('n'); break;
 			case '\b': APPEND_ESC_SEQ('b'); break;
+			DO_APPEND_ESC_SEQ:
+				TO_TSTR();
+				edn_append_esc(&ctx->u.edn.str, esc_seq_char);
+				str++;
+				break;
 			default: {
 				if (IS_ASCII_CNTL(*str)) {
-					assert(in_text);
-					if (str + 1 < end && IS_ASCII_CNTL(str[1])) {
-						/* JSON-ish \uXXXX is lengthy; if the next character is also cntl, switch to hex notation */
-						in_text = false;
-						APPEND_TSTR_BSTR();
+					if (!in_text || str + 1 < end && IS_ASCII_CNTL(str[1])) {
+						/* JSON-ish \uXXXX is lengthy; if now in hex notation or the next character is also cntl, use hex notation */
+						TO_BSTR();
 						continue;
 					}
+					TO_TSTR();
 					smart_str_append_printf(&ctx->u.edn.str, "\\u%04x", *str);
 					str++;
 					break;
@@ -323,18 +333,12 @@ static void edn_do_xstring(dec_context *ctx, const char *val, uint64_t length, b
 				const uint8_t *prev = str;
 				uint32_t cp = cbor_next_utf8(&str, end);
 				if (cp == 0xffffffff) {  /* invalid character */
-					if (in_text) {
-						in_text = false;
-						APPEND_TSTR_BSTR();
-					}
+					TO_BSTR();
 					do {
 						APPEND_HEX(*str);
 					} while (++str < end && (*str & 0xc0) == 0xc0);  /* 0b11000000: not start of character */
 				} else {
-					if (!in_text) {
-						in_text = true;
-						APPEND_BSTR_TSTR();
-					}
+					TO_TSTR();
 					if ((cp >= 0x0080 && cp <= 0x009f)  /* C1 incl. NEXT LINE */
 						|| cp == 0x200E || cp == 0x200F  /* bidi LTR, RTL */
 						|| (cp >= 0x202A && cp <= 0x202E)  /* bidi LRE..RLO */
