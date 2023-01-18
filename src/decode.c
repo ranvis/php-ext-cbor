@@ -105,8 +105,6 @@ struct stack_item_zv {
 	stack_item base;
 	tag_handler_data_t *tag_handler_data;
 	tag_handler_child_t *tag_handler_child[2];
-	tag_handler_exit_t *tag_handler_exit;
-	tag_handler_free_t *tag_handler_free;
 	union si_value_t {
 		zval value;
 		smart_str str;
@@ -117,6 +115,8 @@ struct stack_item_zv {
 		zend_long tag_id;
 		struct si_value_tag_handled_t {
 			zend_long id;
+			tag_handler_exit_t *h_exit;
+			tag_handler_free_t *h_free;
 			union si_value_tag_h_value_t{
 				srns_item *srns_detached;
 				struct si_tag_shareable_t {
@@ -213,8 +213,8 @@ DECLARE_SI_SET_HANDLER_VEC(tag_handler_child)
 
 #define SI_SET_DATA_HANDLER(si, handler)  SI_SET_HANDLER(tag_handler_data, si, handler)
 #define SI_SET_CHILD_HANDLER(si, handler)  SI_SET_HANDLER_VEC(tag_handler_child, si, handler)
-#define SI_SET_EXIT_HANDLER(si, handler)  SI_SET_HANDLER(tag_handler_exit, si, handler)
-#define SI_SET_FREE_HANDLER(si, handler)  SI_SET_HANDLER(tag_handler_free, si, handler)
+#define SI_SET_EXIT_HANDLER(si, handler)  (si)->v.tag_h.h_exit = (handler)
+#define SI_SET_FREE_HANDLER(si, handler)  (si)->v.tag_h.h_free = (handler)
 
 #define SI_CALL_CHILD_HANDLER(si, ...)  SI_CALL_HANDLER_VEC(tag_handler_child, si, __VA_ARGS__)
 
@@ -475,8 +475,8 @@ static void zv_si_free(stack_item *item_)
 	} else if (item->base.si_type == SI_TYPE_TAG) {
 		/* nothing */
 	} else if (item->base.si_type == SI_TYPE_TAG_HANDLED) {
-		if (item->tag_handler_free) {
-			(*item->tag_handler_free)(item);
+		if (item->v.tag_h.h_free) {
+			(*item->v.tag_h.h_free)(item);
 		}
 	} else if (item->base.si_type) {
 		zval_ptr_dtor(&item->v.value);
@@ -705,9 +705,9 @@ static bool zv_append_to_tag_handled(dec_context *ctx, xzval *value, stack_item_
 	bool result;
 	ASSERT_STACK_ITEM_IS_TOP(item);
 	stack_pop_item(ctx);
-	if (item->tag_handler_exit)  {
+	if (item->v.tag_h.h_exit)  {
 		assert(!ctx->cb_error);
-		value = (*item->tag_handler_exit)(ctx, value, item, &tmp_v);
+		value = (*item->v.tag_h.h_exit)(ctx, value, item, &tmp_v);
 		/* exit handler may return the new value, that caller frees */
 	}
 	result = !ctx->cb_error && zv_append(ctx, value);
