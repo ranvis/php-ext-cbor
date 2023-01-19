@@ -103,8 +103,8 @@ typedef void (tag_handler_free_t)(stack_item_zv *item);
 
 enum tag_handler_index_value {
 	THI_NONE = 0,
-	THI_STRING_REF_NS,
-	THI_STRING_REF,
+	THI_STR_REF_NS,
+	THI_STR_REF,
 	THI_SHAREABLE,
 	THI_SHARED_REF,
 	THI_COUNT,
@@ -113,16 +113,19 @@ enum tag_handler_index_value {
 typedef uint8_t tag_handler_index;
 
 typedef struct {
+	tag_handler_enter_t *h_enter;
 	tag_handler_exit_t *h_exit;
 	tag_handler_free_t *h_free;
+	tag_handler_data_t *h_data;
+	tag_handler_child_t *h_child;
 } tag_handlers_t;
 
 static tag_handlers_t tag_handlers[THI_COUNT]; /* cannot be const for VC++ */
 
 struct stack_item_zv {
 	stack_item base;
-	tag_handler_data_t *tag_handler_data;
-	tag_handler_child_t *tag_handler_child[2];
+	tag_handler_index thi_data;
+	tag_handler_index thi_child[2];
 	union si_value_t {
 		zval value;
 		smart_str str;
@@ -198,11 +201,11 @@ void php_cbor_minit_decode()
 
 /* just in case, defined as a macro, as function pointer is theoretically incompatible with data pointer */
 #define DECLARE_SI_SET_HANDLER_VEC(member)  \
-	static bool register_handler_vec_##member(stack_item_zv *item, member##_t *handler) \
+	static bool register_handler_vec_##member(stack_item_zv *item, tag_handler_index thi) \
 	{ \
 		int i, count = sizeof item->member / sizeof item->member[0]; \
-		for (i = 0; i < count && item->member[i]; i++) { \
-			if (item->member[i] == handler) { \
+		for (i = 0; i < count && item->member[i] != THI_NONE; i++) { \
+			if (item->member[i] == thi) { \
 				return true; \
 			} \
 		} \
@@ -210,7 +213,7 @@ void php_cbor_minit_decode()
 		if (i >= count) { \
 			return false; \
 		} \
-		item->member[i] = handler; \
+		item->member[i] = thi; \
 		return true; \
 	}
 #define SI_SET_HANDLER_VEC(member, si, handler)  do { \
@@ -218,20 +221,20 @@ void php_cbor_minit_decode()
 			ctx->cb_error = CBOR_ERROR_INTERNAL; \
 		} \
 	} while (0)
-#define SI_SET_HANDLER(member, si, handler)  si->member = handler
-#define SI_CALL_HANDLER(si, member, ...)  (*si->member)(__VA_ARGS__)
-#define SI_CALL_HANDLER_VEC(member, si, ...)  do { \
+#define SI_SET_HANDLER(member, si, thi)  si->member = thi
+#define SI_CALL_HANDLER(si, thi, member, ...)  (*tag_handlers[si->thi].member)(__VA_ARGS__)
+#define SI_CALL_HANDLER_VEC(member, h_member, si, ...)  do { \
 		for (int i = 0; i < sizeof (si)->member / sizeof (si)->member[0] && (si)->member[i]; i++) { \
-			(*(si)->member[i])(__VA_ARGS__); \
+			(*tag_handlers[(si)->member[i]].h_member)(__VA_ARGS__); \
 		} \
 	} while (0)
 
-DECLARE_SI_SET_HANDLER_VEC(tag_handler_child)
+DECLARE_SI_SET_HANDLER_VEC(thi_child)
 
-#define SI_SET_DATA_HANDLER(si, handler)  SI_SET_HANDLER(tag_handler_data, si, handler)
-#define SI_SET_CHILD_HANDLER(si, handler)  SI_SET_HANDLER_VEC(tag_handler_child, si, handler)
+#define SI_SET_DATA_HANDLER(si, thi)  SI_SET_HANDLER(thi_data, si, thi)
+#define SI_SET_CHILD_HANDLER(si, thi)  SI_SET_HANDLER_VEC(thi_child, si, thi)
 
-#define SI_CALL_CHILD_HANDLER(si, ...)  SI_CALL_HANDLER_VEC(tag_handler_child, si, __VA_ARGS__)
+#define SI_CALL_CHILD_HANDLER(si, ...)  SI_CALL_HANDLER_VEC(thi_child, h_child, si, __VA_ARGS__)
 
 static void stack_free_item(dec_context *ctx, stack_item *item)
 {
@@ -848,8 +851,8 @@ static bool zv_append_string_item(dec_context *ctx, zval *value, bool is_text, b
 		ZVAL_OBJ(&container, obj);
 		value = &container;
 	}
-	if (!is_indef && item && item->tag_handler_data) {
-		(*item->tag_handler_data)(ctx, item, DATA_TYPE_STRING, value);
+	if (!is_indef && item && item->thi_data != THI_NONE) {
+		(*tag_handlers[item->thi_data].h_data)(ctx, item, DATA_TYPE_STRING, value);
 	}
 	result = zv_append(ctx, value);
 	if (!Z_ISNULL(container)) {
@@ -1112,8 +1115,8 @@ static void tag_handler_str_ref_ns_child(dec_context *ctx, stack_item_zv *item, 
 		/* chunks of indefinite length string */
 		return;
 	}
-	SI_SET_CHILD_HANDLER(item, &tag_handler_str_ref_ns_child);
-	SI_SET_DATA_HANDLER(item, &tag_handler_str_ref_ns_data);
+	SI_SET_CHILD_HANDLER(item, THI_STR_REF_NS);
+	SI_SET_DATA_HANDLER(item, THI_STR_REF_NS);
 }
 
 static xzval *tag_handler_str_ref_ns_exit(dec_context *ctx, xzval *value, stack_item_zv *item, zval *tmp_v)
@@ -1140,8 +1143,8 @@ static void tag_handler_str_ref_ns_free(stack_item_zv *item)
 static bool tag_handler_str_ref_ns_enter(dec_context *ctx, stack_item_zv *item)
 {
 	srns_item *srns = emalloc(sizeof *srns);
-	SI_SET_DATA_HANDLER(item, &tag_handler_str_ref_ns_data);
-	SI_SET_CHILD_HANDLER(item, &tag_handler_str_ref_ns_child);
+	SI_SET_DATA_HANDLER(item, THI_STR_REF_NS);
+	SI_SET_CHILD_HANDLER(item, THI_STR_REF_NS);
 	item->v.tag_h.v.srns_detached = NULL;
 	srns->str_table = zend_new_array(0);
 	srns->prev_item = ctx->u.zv.srns;
@@ -1262,7 +1265,7 @@ static bool tag_handler_shareable_enter(dec_context *ctx, stack_item_zv *item)
 		/* nested shareable */
 		RETURN_CB_ERROR_B(E_DESC(CBOR_ERROR_TAG_SYNTAX, SHARE_NESTED));
 	}
-	SI_SET_CHILD_HANDLER(item, &tag_handler_shareable_child);
+	SI_SET_CHILD_HANDLER(item, THI_SHAREABLE);
 	ZVAL_NULL(&item->v.tag_h.v.shareable.value); /* cannot be undef if adding to HashTable */
 	item->v.tag_h.v.shareable.index = zend_hash_num_elements(ctx->u.zv.refs);
 	if (zend_hash_next_index_insert(ctx->u.zv.refs, &item->v.tag_h.v.shareable.value) == NULL) {
@@ -1298,15 +1301,24 @@ static bool tag_handler_shared_ref_enter(dec_context *ctx, stack_item_zv *item)
 
 static tag_handlers_t tag_handlers[THI_COUNT] = {
 	{
-		NULL, NULL,
+		NULL,
 	}, {
+		&tag_handler_str_ref_ns_enter,
 		&tag_handler_str_ref_ns_exit,
 		&tag_handler_str_ref_ns_free,
+		&tag_handler_str_ref_ns_data,
+		&tag_handler_str_ref_ns_child,
 	}, {
+		&tag_handler_str_ref_enter,
 		&tag_handler_str_ref_exit,
 	}, {
+		&tag_handler_shareable_enter,
 		&tag_handler_shareable_exit,
+		NULL,
+		NULL,
+		&tag_handler_shareable_child,
 	}, {
+		&tag_handler_shared_ref_enter,
 		&tag_handler_shared_ref_exit,
 	},
 };
@@ -1314,25 +1326,20 @@ static tag_handlers_t tag_handlers[THI_COUNT] = {
 static bool zv_do_tag_enter(dec_context *ctx, zend_long tag_id)
 {
 	/* must return true if pushed to stack or an error occurred */
-	tag_handler_enter_t *handler = NULL;
 	tag_handler_index thi = THI_NONE;
 	if (tag_id == CBOR_TAG_STRING_REF_NS && ctx->args.string_ref) {
-		handler = &tag_handler_str_ref_ns_enter;
-		thi = THI_STRING_REF_NS;
+		thi = THI_STR_REF_NS;
 	} else if (tag_id == CBOR_TAG_STRING_REF && ctx->args.string_ref) {
-		handler = &tag_handler_str_ref_enter;
-		thi = THI_STRING_REF;
+		thi = THI_STR_REF;
 	} else if (tag_id == CBOR_TAG_SHAREABLE && ctx->args.shared_ref) {
-		handler = &tag_handler_shareable_enter;
 		thi = THI_SHAREABLE;
 	} else if (tag_id == CBOR_TAG_SHARED_REF && ctx->args.shared_ref) {
-		handler = &tag_handler_shared_ref_enter;
 		thi = THI_SHARED_REF;
 	}
-	if (handler) {
+	if (thi != THI_NONE) {
 		stack_item_zv *item = stack_new_item(ctx, SI_TYPE_TAG_HANDLED, 1);
 		item->v.tag_h.id = tag_id;
-		if (!(*handler)(ctx, item)) {
+		if (!(*tag_handlers[thi].h_enter)(ctx, item)) {
 			ASSERT_ERROR_SET();
 			stack_free_item(ctx, &item->base);
 			return true;
