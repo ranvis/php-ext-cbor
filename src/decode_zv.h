@@ -392,7 +392,7 @@ static bool zv_append_string_item(dec_context *ctx, zval *value, bool is_text, b
 			RETURN_CB_ERROR_B(error);
 		}
 	} else if (ctx->args.flags & type_flag) {  /* to PHP string */
-		/* do nothing*/
+		/* do nothing */
 	} else {
 		zend_object *obj = cbor_xstring_create(string_ce);
 		cbor_xstring_set_value(obj, Z_STR_P(value));
