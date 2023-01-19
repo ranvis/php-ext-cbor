@@ -570,4 +570,5 @@ FINALLY: ;
 }
 
 #define METHOD(name) edn_##name
-#include "decode_base.c"
+#include "decode_base.h"
+#undef METHOD

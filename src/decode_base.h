@@ -1,3 +1,8 @@
+/**
+ * @author SATO Kentaro
+ * @license BSD-2-Clause
+ */
+
 #define SET_READ_ERROR(result)  do { \
 		if (!result) { \
 			error = out->req_len ? CBOR_ERROR_TRUNCATED_DATA \
@@ -120,5 +125,3 @@ static cbor_error METHOD(dec_item)(const uint8_t *data, size_t len, cbor_di_deco
 FINALLY:
 	return error;
 }
-
-#undef METHOD
