@@ -1,6 +1,8 @@
 #include "cbor.h"
 #include "di.h"
 #include "types.h"
+#include <Zend/zend_smart_str.h>
+#include <assert.h>
 
 void cbor_di_write_int(smart_str *buf, uint8_t di_type, uint64_t val)
 {

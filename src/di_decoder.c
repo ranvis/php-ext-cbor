@@ -4,6 +4,7 @@
  */
 
 #include "di_decoder.h"
+#include <assert.h>
 
 /* This program assumes IEEE 754 binary32/64 to be used as float/double. */
 

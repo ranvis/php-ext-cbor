@@ -33,13 +33,13 @@ run(function () {
     ok($instance != null);
 
     // prohibited actions
-    throws('Error', fn () => $instance->abc);
-    throws('Error', fn () => $instance->abc = true);
-    throws('Error', function () use ($instance) {
+    throws(Error::class, fn () => $instance->abc);
+    throws(Error::class, fn () => $instance->abc = true);
+    throws(Error::class, function () use ($instance) {
         unset($instance->abc);
     });
-    throws('Error', fn () => $x = &$instance->abc);
-    throws('Error', fn () => new Cbor\Undefined());
+    throws(Error::class, fn () => $x = &$instance->abc);
+    throws(Error::class, fn () => new Cbor\Undefined());
 
     // uniqueness for serialization
     $serialized = 'C:14:"Cbor\Undefined":0:{}';

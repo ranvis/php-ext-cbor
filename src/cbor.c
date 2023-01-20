@@ -4,13 +4,16 @@
  */
 
 #include "cbor.h"
-#include <ext/json/php_json.h>
 #include "compatibility.h"
 #include "cbor_arginfo.h"
 #include "cbor_ns_arginfo.h"
 #include "codec.h"
 #include "tags.h"
 #include "types.h"
+#include <main/php_ini.h>
+#include <ext/json/php_json.h>
+#include <ext/standard/info.h>
+#include <Zend/zend_exceptions.h>
 
 #define PHP_CBOR_VERSION "0.4.2"
 

@@ -67,14 +67,14 @@ try {
 }
 ```
 
-When decoding, CBOR data item must be a single item, or the function will throw an exception with code `CBOR_ERROR_EXTRANEOUS_DATA`.
-This means this function cannot decode CBOR sequences format defined in [RFC 8742](https://datatracker.ietf.org/doc/html/rfc8742).
+When decoding, the CBOR data item must be a single item, or the function will throw an exception with code `CBOR_ERROR_EXTRANEOUS_DATA`.
+This means this function cannot decode the CBOR sequences format defined in [RFC 8742](https://datatracker.ietf.org/doc/html/rfc8742).
 See `Decoder` class for sequences and progressive decoding.
 
 `$options` array elements are:
 
 - `'max_depth'` (default:`64`; range: `0`..`10000`)
-  Maximum number of nesting level to process.
+  Maximum number of nesting levels to process.
   To handle arrays/maps/tags, at least 1 depth is required.
 
 - `'max_size'`: (default:`65536`; range: `0`..`0xffffffff`)
@@ -148,7 +148,7 @@ Although some classes such as PSR-7 `UriInterface` are serializable by default a
 
 #### EncodeParams
 
-When the encoder encounters a `Cbor\EncodeParams` instance, it encodes `$value` instance variable with the specified `$params` flags and options added to the current flags and options. After encoding inner `$value`, those parameters are back to the previous state.
+When the encoder encounters a `Cbor\EncodeParams` instance, it encodes the `$value` instance variable with the specified `$params` flags and options added to the current flags and options. After encoding the inner `$value`, those parameters are back to the previous state.
 This can be useful when you want to enforce specific parameters partially.
 
 `$params` array elements are:
@@ -158,7 +158,7 @@ This can be useful when you want to enforce specific parameters partially.
 Flags in `'flags_clear'` are cleared first then flags in `'flags'` are set.
 Note that you don't need to clear conflicting string flags, i.e. `CBOR_TEXT` is cleared when setting `CBOR_BYTE` and vice versa. The same applies for `CBOR_KEY_*` string flags.
 - Other `$options` values for encoding.
-You cannot change `'max_depth'` or options that makes CBOR data contextual.
+You cannot change `'max_depth'` or options that make CBOR data contextual.
 
 Unknown or unsupported key names are silently ignored.
 
@@ -174,12 +174,13 @@ The parameters act like those of `substr()` PHP function.
 To process data in the buffer, call `process()`. It will return `true` if a data item is decoded. You can test it with `hasValue()` method too. Call `getValue()` to retrieve the decoded value.
 If another data item follows (CBOR sequences), call `add()` and/or `process()` again.
 
-`process()` will not return `ture` until a complete item is decoded. Until that, `isPartial()` returns `true` and you need to feed more data to complete decode.
+`process()` will not return `ture` until a complete item is decoded. Until that, `isPartial()` returns `true` and you need to feed more data to complete the decode.
 `getBuffer()` returns a copy of the internal buffer. Note that it doesn't contain data that is partially consumed by `process()`.
 
 **Progressive decoding**
 
 With the class, large data can be decoded progressively without loading the whole data in memory at once:
+
 ```php
 if (($fp = fopen($filePath, 'rb')) === false) {
     throw new RuntimeException('Cannot open file');
@@ -234,19 +235,21 @@ If decoding data contains out-of-range value, an exception is thrown.
 
 #### Floating-Point Numbers
 
-CBOR `float` has three sizes. 64-bit value is translated to PHP `float`.
+CBOR `float` has three sizes. 64-bit values are translated to PHP `float`.
 
-32-bit values and 16-bit values are translated to PHP `Cbor\Float32` and `Cbor\Float16` respectively.
-But if the flags `CBOR_FLOAT32` and/or `CBOR_FLOAT16` is passed, they are treated as PHP `float`.
+32-bit values and 16-bit values are decoded to PHP `Cbor\Float32` and `Cbor\Float16` respectively.
+But if the flags `CBOR_FLOAT32` and/or `CBOR_FLOAT16` are passed, they are decoded to PHP `float`.
+
+When encoding PHP `float`, Values are stored with the smallest possible type if a flag is set and no informational loss is expected.
 
 #### Strings
 
 CBOR has two types of strings: `byte string` (binary octets) and `text string` (UTF-8 encoded octets).
 PHP `string` type does not have this distinction.
 
-If you specify `CBOR_BYTE` flag (default) and/or `CBOR_TEXT` flag on decoding, those strings are decoded to PHP `string`. If the flags are not specified, strings are decoded to `Cbor\Byte` and `Cbor\Text` object respectively.
+If you specify the `CBOR_BYTE` flag (default) and/or the `CBOR_TEXT` flag on decoding, those strings are decoded to PHP `string`. If the flags are not specified, strings are decoded to `Cbor\Byte` and `Cbor\Text` objects respectively.
 
-On encoding PHP `string`, you must specify either of the flag so that the extension knows to which you want your strings to be encoded. The default is `CBOR_BYTE`.
+On encoding PHP `string`, you must specify either of the flags so that the extension knows to which you want your strings to be encoded. The default is `CBOR_BYTE`.
 
 `CBOR_KEY_BYTE` and `CBOR_KEY_TEXT` are for strings of CBOR `map` keys.
 
@@ -261,13 +264,13 @@ If PHP `array` has holes or `string` keys (i.e. the array is not a "list"), it i
 #### Maps
 
 CBOR `map` is translated to PHP `stdClass` object.
-If `CBOR_MAP_AS_ARRAY` flag is passed when decoding, it is translated to PHP `array` instead.
+If the `CBOR_MAP_AS_ARRAY` flag is passed when decoding, it is translated to PHP `array` instead.
 
 Keys must be of CBOR `string` type.
 
-The extension may accept CBOR `integer` key if `CBOR_INT_KEY` flag is passed. Likewise with the flag, it will encode PHP `int` key (including integer numeric `string` keys in the range of CBOR `integer`) as CBOR `integer` key.
+The extension may accept CBOR `integer` keys if the `CBOR_INT_KEY` flag is passed. Likewise with the flag, it will encode PHP `int` key (including integer numeric `string` keys in the range of CBOR `integer`) as CBOR `integer` key.
 
-If `CBOR_MAP_NO_DUP_KEY` flag is specified on decoding, a duplicated key will throw an exception instead of overriding the former value. This may happen on valid CBOR `map`; e.g. all of unsigned integer `1`, text string `"1"`, and byte string `b'31'` may be the same key for PHP.
+If the `CBOR_MAP_NO_DUP_KEY` flag is specified on decoding, a duplicated key will throw an exception instead of overriding the former value. This may happen on valid CBOR `map`; e.g. all of unsigned integer `1`, text string `"1"`, and byte string `b'31'` may be the same key for PHP.
 
 #### Tags
 
@@ -285,7 +288,7 @@ Also see "Supported Tags" below.
 CBOR has `null` and `undefined` value, but PHP does not have `undefined` value.
 
 CBOR `undefined` is translated to PHP `Cbor\Undefined` singleton object.
-This object is evaluated as `false` in boolean context. It is not equal to `null`.
+This object is evaluated as `false` in a boolean context. It is not equal to `null`.
 
 ```php
 $undefined = Cbor\Undefined::get();
@@ -308,7 +311,7 @@ Constants:
 - `CBOR_TAG_SELF_DESCRIBE_DATA`
 
 Self-Described CBOR is CBOR data that has this tag for the data.
-This 3-byte binary string (so-called magic) can be used to distinguish CBOR from other data including Unicode text encodings. This is useful if data loader need to identify the format by data itself.
+This 3-byte binary string (magic pattern) can be used to distinguish CBOR from other data including Unicode text encodings. This is useful if data loader need to identify the format by data itself.
 ```php
 $isCbor = str_starts_with($data, CBOR_TAG_SELF_DESCRIBE_DATA);
 ```
@@ -347,7 +350,7 @@ CBOR data that use {stringref} can be embedded in other CBOR. But data that does
 (As of now, the extension cannot embed raw CBOR data on encoding though.)
 
 Decoders without the support of this tag cannot decode data using {stringref} correctly.
-It is recommended to explicity enable `string_ref` option on decoding if you are sure of the use of {stringref}, so that readers of the code will know of it.
+It is recommended to explicity enable the `string_ref` option on decoding if you are sure of the use of {stringref}, so that readers of the code will know of it.
 
 ### tag(28): shareable, tag(29): sharedref
 

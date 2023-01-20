@@ -3,11 +3,10 @@
  * @license BSD-2-Clause
  */
 
-#include <assert.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <stdint.h>
 #include "di.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 
 typedef struct {
 	size_t read_len;

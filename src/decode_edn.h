@@ -3,8 +3,8 @@
  * @license BSD-2-Clause
  */
 
-#include <Zend/zend_strtod.h>
 #include "compatibility.h"
+#include <Zend/zend_strtod.h>
 
 typedef struct stack_item_edn {
 	stack_item base;
@@ -556,7 +556,6 @@ static void edn_proc_indef_break(dec_context *ctx, stack_item *item_)
 				}
 				assert(ZSTR_LEN(ctx->u.edn.str.s) > 0);  /* should never underflow */
 				ZSTR_LEN(ctx->u.edn.str.s)--;
-				/* N.B. not \0 terminated */
 			}
 		}
 		APPEND_DEINDENT_NL();

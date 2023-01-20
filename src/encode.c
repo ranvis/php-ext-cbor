@@ -10,6 +10,11 @@
 #include "tags.h"
 #include "types.h"
 #include "utf8.h"
+#include "warn_muted.h"
+#include <ext/date/php_date.h>
+#include "warn_unmuted.h"
+#include <Zend/zend_smart_str.h>
+#include <assert.h>
 
 #define CTX_TEXT_FLAG(ctx)  (((ctx)->args.flags & CBOR_TEXT) != 0)
 
@@ -414,16 +419,13 @@ static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 	bool is_list;
 	bool is_indef_length = false;
 	bool use_int_key = ctx->args.flags & CBOR_INT_KEY;
+	if (Z_IS_RECURSIVE_P(value)) {
+		return CBOR_ERROR_RECURSION;
+	}
 	if (type != HASH_ARRAY) {
 		obj = Z_OBJ_P(value);
-		if (GC_IS_RECURSIVE(obj)) {
-			return CBOR_ERROR_RECURSION;
-		}
 	} else {
 		ht = Z_ARR_P(value);
-		if (GC_IS_RECURSIVE(ht)) {
-			return CBOR_ERROR_RECURSION;
-		}
 	}
 	if (type != HASH_ARRAY) {
 		ht = zend_get_properties_for(value, ZEND_PROP_PURPOSE_JSON);
@@ -441,11 +443,7 @@ static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 		zend_ulong index;
 		zend_string *key;
 		zval *data;
-		if (type != HASH_ARRAY) {
-			GC_TRY_PROTECT_RECURSION(obj);
-		} else {
-			GC_TRY_PROTECT_RECURSION(ht);
-		}
+		Z_PROTECT_RECURSION_P(value);
 		ZEND_HASH_FOREACH_KEY_VAL_IND(ht, index, key, data) {
 			if (!is_list) {
 				if (key) {
@@ -488,11 +486,7 @@ static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 		if (!error && count) {
 			error = CBOR_ERROR_INTERNAL;
 		}
-		if (type != HASH_ARRAY) {
-			GC_TRY_UNPROTECT_RECURSION(obj);
-		} else {
-			GC_TRY_UNPROTECT_RECURSION(ht);
-		}
+		Z_UNPROTECT_RECURSION_P(value);
 	}
 	if (type != HASH_ARRAY) {
 		zend_release_properties(ht);

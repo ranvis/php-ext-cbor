@@ -1,5 +1,5 @@
-#include <Zend/zend_smart_str_public.h>
 #include "di.h"
+#include <Zend/zend_smart_str_public.h>
 
 void cbor_di_write_int(smart_str *buf, uint8_t di_type, uint64_t val);
 void cbor_di_write_indef(smart_str *buf, uint8_t di_type);

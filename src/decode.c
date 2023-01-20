@@ -10,6 +10,8 @@
 #include "types.h"
 #include "utf8.h"
 #include "xzval.h"
+#include <Zend/zend_smart_str.h>
+#include <assert.h>
 
 #define SIZE_INIT_LIMIT  4096
 
@@ -137,7 +139,7 @@ struct stack_item_zv {
 		struct si_value_tag_handled_t {
 			zend_long id;
 			tag_handler_index thi;
-			union si_value_tag_h_value_t{
+			union si_value_tag_h_value_t {
 				srns_item *srns_detached;
 				struct si_tag_shareable_t {
 					zval value;

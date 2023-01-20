@@ -4,9 +4,11 @@
  */
 
 #include "cbor.h"
-#include <Zend/zend_interfaces.h> /* zend_class_serialize_deny */
 #include "codec.h"
 #include "types.h"
+#include <Zend/zend_exceptions.h>
+#include <Zend/zend_interfaces.h>
+#include <assert.h>
 
 #define IS_STR_OWNED(str)  (!ZSTR_IS_INTERNED(str) && GC_REFCOUNT(str) <= 1)  /* eval twice */
 

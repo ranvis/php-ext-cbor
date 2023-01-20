@@ -5,6 +5,8 @@
 
 #include "cbor.h"
 #include "codec.h"
+#include <Zend/zend_exceptions.h>
+#include <assert.h>
 
 /* {{{ proto string cbor_encode(mixed $value, int $flags = CBOR_BYTE, ?array $options = [...])
    Return a CBOR encoded string of a value. */
