@@ -5,6 +5,7 @@
 ### Added
 - Add `'offset'` and `'length'` options to cbor_decode().
 - Add `$offset` and `$length` parameters to Cbor\Decoder::add().
+- `Traversable` is allowed and encoded to `map`.
 ### Changed
 - '`max_size`' on decode is enforced for indefinite-length elements too.
 ### Removed

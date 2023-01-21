@@ -13,6 +13,7 @@
 #include "warn_muted.h"
 #include <ext/date/php_date.h>
 #include "warn_unmuted.h"
+#include <Zend/zend_interfaces.h>
 #include <Zend/zend_smart_str.h>
 #include <assert.h>
 
@@ -42,8 +43,17 @@ enum {
 	EXT_STR_DEC_ISNEG_FN,
 	EXT_STR_DEC_TOSTR_FN,
 
+#if PHP_API_VERSION < 20220829 /* <PHP8.2 */
+	EXT_STR_COUNT,
+#endif
+
 	_EXT_STR_COUNT,
 };
+
+typedef struct {
+	zend_fcall_info fci;
+	zend_fcall_info_cache fcc;
+} enc_ctx_call_info;
 
 typedef struct {
 	cbor_encode_args args;
@@ -57,6 +67,9 @@ typedef struct {
 		zend_class_entry *decimal;
 		zend_class_entry *uri_i;
 	} ce;
+	struct enc_ctx_call {
+		enc_ctx_call_info count;
+	} call;
 	zend_string *str[_EXT_STR_COUNT];
 } enc_context;
 
@@ -78,6 +91,7 @@ static void enc_typed_floatx(enc_context *ctx, zval *ins, int bits);
 static cbor_error enc_tag(enc_context *ctx, zval *ins);
 static void enc_tag_bare(enc_context *ctx, zend_long tag_id);
 static cbor_error enc_serializable(enc_context *ctx, zval *value);
+static cbor_error enc_traversable(enc_context *ctx, zval *value);
 static cbor_error enc_encodeparams(enc_context *ctx, zval *ins);
 
 static void init_srns_stack(enc_context *ctx);
@@ -107,6 +121,11 @@ void php_cbor_minit_encode()
 			goto ENCODED; \
 		} \
 	} while (0);
+#define ENC_CHECK_EXCEPTION()  do {\
+		if (UNEXPECTED(EG(exception))) { \
+			ENC_RESULT(CBOR_ERROR_EXCEPTION); \
+		} \
+	} while (0)
 
 static cbor_error validate_flags(uint32_t flags)
 {
@@ -148,6 +167,9 @@ cbor_error php_cbor_encode(zval *value, zend_string **data, const cbor_encode_ar
 	}
 	if (ctx.ref_lock) {
 		zend_array_destroy(ctx.ref_lock);
+	}
+	if (!Z_ISUNDEF(ctx.call.count.fci.function_name)) {
+		/* release, if allocated string */
 	}
 	for (int i = 0; i < _EXT_STR_COUNT; i++) {
 		if (ctx.str[i]) {
@@ -222,6 +244,8 @@ RETRY:
 			error = enc_encodeparams(ctx, value);
 		} else if (instanceof_function(ce, CBOR_CE(serializable))) {
 			error = enc_serializable(ctx, value);
+		} else if (instanceof_function(ce, zend_ce_traversable)) {
+			error = enc_traversable(ctx, value);
 		} else {
 			if (!ctx->ce.date_i) {
 				ctx->ce.date_i = php_date_get_interface_ce();  /* in core */
@@ -588,6 +612,91 @@ static cbor_error enc_serializable(enc_context *ctx, zval *value)
 	error = enc_zval(ctx, &r_value);
 	Z_UNPROTECT_RECURSION_P(value);
 	zval_ptr_dtor(&r_value);
+	return error;
+}
+
+static cbor_error enc_traversable(enc_context *ctx, zval *value)
+{
+	if (Z_IS_RECURSIVE_P(value)) {
+		return CBOR_ERROR_RECURSION;
+	}
+	Z_PROTECT_RECURSION_P(value);
+	cbor_error error = 0;
+	zend_object_iterator *it = NULL;
+	bool is_indef_length = !zend_is_countable(value);
+	zend_long count;
+	if (is_indef_length) {
+		cbor_di_write_indef(ctx->buf, DI_MAP);
+		count = -1;
+	} else {
+		if (Z_ISUNDEF(ctx->call.count.fci.function_name)) {
+			zval z_count_str;
+#if PHP_API_VERSION < 20220829 /* <PHP8.2 */
+			if (!ctx->str[EXT_STR_COUNT]) {
+				ctx->str[EXT_STR_COUNT] = MAKE_ZSTR("count");
+			}
+			ZVAL_STR(&z_count_str, ctx->str[EXT_STR_COUNT]);
+#else
+			ZVAL_STR(&z_count_str, ZSTR_KNOWN(ZEND_STR_COUNT));
+#endif
+			if (zend_fcall_info_init(&z_count_str, 0, &ctx->call.count.fci, &ctx->call.count.fcc, NULL, NULL) != SUCCESS) {
+				ENC_RESULT(EG(exception) ? CBOR_ERROR_EXCEPTION : CBOR_ERROR_INTERNAL);
+			}
+		}
+		zend_fcall_info *fci = &ctx->call.count.fci;
+		zval z_count;
+		fci->retval = &z_count;
+		fci->params = value;
+		fci->param_count = 1;
+		zend_result call_result = zend_call_function(fci, &ctx->call.count.fcc);
+		zval_ptr_dtor(&z_count); /* Can free safely before accessing as IS_LONG is the only valid type */
+		if (UNEXPECTED(call_result != SUCCESS || EG(exception) || Z_TYPE(z_count) != IS_LONG || Z_LVAL(z_count) < 0)) {
+			ENC_CHECK(EG(exception) ? CBOR_ERROR_EXCEPTION : CBOR_ERROR_INTERNAL);
+		}
+		count = Z_LVAL(z_count);
+		cbor_di_write_int(ctx->buf, DI_MAP, count);
+	}
+	zend_object *obj = Z_OBJ_P(value);
+	zend_class_entry *ce = obj->ce;
+	it = ce->get_iterator(ce, value, 0);
+	ENC_CHECK_EXCEPTION();
+	(*it->funcs->rewind)(it);
+	ENC_CHECK_EXCEPTION();
+	zend_long index = 0;
+	while ((*it->funcs->valid)(it) == SUCCESS) {
+		ENC_CHECK_EXCEPTION();
+		if (!is_indef_length) {
+			if (index == count) {
+				ENC_RESULT(CBOR_ERROR_EXTRANEOUS_DATA);
+			}
+		}
+		zval key;
+		if (it->funcs->get_current_key) {
+			(*it->funcs->get_current_key)(it, &key);
+			ENC_CHECK_EXCEPTION();
+		} else { /* fallback to 0-based index */
+			ZVAL_LONG(&key, index);
+		}
+		index++;
+		ENC_CHECK(enc_zval(ctx, &key));
+		zval *current = (*it->funcs->get_current_data)(it);
+		ENC_CHECK_EXCEPTION();
+		/* CBOR_INT_KEY is not applied here. For traversable keys are not coerced, users can cast freely */
+		ENC_CHECK(enc_zval(ctx, current));
+		(*it->funcs->move_forward)(it);
+		ENC_CHECK_EXCEPTION();
+	}
+	ENC_CHECK_EXCEPTION();
+	if (is_indef_length) {
+		cbor_di_write_break(ctx->buf);
+	} else if (index != count) {
+		ENC_RESULT(CBOR_ERROR_TRUNCATED_DATA);
+	}
+ENCODED:
+	if (it) {
+		zend_iterator_dtor(it);
+	}
+	Z_UNPROTECT_RECURSION_P(value);
 	return error;
 }
 

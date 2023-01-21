@@ -142,9 +142,10 @@ Invalid UTF-8 sequences are represented as byte string fragments inside text str
 
 When encoding classes that implement `Cbor\Serializable`, the encoder will call `cborSerialize()`.
 Implementors may return data structure to serialize the instance, or throw an Exception to stop serializing.
-Classes that does not implement this interface generally cannot be serialized (aside from `stdClass` plain object).
 
-Although some classes such as PSR-7 `UriInterface` are serializable by default as described below, `Serializable` can take precedence.
+Although some classes such as `Traversable` and PSR-7 `UriInterface` are serializable by default as described below, `Serializable` can take precedence.
+
+`stdClass` plain object is serialized to `map` by default.
 
 #### EncodeParams
 
@@ -294,6 +295,14 @@ This object is evaluated as `false` in a boolean context. It is not equal to `nu
 $undefined = Cbor\Undefined::get();
 var_dump($undefined === clone $undefined); // true
 ```
+
+#### PHP `Traversable`s
+
+Classes that implement `Traversable` interface are encoded to `map`.
+
+If the class does not implement `Countable` interface, it is encoded to an indefinite-length `map`.
+
+The `CBOR_INT_KEY` flag does not take effect on encoding `Traversable` objects, and the key is encoded according to the actual type.
 
 
 ## Supported Tags
