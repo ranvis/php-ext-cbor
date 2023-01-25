@@ -470,10 +470,11 @@ static void zv_proc_array_start(dec_context *ctx, uint32_t count)
 	if (ctx->mem->limit && ctx->mem->offset + count > ctx->mem->limit) {
 		RETURN_CB_ERROR(CBOR_ERROR_TRUNCATED_DATA);
 	}
-	array_init_size(&value, ((count > SIZE_INIT_LIMIT) ? SIZE_INIT_LIMIT : (uint32_t)count));
 	if (count) {
+		array_init_size(&value, ((count > SIZE_INIT_LIMIT) ? SIZE_INIT_LIMIT : (uint32_t)count));
 		zv_stack_push_counted(ctx, SI_TYPE_ARRAY, &value, (uint32_t)count);
 	} else {
+		ZVAL_EMPTY_ARRAY(&value);
 		zv_append(ctx, &value);
 		zval_ptr_dtor(&value);
 	}
@@ -496,7 +497,11 @@ static void zv_proc_map_start(dec_context *ctx, uint32_t count)
 		RETURN_CB_ERROR(CBOR_ERROR_TRUNCATED_DATA);
 	}
 	if (ctx->args.flags & CBOR_MAP_AS_ARRAY) {
-		array_init_size(&value, ((count > SIZE_INIT_LIMIT) ? SIZE_INIT_LIMIT : (uint32_t)count));
+		if (count) {
+			array_init_size(&value, ((count > SIZE_INIT_LIMIT) ? SIZE_INIT_LIMIT : (uint32_t)count));
+		} else {
+			ZVAL_EMPTY_ARRAY(&value);
+		}
 	} else {
 		ZVAL_OBJ(&value, zend_objects_new(zend_standard_class_def));
 	}
