@@ -5,6 +5,7 @@
 
 #include "cbor.h"
 #include "codec.h"
+#include "compatibility.h"
 #include "types.h"
 #include <Zend/zend_exceptions.h>
 #include <Zend/zend_interfaces.h>
@@ -283,7 +284,7 @@ PHP_METHOD(Cbor_Decoder, getBuffer)
 void php_cbor_minit_decoder()
 {
 	CBOR_CE(decoder)->create_object = &decoder_create;
-#if PHP_API_VERSION < 20210902 /* <PHP8.1 */
+#if TARGET_PHP_API_LT_81
 	CBOR_CE(decoder)->serialize = zend_class_serialize_deny;
 	CBOR_CE(decoder)->unserialize = zend_class_unserialize_deny;
 #endif

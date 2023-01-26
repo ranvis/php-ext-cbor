@@ -4,8 +4,9 @@
  */
 
 #include "cbor.h"
+#include "compatibility.h"
 
-#if PHP_API_VERSION < 20210902 /* <PHP8.1 */
+#if TARGET_PHP_API_LT_81
 /*
    +----------------------------------------------------------------------+
    | Zend Engine                                                          |

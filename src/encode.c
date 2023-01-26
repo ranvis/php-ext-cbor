@@ -43,7 +43,7 @@ enum {
 	EXT_STR_DEC_ISNEG_FN,
 	EXT_STR_DEC_TOSTR_FN,
 
-#if PHP_API_VERSION < 20220829 /* <PHP8.2 */
+#if TARGET_PHP_API_LT_82
 	EXT_STR_COUNT,
 #endif
 
@@ -631,7 +631,7 @@ static cbor_error enc_traversable(enc_context *ctx, zval *value)
 	} else {
 		if (Z_ISUNDEF(ctx->call.count.fci.function_name)) {
 			zval z_count_str;
-#if PHP_API_VERSION < 20220829 /* <PHP8.2 */
+#if TARGET_PHP_API_LT_82
 			if (!ctx->str[EXT_STR_COUNT]) {
 				ctx->str[EXT_STR_COUNT] = MAKE_ZSTR("count");
 			}
