@@ -309,86 +309,6 @@ The `CBOR_INT_KEY` flag does not take effect on encoding `Traversable` objects, 
 
 Note: In this section, tag names are written as {tag-name} for clarity.
 
-### tag(55799): Self-Described CBOR
-
-Flag:
-- `CBOR_SELF_DESCRIBE`
-  - default: `false`
-
-Constants:
-- `Cbor\Tag::SELF_DESCRIBE`
-- `CBOR_TAG_SELF_DESCRIBE_DATA`
-
-Self-Described CBOR is CBOR data that has this tag for the data.
-This 3-byte binary string (magic pattern) can be used to distinguish CBOR from other data including Unicode text encodings. This is useful if data loader need to identify the format by data itself.
-```php
-$isCbor = str_starts_with($data, CBOR_TAG_SELF_DESCRIBE_DATA);
-```
-
-On encoding if the flag is set, the tag is prepended to the encoded data.
-On decoding if the flag is _not_ set, the tag is skipped even if one exists. If the flag _is_ set, the tag is _retained_ in the decoded value, meaning you need to test if the root is this tag to extract the real content.
-
-If the tag is to be prepended/skipped, it is handled specially and not counted as a `'max_depth'` level.
-
-### tag(256): stringref-namespace, tag(25): stringref
-
-Option:
-- `'string_ref'`:
-  - Encode: default: `false`; values: `bool` | `'explicit'`
-  - Decode: default: `true`; values: `bool`
-
-Constants:
-- `Cbor\Tag::STRING_REF_NS`
-- `Cbor\Tag::STRING_REF`
-
-The tag {stringref} is like a compression, that "references" the string previously appeared inside {stringref-namespace} tag. Note that it differs from PHP's reference to `string`; i.e. _not_ the concept of `$stringRef = &$string`.
-
-On encode, it can save payload size by replacing the string already seen with the tag + index (or at the worst case increase by 3-bytes overall when single-namespaced).
-Note that if smaller payload is desired, it should perform better to apply a data compression instead of this tag.
-
-On decode, the use of tag can save memory of decoded value because PHP can share the identical `string` sequences until one of them is going to be modified (copy-on-write).
-
-For decoding, the option is enabled as `true` by default, while encoding it should be specified explicitly.
-
-If `true` is specified on encoding, data is always wrapped with {stringref-namespace} tag. It initializes the string index table (like compression dictionary) for the content inside the tag.
-The {stringref-namespace} tag added implicitly is handled specially and not counted as `'max_depth'` level.
-Similarly, `'explicit'` makes {stringref} active but the root namespace is not implicitly created, meaning {stringref} is not created on its own.
-
-The use of this tag makes CBOR contextual.
-CBOR data that use {stringref} can be embedded in other CBOR. But data that doesn't use it cannot always be embedded safely in {stringref} CBOR, because it will corrupt reference indices of the following strings.
-(As of now, the extension cannot embed raw CBOR data on encoding though.)
-
-Decoders without the support of this tag cannot decode data using {stringref} correctly.
-It is recommended to explicity enable the `string_ref` option on decoding if you are sure of the use of {stringref}, so that readers of the code will know of it.
-
-### tag(28): shareable, tag(29): sharedref
-
-Option:
-- `'shared_ref'`:
-  - Encode: default: `false`; values: `bool` | `'unsafe_ref'`
-  - Decode: default: `true`; values: `bool` | `'shareable'` | `'unsafe_ref'`
-
-Constants:
-- `Cbor\Tag::SHAREABLE`
-- `Cbor\Tag::SHARED_REF`
-
-The tag {sharedref} can refer the previously-defined data.
-
-If the option is enabled, CBOR maps tagged as {shareable} once decoded into PHP object will share the instance among {sharedref} references. If other type of values like CBOR array is tagged {shareable}, it triggers an error. See other option values for possible workarounds.
-
-The option is enabled by default on decoding.
-
-On encoding, potentially shared PHP objects (i.e. there are variables holding the object somewhere) are tagged {shareable}, and once reused, {sharedref} tag is emitted. A reference to variable is dereferenced.
-
-If `'shareable'` is specified, non-object CBOR values tagged as {shareable} is wrapped into `Cbor\Shareable` object on decoding and the instance is reused on {sharedref} tag. On encoding, an instance of `Cbor\Shareable` is tagged {shareable} regardless of the option value.
-
-If `'unsafe_ref'` is specified, {shareable} tagged data that decoded to non-object becomes PHP `&` reference. On encoding a reference to variable is tagged {shareable} too.
-At first glance it may seem natural to use PHP reference for shared scalars and arrays. But this may cause unwanted side effects when the decoded structure contains references that you don't expect. You replace a single scalar value, and somewhere else is changed too!
-
-Note that decoder's return value (decoding root value) cannot be a PHP reference. Moreover, a reference to a PHP object cannot be described even with this option.
-
-The use of this tag makes CBOR contextual.
-
 ### tag(0): date/time string
 
 Option:
@@ -437,3 +357,87 @@ Constant:
 - `Cbor\Tag::URI`
 
 If the option is enabled, an instance of class that implements PSR-7 `UriInterface` is encoded as a `text string` with {uri} tag.
+
+### tag(55799): Self-Described CBOR
+
+Flag:
+- `CBOR_SELF_DESCRIBE`
+  - default: `false`
+
+Constants:
+- `Cbor\Tag::SELF_DESCRIBE`
+- `CBOR_TAG_SELF_DESCRIBE_DATA`
+
+Self-Described CBOR is CBOR data that has this tag for the data.
+This 3-byte binary string (magic pattern) can be used to distinguish CBOR from other data including Unicode text encodings. This is useful if data loader need to identify the format by data itself.
+```php
+$isCbor = str_starts_with($data, CBOR_TAG_SELF_DESCRIBE_DATA);
+```
+
+On encoding if the flag is set, the tag is prepended to the encoded data.
+On decoding if the flag is _not_ set, the tag is skipped even if one exists. If the flag _is_ set, the tag is _retained_ in the decoded value, meaning you need to test if the root is this tag to extract the real content.
+
+If the tag is to be prepended/skipped, it is handled specially and not counted as a `'max_depth'` level.
+
+### tag(256): stringref-namespace, tag(25): stringref
+
+* This tag is not in the RFC but registerd in the CBOR Tags registry.
+
+Option:
+- `'string_ref'`:
+  - Encode: default: `false`; values: `bool` | `'explicit'`
+  - Decode: default: `true`; values: `bool`
+
+Constants:
+- `Cbor\Tag::STRING_REF_NS`
+- `Cbor\Tag::STRING_REF`
+
+The tag {stringref} is like a compression, that "references" the string previously appeared inside {stringref-namespace} tag. Note that it differs from PHP's reference to `string`; i.e. _not_ the concept of `$stringRef = &$string`.
+
+On encode, it can save payload size by replacing the string already seen with the tag + index (or at the worst case increase by 3-bytes overall when single-namespaced).
+Note that if smaller payload is desired, it should perform better to apply a data compression instead of this tag.
+
+On decode, the use of tag can save memory of decoded value because PHP can share the identical `string` sequences until one of them is going to be modified (copy-on-write).
+
+For decoding, the option is enabled as `true` by default, while encoding it should be specified explicitly.
+
+If `true` is specified on encoding, data is always wrapped with {stringref-namespace} tag. It initializes the string index table (like compression dictionary) for the content inside the tag.
+The {stringref-namespace} tag added implicitly is handled specially and not counted as `'max_depth'` level.
+Similarly, `'explicit'` makes {stringref} active but the root namespace is not implicitly created, meaning {stringref} is not created on its own.
+
+The use of this tag makes CBOR contextual.
+CBOR data that use {stringref} can be embedded in other CBOR. But data that doesn't use it cannot always be embedded safely in {stringref} CBOR, because it will corrupt reference indices of the following strings.
+(As of now, the extension cannot embed raw CBOR data on encoding though.)
+
+Decoders without the support of this tag cannot decode data using {stringref} correctly.
+It is recommended to explicity enable the `string_ref` option on decoding if you are sure of the use of {stringref}, so that readers of the code will know of it.
+
+### tag(28): shareable, tag(29): sharedref
+
+* This tag is not in the RFC but registerd in the CBOR Tags registry.
+
+Option:
+- `'shared_ref'`:
+  - Encode: default: `false`; values: `bool` | `'unsafe_ref'`
+  - Decode: default: `true`; values: `bool` | `'shareable'` | `'unsafe_ref'`
+
+Constants:
+- `Cbor\Tag::SHAREABLE`
+- `Cbor\Tag::SHARED_REF`
+
+The tag {sharedref} can refer the previously-defined data.
+
+If the option is enabled, CBOR maps tagged as {shareable} once decoded into PHP object will share the instance among {sharedref} references. If other type of values like CBOR array is tagged {shareable}, it triggers an error. See other option values for possible workarounds.
+
+The option is enabled by default on decoding.
+
+On encoding, potentially shared PHP objects (i.e. there are variables holding the object somewhere) are tagged {shareable}, and once reused, {sharedref} tag is emitted. A reference to variable is dereferenced.
+
+If `'shareable'` is specified, non-object CBOR values tagged as {shareable} is wrapped into `Cbor\Shareable` object on decoding and the instance is reused on {sharedref} tag. On encoding, an instance of `Cbor\Shareable` is tagged {shareable} regardless of the option value.
+
+If `'unsafe_ref'` is specified, {shareable} tagged data that decoded to non-object becomes PHP `&` reference. On encoding a reference to variable is tagged {shareable} too.
+At first glance it may seem natural to use PHP reference for shared scalars and arrays. But this may cause unwanted side effects when the decoded structure contains references that you don't expect. You replace a single scalar value, and somewhere else is changed too!
+
+Note that decoder's return value (decoding root value) cannot be a PHP reference. Moreover, a reference to a PHP object cannot be described even with this option.
+
+The use of this tag makes CBOR contextual.
