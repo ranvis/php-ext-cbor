@@ -1,18 +1,24 @@
 # Changelog
 
-[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.Y.Z...HEAD
 ## [Unreleased]
+### Added
+### Changed
+### Removed
+### Fixed
+### Security
+### Deprecated
+
+[0.4.3]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.2...v0.4.3
+## [0.4.3] - 2023-01-28
 ### Added
 - Add `'offset'` and `'length'` options to cbor_decode().
 - Add `$offset` and `$length` parameters to Cbor\Decoder::add().
 - `Traversable` is allowed and encoded to `map`.
 ### Changed
 - '`max_size`' on decode is enforced for indefinite-length elements too.
-### Removed
 ### Fixed
 - Fix redundant representation of EDN string if text string has some sort of invalid UTF-8 sequences.
-### Security
-### Deprecated
 
 [0.4.2]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.1...v0.4.2
 ## [0.4.2] - 2022-12-10
