@@ -244,10 +244,9 @@ static zend_result_82 xstring_cast(zend_object *obj, zval *retval, int type)
 	return SUCCESS;
 }
 
-static zend_array *xstring_get_properties_for(zend_object *obj, zend_prop_purpose purpose)
+static bool xstring_copy_properties(zend_object *obj, zend_prop_purpose purpose, zend_array *props)
 {
 	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
-	zend_array *props;
 	zval value;
 	bool view = false;
 	switch (purpose) {
@@ -259,24 +258,33 @@ static zend_array *xstring_get_properties_for(zend_object *obj, zend_prop_purpos
 	case ZEND_PROP_PURPOSE_VAR_EXPORT:
 		break;
 	default:
-		return NULL;
+		return false;
 	}
-	props = zend_new_array(1);
 	ZVAL_STR_COPY(&value, base->str);
 	if (view) {
-		zend_hash_add_new(props, ZSTR_KNOWN(ZEND_STR_VALUE), &value);
+		zend_hash_update(props, ZSTR_KNOWN(ZEND_STR_VALUE), &value);
 	} else {
-		zend_hash_next_index_insert(props, &value);
+		zend_hash_index_update(props, 0, &value);
+	}
+	return true;
+}
+
+static zend_array *xstring_get_properties_for(zend_object *obj, zend_prop_purpose purpose)
+{
+	zend_array *props = zend_new_array(1);
+	if (!xstring_copy_properties(obj, purpose, props)) {
+		zend_array_destroy(props);
+		props = NULL;
 	}
 	return props;
 }
 
 static HashTable *xstring_get_properties(zend_object *obj)
 {
-	if (obj->properties) {
-		zend_array_release(obj->properties);
+	if (!obj->properties) {
+		obj->properties = zend_new_array(1);
 	}
-	obj->properties = xstring_get_properties_for(obj, ZEND_PROP_PURPOSE_ARRAY_CAST);
+	xstring_copy_properties(obj, ZEND_PROP_PURPOSE_ARRAY_CAST, obj->properties);
 	return obj->properties;
 }
 
@@ -606,10 +614,10 @@ size_t cbor_floatx_get_value(zend_object *obj, char *out)
 	return 2;
 }
 
-static zend_array *floatx_get_properties_for(zend_object *obj, zend_prop_purpose purpose)
+static bool floatx_copy_properties(zend_object *obj, zend_prop_purpose purpose, zend_array *props)
 {
+	/* While floatX can have custom properties for now, they are not dumped or restored. */
 	floatx_class *base = CUSTOM_OBJ(floatx_class, obj);
-	zend_array *props;
 	zval zv;
 	bool decode = false;
 	switch (purpose) {
@@ -621,10 +629,8 @@ static zend_array *floatx_get_properties_for(zend_object *obj, zend_prop_purpose
 	case ZEND_PROP_PURPOSE_VAR_EXPORT:
 		break;
 	default:
-		return zend_std_get_properties_for(obj, purpose);
+		return false;
 	}
-	/* While floatX can have custom properties for now, they are not dumped or restored. */
-	props = zend_new_array(1);
 	if (decode) {
 		double value;
 		if (obj->ce == CBOR_CE(float32)) {
@@ -633,22 +639,32 @@ static zend_array *floatx_get_properties_for(zend_object *obj, zend_prop_purpose
 			value = cbor_from_float16(base->v.binary16);
 		}
 		ZVAL_DOUBLE(&zv, value);
-		zend_hash_add_new(props, ZSTR_KNOWN(ZEND_STR_VALUE), &zv);
+		zend_hash_update(props, ZSTR_KNOWN(ZEND_STR_VALUE), &zv);
 	} else {
 		char bin[4];
 		size_t len = cbor_floatx_get_value(obj, bin);
 		ZVAL_STRINGL(&zv, bin, len);
-		zend_hash_next_index_insert(props, &zv);
+		zend_hash_index_update(props, 0, &zv);
+	}
+	return true;
+}
+
+static zend_array *floatx_get_properties_for(zend_object *obj, zend_prop_purpose purpose)
+{
+	zend_array *props = zend_new_array(1);
+	if (!floatx_copy_properties(obj, purpose, props)) {
+		zend_array_destroy(props);
+		props = zend_std_get_properties_for(obj, purpose);
 	}
 	return props;
 }
 
 static HashTable *floatx_get_properties(zend_object *obj)
 {
-	if (obj->properties) {
-		zend_array_release(obj->properties);
+	if (!obj->properties) {
+		obj->properties = zend_new_array(1);
 	}
-	obj->properties = floatx_get_properties_for(obj, ZEND_PROP_PURPOSE_ARRAY_CAST);
+	floatx_copy_properties(obj, ZEND_PROP_PURPOSE_ARRAY_CAST, obj->properties);
 	return obj->properties;
 }
 

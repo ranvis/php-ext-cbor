@@ -6,6 +6,7 @@
 ### Changed
 ### Removed
 ### Fixed
+- Fix infinite loop when array_walk() is applied on CBOR value types.
 ### Security
 ### Deprecated
 
@@ -14,7 +15,7 @@
 ### Added
 - Add `'offset'` and `'length'` options to cbor_decode().
 - Add `$offset` and `$length` parameters to Cbor\Decoder::add().
-- `Traversable` is allowed and encoded to `map`.
+- Add encoding of `Traversable` to `map`.
 ### Changed
 - '`max_size`' on decode is enforced for indefinite-length elements too.
 ### Fixed

@@ -32,6 +32,8 @@ run(function () {
     // cast to string (heap allocated string)
     $instance = new Cbor\Text(substr(rand() . 'abc', -3));
     eq('abc', (string)$instance);
+    // multiple calls to get_properties during iteration
+    array_walk($instance, fn ($v, $k) => true);
 });
 
 ?>
