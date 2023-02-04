@@ -279,10 +279,10 @@ static void *stack_new_item(dec_context *ctx, si_type_t si_type, uint32_t count)
 	stack_item *item = ctx->stack_pool;
 	if (item) {
 		ctx->stack_pool = item->next_item;
+		memset(item, 0, ctx->vt->si_size);
 	} else {
-		item = emalloc(ctx->vt->si_size);
+		item = ecalloc(1, ctx->vt->si_size);
 	}
-	memset(item, 0, ctx->vt->si_size);
 	item->vt = ctx->vt;
 	item->si_type = si_type;
 	item->count = count;
