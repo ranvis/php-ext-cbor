@@ -260,7 +260,7 @@ static bool zv_append_to_tag(dec_context *ctx, xzval *value, stack_item_zv *item
 	stack_pop_item(ctx);
 	stack_free_item(ctx, &item->base);
 	result = zv_append(ctx, &container);
-	zval_ptr_dtor(&container);
+	zval_ptr_dtor_nogc(&container);
 	return result;
 }
 
@@ -404,7 +404,7 @@ static bool zv_append_string_item(dec_context *ctx, zval *value, bool is_text, b
 	}
 	result = zv_append(ctx, value);
 	if (!Z_ISNULL(container)) {
-		zval_ptr_dtor(&container);
+		zval_ptr_dtor_nogc(&container);
 	}
 	return result;
 }
@@ -438,7 +438,7 @@ static void zv_do_xstring(dec_context *ctx, const char *val, uint64_t length, bo
 	}
 	ZVAL_STRINGL_FAST(&value, (const char *)val, (size_t)length);
 	zv_append_string_item(ctx, &value, is_text, false);
-	zval_ptr_dtor(&value);
+	zval_ptr_dtor_str(&value);
 }
 
 static void zv_proc_text_string(dec_context *ctx, const char *val, uint64_t length)
@@ -476,7 +476,7 @@ static void zv_proc_array_start(dec_context *ctx, uint32_t count)
 	} else {
 		ZVAL_EMPTY_ARRAY(&value);
 		zv_append(ctx, &value);
-		zval_ptr_dtor(&value);
+		zval_ptr_dtor_nogc(&value);
 	}
 }
 
@@ -509,7 +509,7 @@ static void zv_proc_map_start(dec_context *ctx, uint32_t count)
 		zv_stack_push_map(ctx, SI_TYPE_MAP, &value, (uint32_t)count);
 	} else {
 		zv_append(ctx, &value);
-		zval_ptr_dtor(&value);
+		zval_ptr_dtor_nogc(&value);
 	}
 }
 
@@ -557,7 +557,7 @@ static void zv_do_floatx(dec_context *ctx, uint32_t raw, int bits)
 	cbor_floatx_set_value(obj, NULL, raw);  /* always succeeds */
 	ZVAL_OBJ(&container, obj);
 	zv_append(ctx, &container);
-	zval_ptr_dtor(&container);
+	zval_ptr_dtor_nogc(&container);
 }
 
 static void zv_proc_float16(dec_context *ctx, uint16_t val)
@@ -612,7 +612,7 @@ static void zv_proc_indef_break(dec_context *ctx, stack_item *item_)
 		zval value;
 		ZVAL_STR(&value, smart_str_extract(&item->v.str));
 		zv_append_string_item(ctx, &value, is_text, true);
-		zval_ptr_dtor(&value);
+		zval_ptr_dtor_str(&value);
 	} else {  /* SI_TYPE_ARRAY, SI_TYPE_MAP, SI_TYPE_TAG, SI_TYPE_TAG_HANDLED */
 		if (UNEXPECTED(item->base.count != 0)  /* definite-length */
 				|| (item->base.si_type == SI_TYPE_MAP && UNEXPECTED(!Z_ISUNDEF(item->v.map.key)))) {  /* value is expected */
