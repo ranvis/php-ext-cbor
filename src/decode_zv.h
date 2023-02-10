@@ -306,7 +306,7 @@ static bool zv_append(dec_context *ctx, xzval *value)
 		return zv_append_to_tag_handled(ctx, value, item);
 	}
 	if (item->base.si_type & SI_TYPE_STRING_MASK) {
-		RETURN_CB_ERROR_B(E_DESC(CBOR_ERROR_SYNTAX, NESTED_INDEF_STRING));
+		RETURN_CB_ERROR_B(E_DESC(CBOR_ERROR_SYNTAX, INDEF_STRING_CHUNK_TYPE));
 	}
 	RETURN_CB_ERROR_B(CBOR_ERROR_SYNTAX);
 }
