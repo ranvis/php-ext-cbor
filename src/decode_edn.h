@@ -10,7 +10,7 @@ typedef struct stack_item_edn {
 	stack_item base;
 	bool indef_appended;
 	uint8_t opt_indent;
-	union edn_si_value_t {
+	union edn_si_value_ {
 		bool map_is_key;
 	} v;
 } stack_item_edn;
@@ -120,20 +120,20 @@ static cbor_error edn_dec_finish(dec_context *ctx, cbor_decode_args *args, cbor_
 	return 0;
 }
 
-static void edn_stack_push_counted(dec_context *ctx, si_type_t si_type, uint32_t count)
+static void edn_stack_push_counted(dec_context *ctx, si_type_code si_type, uint32_t count)
 {
 	stack_item_edn *item = stack_new_item(ctx, si_type, count);
 	item->indef_appended = false;
 	stack_push_item(ctx, &item->base);
 }
 
-static void edn_stack_push_xstring(dec_context *ctx, si_type_t si_type)
+static void edn_stack_push_xstring(dec_context *ctx, si_type_code si_type)
 {
 	stack_item_edn *item = stack_new_item(ctx, si_type, 0);
 	stack_push_item(ctx, &item->base);
 }
 
-static void edn_stack_push_map(dec_context *ctx, si_type_t si_type, uint32_t count)
+static void edn_stack_push_map(dec_context *ctx, si_type_code si_type, uint32_t count)
 {
 	stack_item_edn *item = stack_new_item(ctx, si_type, count);
 	if (count) {
@@ -261,7 +261,7 @@ static void edn_do_xstring(dec_context *ctx, const char *val, uint64_t length, b
 #endif
 	if (item != NULL && item->base.si_type & SI_TYPE_STRING_MASK) {
 		/* indefinite-length string */
-		si_type_t str_si_type = is_text ? SI_TYPE_TEXT : SI_TYPE_BYTE;
+		si_type_code str_si_type = is_text ? SI_TYPE_TEXT : SI_TYPE_BYTE;
 		if (item->base.si_type != str_si_type) {
 			RETURN_CB_ERROR(E_DESC(CBOR_ERROR_SYNTAX, INCONSISTENT_STRING_TYPE));
 		}

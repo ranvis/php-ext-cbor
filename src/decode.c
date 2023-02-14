@@ -81,27 +81,27 @@ typedef enum {
 	SI_TYPE_MAP,
 	SI_TYPE_TAG,
 	SI_TYPE_TAG_HANDLED,
-} si_type_t;
+} si_type_code;
 
 typedef enum {
 	DATA_TYPE_STRING = 1,
-} data_type_t;
+} data_type;
 
 struct stack_item {
 	stack_item *next_item;
 	const decode_vt *vt;
-	si_type_t si_type;
+	si_type_code si_type;
 	uint32_t count;
 	/* ... */
 };
 
 typedef struct stack_item_zv stack_item_zv;
 
-typedef bool (tag_handler_enter_t)(dec_context *ctx, stack_item_zv *item);
-typedef void (tag_handler_data_t)(dec_context *ctx, stack_item_zv *item, data_type_t type, zval *value);
-typedef void (tag_handler_child_t)(dec_context *ctx, stack_item_zv *item, stack_item_zv *self);
-typedef xzval *(tag_handler_exit_t)(dec_context *ctx, xzval *value, stack_item_zv *item, zval *tmp_v);
-typedef void (tag_handler_free_t)(stack_item_zv *item);
+typedef bool (tag_handler_enter_proc)(dec_context *ctx, stack_item_zv *item);
+typedef void (tag_handler_data_proc)(dec_context *ctx, stack_item_zv *item, data_type type, zval *value);
+typedef void (tag_handler_child_proc)(dec_context *ctx, stack_item_zv *item, stack_item_zv *self);
+typedef xzval *(tag_handler_exit_proc)(dec_context *ctx, xzval *value, stack_item_zv *item, zval *tmp_v);
+typedef void (tag_handler_free_proc)(stack_item_zv *item);
 
 enum tag_handler_index_value {
 	THI_NONE = 0,
@@ -115,33 +115,33 @@ enum tag_handler_index_value {
 typedef uint8_t tag_handler_index;
 
 typedef struct {
-	tag_handler_enter_t *h_enter;
-	tag_handler_exit_t *h_exit;
-	tag_handler_free_t *h_free;
-	tag_handler_data_t *h_data;
-	tag_handler_child_t *h_child;
-} tag_handlers_t;
+	tag_handler_enter_proc *h_enter;
+	tag_handler_exit_proc *h_exit;
+	tag_handler_free_proc *h_free;
+	tag_handler_data_proc *h_data;
+	tag_handler_child_proc *h_child;
+} tag_handler_procs;
 
-static tag_handlers_t tag_handlers[THI_COUNT]; /* cannot be const for VC++ */
+static tag_handler_procs tag_handlers[THI_COUNT]; /* cannot be const for VC++ */
 
 struct stack_item_zv {
 	stack_item base;
 	tag_handler_index thi_data;
 	tag_handler_index thi_child[2];
-	union si_value_t {
+	union si_value_ {
 		zval value;
 		smart_str str;
-		struct si_value_map_t {
+		struct si_value_map_ {
 			zval dest; /* extra: count of added elements for indefinite-length */
 			zval key;
 		} map;
 		zend_long tag_id;
-		struct si_value_tag_handled_t {
+		struct si_value_tag_handled_ {
 			zend_long id;
 			tag_handler_index thi;
-			union si_value_tag_h_value_t {
+			union si_value_tag_h_value_ {
 				srns_item *srns_detached;
-				struct si_tag_shareable_t {
+				struct si_tag_shareable_ {
 					zval value;
 					zend_long index;
 				} shareable;
@@ -274,7 +274,7 @@ static void stack_push_item(dec_context *ctx, stack_item *item)
 	ctx->stack_top = item;
 }
 
-static void *stack_new_item(dec_context *ctx, si_type_t si_type, uint32_t count)
+static void *stack_new_item(dec_context *ctx, si_type_code si_type, uint32_t count)
 {
 	stack_item *item = ctx->stack_pool;
 	if (item) {

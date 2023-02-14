@@ -80,20 +80,20 @@ static cbor_error zv_dec_finish(dec_context *ctx, cbor_decode_args *args, cbor_e
 	return error;
 }
 
-static void zv_stack_push_counted(dec_context *ctx, si_type_t si_type, zval *value, uint32_t count)
+static void zv_stack_push_counted(dec_context *ctx, si_type_code si_type, zval *value, uint32_t count)
 {
 	stack_item_zv *item = stack_new_item(ctx, si_type, count);
 	ZVAL_COPY_VALUE(&item->v.value, value);
 	stack_push_item(ctx, &item->base);
 }
 
-static void zv_stack_push_xstring(dec_context *ctx, si_type_t si_type)
+static void zv_stack_push_xstring(dec_context *ctx, si_type_code si_type)
 {
 	stack_item_zv *item = stack_new_item(ctx, si_type, 0);
 	stack_push_item(ctx, &item->base);
 }
 
-static void zv_stack_push_map(dec_context *ctx, si_type_t si_type, zval *value, uint32_t count)
+static void zv_stack_push_map(dec_context *ctx, si_type_code si_type, zval *value, uint32_t count)
 {
 	stack_item_zv *item = stack_new_item(ctx, si_type, count);
 	ZVAL_COPY_VALUE(&item->v.map.dest, value);
@@ -424,7 +424,7 @@ static void zv_do_xstring(dec_context *ctx, const char *val, uint64_t length, bo
 	}
 	if (item != NULL && item->base.si_type & SI_TYPE_STRING_MASK) {
 		/* indefinite-length string */
-		si_type_t str_si_type = is_text ? SI_TYPE_TEXT : SI_TYPE_BYTE;
+		si_type_code str_si_type = is_text ? SI_TYPE_TEXT : SI_TYPE_BYTE;
 		if (item->base.si_type == str_si_type) {
 			if (length) {
 				if (UNEXPECTED(length > SIZE_MAX - smart_str_get_len(&item->v.str))) {
@@ -624,7 +624,7 @@ static void zv_proc_indef_break(dec_context *ctx, stack_item *item_)
 FINALLY: ;
 }
 
-static void tag_handler_str_ref_ns_data(dec_context *ctx, stack_item_zv *item, data_type_t type, zval *value)
+static void tag_handler_str_ref_ns_data(dec_context *ctx, stack_item_zv *item, data_type type, zval *value)
 {
 	if (type == DATA_TYPE_STRING) {
 		HashTable *str_table = ctx->u.zv.srns->str_table;
@@ -835,7 +835,7 @@ static bool tag_handler_shared_ref_enter(dec_context *ctx, stack_item_zv *item)
 	return true;
 }
 
-static tag_handlers_t tag_handlers[THI_COUNT] = {
+static tag_handler_procs tag_handlers[THI_COUNT] = {
 	{
 		NULL,
 	}, {

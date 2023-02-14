@@ -11,7 +11,7 @@
 typedef struct {
 	size_t read_len;
 	size_t req_len;  /* if returned false and req_len == 0, data is truncated */
-	union cbor_di_decoded_t {
+	union cbor_di_decoded_ {
 		uint32_t i32;
 		uint64_t i64;
 		struct {
