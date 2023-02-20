@@ -799,7 +799,7 @@ static cbor_error enc_string_ref(enc_context *ctx, const char *value, size_t len
 	if (!cbor_is_len_string_ref(length, srns->next_index)) {
 		ENC_RESULT(CBOR_STATUS_VALUE_FOLLOWS);
 	}
-	if (srns->next_index == ZEND_LONG_MAX) {  /* until max - 1 for simplicity */
+	if (!(~srns->next_index)) {  /* until max - 1 for simplicity */
 		ENC_RESULT(CBOR_ERROR_INTERNAL);
 	}
 	ZVAL_LONG(&new_index, srns->next_index);
