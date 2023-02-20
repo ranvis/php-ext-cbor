@@ -244,7 +244,7 @@ PHP_METHOD(Cbor_Decoder, hasValue)
 PHP_METHOD(Cbor_Decoder, getValue)
 {
 	decoder_class *base = CUSTOM_OBJ(decoder_class, Z_OBJ_P(ZEND_THIS));
-	zend_bool clear = true;
+	bool clear = true;
 	NO_REENTRANT(base);
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|b", &clear) != SUCCESS) {
 		RETURN_THROWS();
