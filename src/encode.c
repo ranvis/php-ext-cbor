@@ -419,7 +419,7 @@ static bool convert_string_to_int(zend_string *str, uint64_t *value, bool *is_ne
 			break;
 		}
 		dec_value = dec_value * 10 + ch_dec;
-		*ptr++;
+		ptr++;
 	}
 	if (ptr != head_ptr + len) {
 		return false;
@@ -436,7 +436,6 @@ static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 {
 	cbor_error error = 0;
 	HashTable *ht = NULL;
-	zend_object *obj = NULL;
 	zend_ulong count;
 	bool to_text = (ctx->args.flags & CBOR_KEY_TEXT) != 0;
 	bool key_flag_error = !(ctx->args.flags & (CBOR_KEY_BYTE | CBOR_KEY_TEXT));
@@ -446,12 +445,9 @@ static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 	if (Z_IS_RECURSIVE_P(value)) {
 		return CBOR_ERROR_RECURSION;
 	}
-	if (type != HASH_ARRAY) {
-		obj = Z_OBJ_P(value);
-	} else {
+	if (type == HASH_ARRAY) {
 		ht = Z_ARR_P(value);
-	}
-	if (type != HASH_ARRAY) {
+	} else {
 		ht = zend_get_properties_for(value, ZEND_PROP_PURPOSE_JSON);
 	}
 	is_list = type == HASH_ARRAY && zend_array_is_list(ht);
