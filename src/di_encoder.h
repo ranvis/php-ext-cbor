@@ -1,3 +1,8 @@
+/**
+ * @author SATO Kentaro
+ * @license BSD-2-Clause
+ */
+
 #include "di.h"
 #include <Zend/zend_smart_str_public.h>
 

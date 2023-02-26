@@ -1,3 +1,8 @@
+/**
+ * @author SATO Kentaro
+ * @license BSD-2-Clause
+ */
+
 #define CUSTOM_OBJ(obj_type_t, obj)  ((obj_type_t *)((char *)(obj) - XtOffsetOf(obj_type_t, std)))
 #define ZVAL_CUSTOM_OBJ(obj_type_t, zv)  CUSTOM_OBJ(obj_type_t, Z_OBJ_P(zv))
 

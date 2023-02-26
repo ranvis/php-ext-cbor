@@ -1,3 +1,8 @@
+/**
+ * @author SATO Kentaro
+ * @license BSD-2-Clause
+ */
+
 #define DI_MAJOR_TYPE_MASK  0xe0  /* 0b1110_0000 */
 #define DI_MAJOR_TYPE(n)  ((n) << 5)
 

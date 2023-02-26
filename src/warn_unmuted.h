@@ -1,3 +1,8 @@
+/**
+ * @author SATO Kentaro
+ * @license BSD-2-Clause
+ */
+
 #ifndef WARN_MUTE_H
 #error "must be used in pair with warn_muted.h"
 #endif

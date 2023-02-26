@@ -1,3 +1,8 @@
+/**
+ * @author SATO Kentaro
+ * @license BSD-2-Clause
+ */
+
 #include "cbor.h"
 #include "di.h"
 #include "types.h"
