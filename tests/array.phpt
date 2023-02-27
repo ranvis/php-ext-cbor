@@ -17,6 +17,12 @@ run(function () {
     eq($expected, cdec('83018202039f0405ff'));
     eq($expected, cdec('83019f0203ff820405'));
     cdecThrows(CBOR_ERROR_EXTRANEOUS_DATA, '810000');
+
+    // each length size, not canonical
+    eq($expected, cdec('980301820203820405'));
+    eq($expected, cdec('99000301820203820405'));
+    eq($expected, cdec('9a0000000301820203820405'));
+    eq($expected, cdec('9b000000000000000301820203820405'));
 });
 
 ?>

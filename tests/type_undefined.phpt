@@ -45,6 +45,9 @@ run(function () {
     $serialized = 'C:14:"Cbor\Undefined":0:{}';
     eq($serialized, serialize($instance));
     ok($instance === unserialize($serialized));
+    // invalid serialization
+    $serialized = 'C:14:"Cbor\Undefined":1:{a}';
+    throws(Error::class, fn () => unserialize($serialized));
 
     // void context
     Cbor\Undefined::get();

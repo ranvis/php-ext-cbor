@@ -84,10 +84,21 @@ h\'2222222222222222 33333333\'', cdec($data, CBOR_EDN, ['byte_space' => 8, 'byte
         )
         END, cdec($data, CBOR_EDN | CBOR_SELF_DESCRIBE, ['indent' => 2, 'byte_wrap' => 4]));
 
+    // escape sequences
+    $data = "\\\"\t\r\f\n\x08";
+    $data = bin2hex(chr(0x60 + strlen($data)) . $data);
+    eq('"\\\\\\"\\t\\r\\f\\n\\b"', cdec($data, CBOR_EDN));
     // text escaping
     $data = "\u{202e}efas\u{202c}";
     $data = bin2hex(chr(0x60 + strlen($data)) . $data);
     eq('"\u202eefas\u202c"', cdec($data, CBOR_EDN));
+    // single control character
+    $data = "\x00";
+    $data = bin2hex(chr(0x60 + strlen($data)) . $data);
+    eq('"\u0000"', cdec($data, CBOR_EDN));
+    // empty indefinite string
+    eq('\'\'_', cdec('5fff', CBOR_EDN));
+    eq('""_', cdec('7fff', CBOR_EDN));
 });
 
 ?>

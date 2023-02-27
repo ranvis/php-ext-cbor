@@ -10,8 +10,27 @@ require_once __DIR__ . '/common.php';
 run(function () {
     $instance = new Cbor\Text('abc');
     eq('abc', $instance->value);
-    // cast to string
+    // cast
     eq('abc', (string)$instance);
+    //eq('', (int)$instance); // warns. how do you test?
+    // clone
+    $copy = clone $instance;
+    eq((string)$instance, (string)$copy);
+    // change
+    $copy->value = 'def';
+    eq('def', (string)$copy);
+    // isset/empty/unset
+    $copy->value = '';
+    ok(isset($copy->value));
+    ok(empty($copy->value));
+    ok(!isset($copy->value2));
+    throws(Error::class, function () use ($copy) {
+        unset($copy->value);
+    });
+    // encode
+    eq('0x63616263', cenc($instance));
+    $instance2 = new Cbor\Byte('abc');
+    eq('0x43616263', cenc($instance2));
     // serialization
     eq('O:9:"Cbor\\Text":1:{i:0;s:3:"abc";}', serialize($instance));
     eq($instance, unserialize('O:9:"Cbor\\Text":1:{i:0;s:3:"abc";}'));

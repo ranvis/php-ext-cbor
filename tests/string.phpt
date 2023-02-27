@@ -42,6 +42,12 @@ run(function () {
     // indefinite splits UTF-8 sequence in the middle
     cdecThrows(CBOR_ERROR_UTF8, '7f62f09f629880ff', CBOR_TEXT);
 
+    // each length size, not canonical
+    eq('123', cdec('5803313233'));
+    eq('123', cdec('590003313233'));
+    eq('123', cdec('5a00000003313233'));
+    eq('123', cdec('5b0000000000000003313233'));
+
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, '41');
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, '5f');
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, '5f4130');
