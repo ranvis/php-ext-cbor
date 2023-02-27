@@ -30,28 +30,28 @@ run(function () {
     eq(-1000, cdec('3903e7'));
 
     // floats
-	eq(new Cbor\Float16(0.0), cdec('f90000'));
-	eq(new Cbor\Float16(-0.0), cdec('f98000'));
-	eq(new Cbor\Float16(1.0), cdec('f93c00'));
-	eq(1.1, cdec('fb3ff199999999999a'));
-	eq(new Cbor\Float16(1.5), cdec('f93e00'));
-	eq(new Cbor\Float16(65504.0), cdec('f97bff'));
-	eq(new Cbor\Float32(100000.0), cdec('fa47c35000'));
-	eq(new Cbor\Float32(3.4028234663852886e+38), cdec('fa7f7fffff'));
-	eq(1.0e+300, cdec('fb7e37e43c8800759c'));
-	eq(new Cbor\Float16(5.960464477539063e-8), cdec('f90001'));
-	eq(new Cbor\Float16(0.00006103515625), cdec('f90400'));
-	eq(new Cbor\Float16(-4.0), cdec('f9c400'));
-	eq(-4.1, cdec('fbc010666666666666'));
-	eq(new Cbor\Float16(INF), cdec('f97c00'));
-	eq(new Cbor\Float16(NAN), cdec('f97e00'));
-	eq(new Cbor\Float16(-INF), cdec('f9fc00'));
-	eq(new Cbor\Float32(INF), cdec('fa7f800000'));
-	eq(new Cbor\Float32(NAN), cdec('fa7fc00000'));
-	eq(new Cbor\Float32(-INF), cdec('faff800000'));
-	eq(INF, cdec('fb7ff0000000000000'));
-	eq(NAN, cdec('fb7ff8000000000000'));
-	eq(-INF, cdec('fbfff0000000000000'));
+    eq(new Cbor\Float16(0.0), cdec('f90000'));
+    eq(new Cbor\Float16(-0.0), cdec('f98000'));
+    eq(new Cbor\Float16(1.0), cdec('f93c00'));
+    eq(1.1, cdec('fb3ff199999999999a'));
+    eq(new Cbor\Float16(1.5), cdec('f93e00'));
+    eq(new Cbor\Float16(65504.0), cdec('f97bff'));
+    eq(new Cbor\Float32(100000.0), cdec('fa47c35000'));
+    eq(new Cbor\Float32(3.4028234663852886e+38), cdec('fa7f7fffff'));
+    eq(1.0e+300, cdec('fb7e37e43c8800759c'));
+    eq(new Cbor\Float16(5.960464477539063e-8), cdec('f90001'));
+    eq(new Cbor\Float16(0.00006103515625), cdec('f90400'));
+    eq(new Cbor\Float16(-4.0), cdec('f9c400'));
+    eq(-4.1, cdec('fbc010666666666666'));
+    eq(new Cbor\Float16(INF), cdec('f97c00'));
+    eq(new Cbor\Float16(NAN), cdec('f97e00'));
+    eq(new Cbor\Float16(-INF), cdec('f9fc00'));
+    eq(new Cbor\Float32(INF), cdec('fa7f800000'));
+    eq(new Cbor\Float32(NAN), cdec('fa7fc00000'));
+    eq(new Cbor\Float32(-INF), cdec('faff800000'));
+    eq(INF, cdec('fb7ff0000000000000'));
+    eq(NAN, cdec('fb7ff8000000000000'));
+    eq(-INF, cdec('fbfff0000000000000'));
 
     // simple values
     eq(false, cdec('f4'));
@@ -90,22 +90,22 @@ run(function () {
     // maps
     eq((object)[], cdec('a0'));
     eq((object)[1 => 2, 3 => 4], cdec('a201020304', CBOR_INT_KEY));
-	eq((object)['a' => 1, 'b' => [2, 3]], cdec('a26161016162820203', CBOR_TEXT | CBOR_KEY_TEXT));
-	eq(['a', (object)['b' => 'c']], cdec('826161a161626163', CBOR_TEXT | CBOR_KEY_TEXT));
-	eq((object)['a' => 'A', 'b' => 'B', 'c' => 'C', 'd' => 'D', 'e' => 'E'], cdec('a56161614161626142616361436164614461656145', CBOR_TEXT | CBOR_KEY_TEXT));
+    eq((object)['a' => 1, 'b' => [2, 3]], cdec('a26161016162820203', CBOR_TEXT | CBOR_KEY_TEXT));
+    eq(['a', (object)['b' => 'c']], cdec('826161a161626163', CBOR_TEXT | CBOR_KEY_TEXT));
+    eq((object)['a' => 'A', 'b' => 'B', 'c' => 'C', 'd' => 'D', 'e' => 'E'], cdec('a56161614161626142616361436164614461656145', CBOR_TEXT | CBOR_KEY_TEXT));
 
     // indefinite length
-	eq(hex2bin('0102') . hex2bin('030405'), cdec('5f42010243030405ff'));
-	eq('strea' . 'ming', cdec('7f657374726561646d696e67ff', CBOR_TEXT | CBOR_KEY_TEXT));
-	eq([], cdec('9fff'));
-	eq([1, [2, 3], [4, 5]], cdec('9f018202039f0405ffff'));
-	eq([1, [2, 3], [4, 5]], cdec('9f01820203820405ff'));
-	eq([1, [2, 3], [4, 5]], cdec('83018202039f0405ff'));
-	eq([1, [2, 3], [4, 5]], cdec('83019f0203ff820405'));
-	eq(range(1, 25), cdec('9f0102030405060708090a0b0c0d0e0f101112131415161718181819ff'));
-	eq((object)['a' => 1, 'b' => [2, 3]], cdec('bf61610161629f0203ffff', CBOR_TEXT | CBOR_KEY_TEXT));
-	eq(['a', (object)['b' => 'c']], cdec('826161bf61626163ff', CBOR_TEXT | CBOR_KEY_TEXT));
-	eq((object)['Fun' => true, 'Amt' => -2], cdec('bf6346756ef563416d7421ff', CBOR_TEXT | CBOR_KEY_TEXT));
+    eq(hex2bin('0102') . hex2bin('030405'), cdec('5f42010243030405ff'));
+    eq('strea' . 'ming', cdec('7f657374726561646d696e67ff', CBOR_TEXT | CBOR_KEY_TEXT));
+    eq([], cdec('9fff'));
+    eq([1, [2, 3], [4, 5]], cdec('9f018202039f0405ffff'));
+    eq([1, [2, 3], [4, 5]], cdec('9f01820203820405ff'));
+    eq([1, [2, 3], [4, 5]], cdec('83018202039f0405ff'));
+    eq([1, [2, 3], [4, 5]], cdec('83019f0203ff820405'));
+    eq(range(1, 25), cdec('9f0102030405060708090a0b0c0d0e0f101112131415161718181819ff'));
+    eq((object)['a' => 1, 'b' => [2, 3]], cdec('bf61610161629f0203ffff', CBOR_TEXT | CBOR_KEY_TEXT));
+    eq(['a', (object)['b' => 'c']], cdec('826161bf61626163ff', CBOR_TEXT | CBOR_KEY_TEXT));
+    eq((object)['Fun' => true, 'Amt' => -2], cdec('bf6346756ef563416d7421ff', CBOR_TEXT | CBOR_KEY_TEXT));
 });
 
 ?>

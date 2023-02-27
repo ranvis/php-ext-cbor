@@ -33,11 +33,11 @@ run(function () {
     eq('1.5_1', cdec('f93e00', CBOR_EDN));
     eq('65504.0_1', cdec('f97bff', CBOR_EDN));
     eq('100000.0_2', cdec('fa47c35000', CBOR_EDN));
-	if (PHP_VERSION >= 80100) {
-	    eq('3.4028235e+38_2', cdec('fa7f7fffff', CBOR_EDN)); // 3.4028234663852886e+38
-	} else {
-	    eq('3.40282347e+38_2', cdec('fa7f7fffff', CBOR_EDN)); // 3.4028234663852886e+38
-	}
+    if (PHP_VERSION >= 80100) {
+        eq('3.4028235e+38_2', cdec('fa7f7fffff', CBOR_EDN)); // 3.4028234663852886e+38
+    } else {
+        eq('3.40282347e+38_2', cdec('fa7f7fffff', CBOR_EDN)); // 3.4028234663852886e+38
+    }
     eq('1.0e+300_3', cdec('fb7e37e43c8800759c', CBOR_EDN));
     eq('5.9605e-8_1', cdec('f90001', CBOR_EDN)); // 5.960464477539063
     eq('6.1035e-5_1', cdec('f90400', CBOR_EDN)); // 0.00006103515625

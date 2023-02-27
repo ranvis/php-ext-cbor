@@ -57,79 +57,79 @@ run(function () {
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, '9f9f9f9f9fffffffff');
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, '9f819f819f9fffffff');
 
-	// Subkind 1:
-	// Reserved additional information values
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '1c');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '1d');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '1e');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '3c');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '3d');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '3e');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '5c');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '5d');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '5e');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '7c');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '7d');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '7e');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '9c');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '9d');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '9e');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'bc');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'bd');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'be');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'dc');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'dd');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'de');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'fc');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'fd');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'fe');
+    // Subkind 1:
+    // Reserved additional information values
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '1c');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '1d');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '1e');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '3c');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '3d');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '3e');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '5c');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '5d');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '5e');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '7c');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '7d');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '7e');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '9c');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '9d');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '9e');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'bc');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'bd');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'be');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'dc');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'dd');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'de');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'fc');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'fd');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'fe');
 
-	// Subkind 2:
-	// Reserved two-byte encodings of simple values
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'f800');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'f801');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'f818');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'f81f');
+    // Subkind 2:
+    // Reserved two-byte encodings of simple values
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'f800');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'f801');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'f818');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'f81f');
 
-	// Subkind 3:
-	// Indefinite-length string chunks not of the correct type
-	cdecThrows(CBOR_ERROR_SYNTAX, '5f00ff');
-	cdecThrows(CBOR_ERROR_SYNTAX, '5f21ff');
-	cdecThrows(CBOR_ERROR_SYNTAX, '5f6100ff');
-	cdecThrows(CBOR_ERROR_SYNTAX, '5f80ff');
-	cdecThrows(CBOR_ERROR_SYNTAX, '5fa0ff');
-	cdecThrows(CBOR_ERROR_SYNTAX, '5fc000ff');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '5fe0ff');  // e0:reserved
-	cdecThrows(CBOR_ERROR_SYNTAX, '7f4100ff');
+    // Subkind 3:
+    // Indefinite-length string chunks not of the correct type
+    cdecThrows(CBOR_ERROR_SYNTAX, '5f00ff');
+    cdecThrows(CBOR_ERROR_SYNTAX, '5f21ff');
+    cdecThrows(CBOR_ERROR_SYNTAX, '5f6100ff');
+    cdecThrows(CBOR_ERROR_SYNTAX, '5f80ff');
+    cdecThrows(CBOR_ERROR_SYNTAX, '5fa0ff');
+    cdecThrows(CBOR_ERROR_SYNTAX, '5fc000ff');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '5fe0ff');  // e0:reserved
+    cdecThrows(CBOR_ERROR_SYNTAX, '7f4100ff');
 
-	// Indefinite-length string chunks not definite length
-	cdecThrows(CBOR_ERROR_SYNTAX, '5f5f4100ffff');
-	cdecThrows(CBOR_ERROR_SYNTAX, '7f7f6100ffff');
+    // Indefinite-length string chunks not definite length
+    cdecThrows(CBOR_ERROR_SYNTAX, '5f5f4100ffff');
+    cdecThrows(CBOR_ERROR_SYNTAX, '7f7f6100ffff');
 
-	// Subkind 4:
-	// Break occurring on its own outside of an indefinite-length item
-	cdecThrows(CBOR_ERROR_SYNTAX, 'ff');
+    // Subkind 4:
+    // Break occurring on its own outside of an indefinite-length item
+    cdecThrows(CBOR_ERROR_SYNTAX, 'ff');
 
-	// Break occurring in a definite-length array or map or a tag
-	cdecThrows(CBOR_ERROR_SYNTAX, '81ff');
-	cdecThrows(CBOR_ERROR_SYNTAX, '8200ff');
-	cdecThrows(CBOR_ERROR_SYNTAX, 'a1ff');
-	cdecThrows(CBOR_ERROR_SYNTAX, 'a1ff00');
-	cdecThrows(CBOR_ERROR_SYNTAX, 'a100ff', CBOR_INT_KEY);
-	cdecThrows(CBOR_ERROR_SYNTAX, 'a20000ff', CBOR_INT_KEY);
-	cdecThrows(CBOR_ERROR_SYNTAX, '9f81ff');
-	cdecThrows(CBOR_ERROR_SYNTAX, '9f829f819f9fffffffff');
+    // Break occurring in a definite-length array or map or a tag
+    cdecThrows(CBOR_ERROR_SYNTAX, '81ff');
+    cdecThrows(CBOR_ERROR_SYNTAX, '8200ff');
+    cdecThrows(CBOR_ERROR_SYNTAX, 'a1ff');
+    cdecThrows(CBOR_ERROR_SYNTAX, 'a1ff00');
+    cdecThrows(CBOR_ERROR_SYNTAX, 'a100ff', CBOR_INT_KEY);
+    cdecThrows(CBOR_ERROR_SYNTAX, 'a20000ff', CBOR_INT_KEY);
+    cdecThrows(CBOR_ERROR_SYNTAX, '9f81ff');
+    cdecThrows(CBOR_ERROR_SYNTAX, '9f829f819f9fffffffff');
 
-	// Break in an indefinite-length map that would lead to an odd
-	// number of items (break in a value position)
-	cdecThrows(CBOR_ERROR_SYNTAX, 'bf00ff', CBOR_INT_KEY);
-	cdecThrows(CBOR_ERROR_SYNTAX, 'bf000000ff', CBOR_INT_KEY);
+    // Break in an indefinite-length map that would lead to an odd
+    // number of items (break in a value position)
+    cdecThrows(CBOR_ERROR_SYNTAX, 'bf00ff', CBOR_INT_KEY);
+    cdecThrows(CBOR_ERROR_SYNTAX, 'bf000000ff', CBOR_INT_KEY);
 
-	// Subkind 5:
-	// Major type 0, 1, 6 with additional information 31
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '1f');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, '3f');
-	cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'df');
+    // Subkind 5:
+    // Major type 0, 1, 6 with additional information 31
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '1f');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '3f');
+    cdecThrows(CBOR_ERROR_MALFORMED_DATA, 'df');
 });
 
 ?>

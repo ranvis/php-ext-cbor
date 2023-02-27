@@ -28,9 +28,9 @@ run(function () {
     $value = ['000', '@@@', '111', '000', '111', ['000', '111']];
     $data = 'd901009f433030305f43404040ff43313131d81900d819019fd81900d81901ffff';
     eq($value, cdec($data, CBOR_BYTE));
-	// no namespace
+    // no namespace
     cdecThrows(CBOR_ERROR_TAG_SYNTAX, '9f433030305f43404040ff43313131d81900d819019fd81900d81901ffff');
-	// not unsigned int, unassigned number
+    // not unsigned int, unassigned number
     cdecThrows(CBOR_ERROR_TAG_TYPE, 'd901009f43303030d819f6ff');
     cdecThrows(CBOR_ERROR_TAG_VALUE, 'd901009f43303030d81920ff');
     cdecThrows(CBOR_ERROR_TAG_VALUE, 'd901009f43303030d81901ff');
