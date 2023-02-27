@@ -59,6 +59,14 @@ static int undef_unserialize(zval *obj, zend_class_entry *ce, const unsigned cha
 	return SUCCESS;
 }
 
+static void undef_dtor(zend_object *obj)
+{
+	if (obj == CBOR_G(undef_ins)) {
+		CBOR_G(undef_ins) = NULL;
+	}
+	zend_objects_destroy_object(obj);
+}
+
 static zend_object *undef_clone(zend_object *obj)
 {
 	GC_ADDREF(obj);
@@ -106,14 +114,6 @@ PHP_METHOD(Cbor_Undefined, __construct)
 	/* private constructor */
 	zend_throw_error(NULL, "You cannot instantiate %s.", ZSTR_VAL(Z_OBJ_P(ZEND_THIS)->ce->name));
 	RETURN_THROWS();
-}
-
-PHP_METHOD(Cbor_Undefined, __destruct)
-{
-	zend_object *obj = Z_OBJ_P(ZEND_THIS);
-	if (obj == CBOR_G(undef_ins)) {
-		CBOR_G(undef_ins) = NULL;
-	}
 }
 
 zend_object *cbor_get_undef()
@@ -770,6 +770,7 @@ void php_cbor_minit_types()
 	CBOR_CE(undefined)->serialize = undef_serialize;
 	CBOR_CE(undefined)->unserialize = undef_unserialize;
 	memcpy(&undef_handlers, &std_object_handlers, sizeof(zend_object_handlers));
+	undef_handlers.dtor_obj = &undef_dtor;
 	undef_handlers.clone_obj = &undef_clone;
 	undef_handlers.read_property = &undef_read_property;
 	undef_handlers.write_property = &undef_write_property;

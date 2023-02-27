@@ -588,8 +588,8 @@ static void zv_proc_undefined(dec_context *ctx)
 {
 	zval value;
 	ZVAL_OBJ(&value, cbor_get_undef());
-	Z_ADDREF(value);
 	zv_append(ctx, &value);
+	Z_DELREF(value);
 }
 
 static void zv_proc_simple(dec_context *ctx, uint32_t val)
