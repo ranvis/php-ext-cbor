@@ -8,6 +8,7 @@
 ### Fixed
 - Fix infinite loop when array_walk() is applied on CBOR value types.
 - Fix memory leak when decoding undefined value.
+- Fix memory leak when encoding `Traversable`.
 ### Security
 ### Deprecated
 

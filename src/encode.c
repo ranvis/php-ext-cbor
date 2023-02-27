@@ -675,10 +675,12 @@ static cbor_error enc_traversable(enc_context *ctx, zval *value)
 		}
 		index++;
 		ENC_CHECK(enc_zval(ctx, &key));
+		zval_ptr_dtor(&key);
 		zval *current = (*it->funcs->get_current_data)(it);
 		ENC_CHECK_EXCEPTION();
 		/* CBOR_INT_KEY is not applied here. For traversable keys are not coerced, users can cast freely */
 		ENC_CHECK(enc_zval(ctx, current));
+		zval_ptr_dtor(current);
 		(*it->funcs->move_forward)(it);
 		ENC_CHECK_EXCEPTION();
 	}
