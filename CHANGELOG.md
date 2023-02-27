@@ -1,16 +1,20 @@
 # Changelog
 
-[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.Y.Z...HEAD
+[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.4...HEAD
 ## [Unreleased]
 ### Added
 ### Changed
 ### Removed
 ### Fixed
+### Security
+### Deprecated
+
+[0.4.4]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.3...v0.4.4
+## [0.4.4] - 2023-02-28
+### Fixed
 - Fix infinite loop when array_walk() is applied on CBOR value types.
 - Fix memory leak when decoding undefined value.
 - Fix memory leak when encoding `Traversable`.
-### Security
-### Deprecated
 
 [0.4.3]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.2...v0.4.3
 ## [0.4.3] - 2023-01-28
