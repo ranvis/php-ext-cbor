@@ -92,6 +92,9 @@ See `Decoder` class for sequences and progressive decoding.
 
 See "Supported Tags" below for the following options:
 
+- `'datetime'`, `'bignum'`, `'decimal'`:
+  - Encode: default: `true`; values: `bool`
+
 - `'string_ref'`:
   - Encode: default: `false`; values: `bool` | `'explicit'`
   - Decode: default: `true`; values: `bool`
@@ -99,9 +102,6 @@ See "Supported Tags" below for the following options:
 - `'shared_ref'`:
   - Encode: default: `false`; values: `bool` | `'unsafe_ref'`
   - Decode: default: `true`; values: `bool` | `'shareable'` | `'unsafe_ref'`
-
-- `'datetime'`, `'bignum'`, `'decimal'`:
-  - Encode: default: `true`; values: `bool`
 
 Unknown key names are silently ignored.
 
@@ -162,6 +162,7 @@ Note that you don't need to clear conflicting string flags, i.e. `CBOR_TEXT` is 
 You cannot change `'max_depth'` or options that make CBOR data contextual.
 
 Unknown or unsupported key names are silently ignored.
+
 
 #### Decoder
 
@@ -241,7 +242,7 @@ CBOR `float` has three sizes. 64-bit values are translated to PHP `float`.
 32-bit values and 16-bit values are decoded to PHP `Cbor\Float32` and `Cbor\Float16` respectively.
 But if the flags `CBOR_FLOAT32` and/or `CBOR_FLOAT16` are passed, they are decoded to PHP `float`.
 
-When encoding PHP `float`, Values are stored with the smallest possible type if a flag is set and no informational loss is expected.
+When encoding PHP `float`, values are stored with the smallest possible type if a flag is set; therefore no informational loss is expected.
 
 #### Strings
 
@@ -271,7 +272,7 @@ Keys must be of CBOR `string` type.
 
 The extension may accept CBOR `integer` keys if the `CBOR_INT_KEY` flag is passed. Likewise with the flag, it will encode PHP `int` key (including integer numeric `string` keys in the range of CBOR `integer`) as CBOR `integer` key.
 
-If the `CBOR_MAP_NO_DUP_KEY` flag is specified on decoding, a duplicated key will throw an exception instead of overriding the former value. This may happen on valid CBOR `map`; e.g. all of unsigned integer `1`, text string `"1"`, and byte string `b'31'` may be the same key for PHP.
+If the `CBOR_MAP_NO_DUP_KEY` flag is specified on decoding, a duplicated key will throw an exception instead of overriding the former value. This may happen on valid CBOR `map`; e.g. all of unsigned integer `1`, text string `"1"`, and byte string `'1'` may be the same key for PHP.
 
 #### Tags
 
@@ -381,7 +382,7 @@ If the tag is to be prepended/skipped, it is handled specially and not counted a
 
 ### tag(256): stringref-namespace, tag(25): stringref
 
-* This tag is not in the RFC but registerd in the CBOR Tags registry.
+\* This tag is not in the RFC but registerd in the CBOR Tags registry.
 
 Option:
 - `'string_ref'`:
@@ -414,7 +415,7 @@ It is recommended to explicity enable the `string_ref` option on decoding if you
 
 ### tag(28): shareable, tag(29): sharedref
 
-* This tag is not in the RFC but registerd in the CBOR Tags registry.
+\* This tag is not in the RFC but registerd in the CBOR Tags registry.
 
 Option:
 - `'shared_ref'`:
