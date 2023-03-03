@@ -168,7 +168,7 @@ void php_cbor_throw_error(cbor_error error, bool has_arg, size_t arg)
 			DESC_MSG("Object property name starting with NUL character is reserved. Specify flag CBOR_MAP_AS_ARRAY and decode map into array to circumvent this");
 		}
 		break;
-	case CBOR_ERROR_UNSUPPORTED_KEY_SIZE:
+	case CBOR_ERROR_UNSUPPORTED_KEY_SIZE:  /* bogus error? */
 		message = "Unsupported size of data for key";
 		break;
 	case CBOR_ERROR_TRUNCATED_DATA:

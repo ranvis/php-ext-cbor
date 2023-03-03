@@ -291,7 +291,7 @@ static bool zv_append(dec_context *ctx, xzval *value)
 	if (item->base.si_type & SI_TYPE_STRING_MASK) {
 		RETURN_CB_ERROR_B(E_DESC(CBOR_ERROR_SYNTAX, INDEF_STRING_CHUNK_TYPE));
 	}
-	RETURN_CB_ERROR_B(CBOR_ERROR_SYNTAX);
+	RETURN_CB_ERROR_B(CBOR_ERROR_INTERNAL);
 }
 
 #if -(ZEND_LONG_MIN + 1) != ZEND_LONG_MAX

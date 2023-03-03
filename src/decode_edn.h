@@ -218,7 +218,7 @@ static bool edn_append(dec_context *ctx, const char *str, size_t len)
 	if (item->base.si_type & SI_TYPE_STRING_MASK) {
 		return true;
 	}
-	RETURN_CB_ERROR_B(CBOR_ERROR_SYNTAX);
+	RETURN_CB_ERROR_B(CBOR_ERROR_INTERNAL);
 }
 
 static void edn_proc_uint64(dec_context *ctx, uint64_t val)
