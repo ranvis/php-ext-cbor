@@ -111,9 +111,6 @@ static cbor_error METHOD(dec_item)(const uint8_t *data, size_t len, cbor_di_deco
 		if (UNEXPECTED(item == NULL)) {
 			THROW_CB_ERROR(E_DESC(CBOR_ERROR_SYNTAX, BREAK_UNDERFLOW));
 		}
-		if (UNEXPECTED(!item->si_type)) {
-			THROW_CB_ERROR(E_DESC(CBOR_ERROR_SYNTAX, BREAK_UNEXPECTED));
-		}
 		METHOD(proc_indef_break)(ctx, item);
 		stack_free_item(ctx, item);
 		break;

@@ -363,9 +363,6 @@ cbor_error php_cbor_decode_process(dec_context *ctx)
 		ctx->skip_self_desc = false;
 	}
 	error = decode_nested(ctx);
-	if (ctx->skip_self_desc && error != CBOR_ERROR_TRUNCATED_DATA) {
-		ctx->skip_self_desc = false;
-	}
 FINALLY:
 	if (error) {
 		cbor_fragment *mem = ctx->mem;

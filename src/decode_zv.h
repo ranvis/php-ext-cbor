@@ -63,13 +63,9 @@ static void zv_si_pop(dec_context *ctx, stack_item *item)
 static cbor_error zv_dec_finish(dec_context *ctx, cbor_decode_args *args, cbor_error error, zval *value)
 {
 	if (!error) {
-		if (EXPECTED(Z_TYPE(ctx->u.zv.root) != IS_REFERENCE)) {
-			ZVAL_COPY_VALUE(value, &ctx->u.zv.root);
-		} else {
-			zval *tmp = &ctx->u.zv.root;
-			ZVAL_DEREF(tmp);
-			ZVAL_COPY(value, tmp);
-			zval_ptr_dtor(&ctx->u.zv.root);
+		ZVAL_COPY_VALUE(value, &ctx->u.zv.root);
+		if (UNEXPECTED(Z_TYPE_P(value) == IS_REFERENCE)) {
+			zend_unwrap_reference(value);
 		}
 	} else {
 		args->error_arg = ctx->args.error_arg;
@@ -202,16 +198,7 @@ static bool zv_append_to_map(dec_context *ctx, xzval *value, stack_item_zv *item
 				&& zend_std_has_property(Z_OBJ(item->v.map.dest), Z_STR(item->v.map.key), ZEND_PROPERTY_EXISTS, NULL)) {
 			RETURN_CB_ERROR_B(CBOR_ERROR_DUPLICATE_KEY);
 		}
-		if (EXPECTED(Z_TYPE_P(value) != IS_REFERENCE)) {
-			zend_std_write_property(Z_OBJ(item->v.map.dest), Z_STR(item->v.map.key), value, NULL);
-		} else {
-			zval *dest = zend_std_get_property_ptr_ptr(Z_OBJ(item->v.map.dest), Z_STR(item->v.map.key), BP_VAR_W, NULL);
-			if (dest == NULL) {
-				RETURN_CB_ERROR_B(CBOR_ERROR_INTERNAL);
-			}
-			zval_ptr_dtor(dest);
-			ZVAL_COPY(dest, value);
-		}
+		zend_std_write_property(Z_OBJ(item->v.map.dest), Z_STR(item->v.map.key), value, NULL);
 	} else {  /* IS_ARRAY */
 		if (Z_TYPE(item->v.map.key) == IS_LONG) {
 			zend_ulong index = (zend_ulong)Z_LVAL(item->v.map.key);
