@@ -68,8 +68,7 @@ static cbor_error zv_dec_finish(dec_context *ctx, cbor_decode_args *args, cbor_e
 		} else {
 			zval *tmp = &ctx->u.zv.root;
 			ZVAL_DEREF(tmp);
-			ZVAL_COPY_VALUE(value, tmp);
-			Z_TRY_ADDREF_P(value);
+			ZVAL_COPY(value, tmp);
 			zval_ptr_dtor(&ctx->u.zv.root);
 		}
 	} else {
@@ -156,8 +155,7 @@ static bool zv_append_to_map(dec_context *ctx, xzval *value, stack_item_zv *item
 			ZVAL_COPY_VALUE(&item->v.map.key, value);
 			break;
 		case IS_STRING:
-			ZVAL_COPY_VALUE(&item->v.map.key, value);
-			Z_TRY_ADDREF_P(value);
+			ZVAL_COPY(&item->v.map.key, value);
 			break;
 		case IS_NULL:
 			RETURN_CB_ERROR_B(E_DESC(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, NULL));
@@ -211,9 +209,8 @@ static bool zv_append_to_map(dec_context *ctx, xzval *value, stack_item_zv *item
 			if (dest == NULL) {
 				RETURN_CB_ERROR_B(CBOR_ERROR_INTERNAL);
 			}
-			Z_TRY_ADDREF_P(value);
 			zval_ptr_dtor(dest);
-			ZVAL_COPY_VALUE(dest, value);
+			ZVAL_COPY(dest, value);
 		}
 	} else {  /* IS_ARRAY */
 		if (Z_TYPE(item->v.map.key) == IS_LONG) {
@@ -291,8 +288,7 @@ static bool zv_append(dec_context *ctx, xzval *value)
 		if (XZ_ISXXINT_P(value)) {
 			RETURN_CB_ERROR_B(E_DESC(CBOR_ERROR_UNSUPPORTED_VALUE, INT_RANGE));
 		}
-		Z_TRY_ADDREF_P(value);
-		ZVAL_COPY_VALUE(&ctx->u.zv.root, value);
+		ZVAL_COPY(&ctx->u.zv.root, value);
 		return true;
 	}
 	switch (item->base.si_type) {
@@ -703,8 +699,7 @@ static xzval *tag_handler_str_ref_exit(dec_context *ctx, xzval *value, stack_ite
 		RETURN_CB_ERROR_V(value, E_DESC(CBOR_ERROR_TAG_VALUE, STR_REF_RANGE));
 	}
 	assert(Z_TYPE_P(value) == IS_LONG);
-	Z_ADDREF_P(str);
-	ZVAL_COPY_VALUE(tmp_v, str);
+	ZVAL_COPY(tmp_v, str);
 	return tmp_v;
 }
 
@@ -758,9 +753,8 @@ static xzval *tag_handler_shareable_exit(dec_context *ctx, xzval *value, stack_i
 		/* child handler is not called */
 		if (Z_TYPE_P(value) == IS_OBJECT || ctx->args.shared_ref == OPT_UNSAFE_REF) {
 			if (Z_TYPE_P(value) != IS_OBJECT) {
-				Z_TRY_ADDREF_P(value);
 				real_v = tmp_v;
-				ZVAL_COPY_VALUE(real_v, value);
+				ZVAL_COPY(real_v, value);
 				ZVAL_MAKE_REF(real_v);
 			} else {
 				real_v = value;
@@ -787,8 +781,7 @@ static xzval *tag_handler_shareable_exit(dec_context *ctx, xzval *value, stack_i
 		} else if (Z_TYPE_P(real_v) == IS_REFERENCE) {
 			zval *shareable_ref = real_v;
 			ZVAL_DEREF(shareable_ref);
-			ZVAL_COPY_VALUE(shareable_ref, value);  /* move into ref content */
-			Z_TRY_ADDREF_P(value);
+			ZVAL_COPY(shareable_ref, value);  /* move into ref content */
 		}
 	}
 	Z_ADDREF_P(real_v);  /* returning */
