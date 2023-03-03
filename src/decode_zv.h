@@ -706,14 +706,14 @@ static void tag_handler_shareable_child(dec_context *ctx, stack_item_zv *item, s
 	assert(Z_TYPE(self->v.tag_h.v.shareable.value) == IS_NULL);
 	if (item->base.si_type == SI_TYPE_MAP && Z_TYPE(item->v.map.dest) == IS_OBJECT) {
 		real_v = &item->v.map.dest;
-		ZVAL_COPY_VALUE(&self->v.tag_h.v.shareable.value, real_v);
+		ZVAL_COPY(&self->v.tag_h.v.shareable.value, real_v);
 	} else {
 		if (ctx->args.shared_ref == OPT_SHAREABLE) {
-			ZVAL_TRUE(&self->v.tag_h.v.shareable.value);
-			if (!create_value_object(&tmp_v, &self->v.tag_h.v.shareable.value, CBOR_CE(shareable))) {
+			ZVAL_TRUE(&tmp_v);
+			if (!create_value_object(&self->v.tag_h.v.shareable.value, &tmp_v, CBOR_CE(shareable))) {
 				RETURN_CB_ERROR(CBOR_ERROR_INTERNAL);
 			}
-			real_v = &tmp_v;
+			real_v = &self->v.tag_h.v.shareable.value;
 		} else if (ctx->args.shared_ref == OPT_UNSAFE_REF) {
 			ZVAL_UNDEF(&tmp_v);
 			real_v = &self->v.tag_h.v.shareable.value;
@@ -725,8 +725,6 @@ static void tag_handler_shareable_child(dec_context *ctx, stack_item_zv *item, s
 	if (zend_hash_index_update(ctx->u.zv.refs, self->v.tag_h.v.shareable.index, real_v) == NULL) {
 		zval_ptr_dtor(real_v);
 		RETURN_CB_ERROR(CBOR_ERROR_INTERNAL);
-	} else {
-		Z_ADDREF_P(real_v);
 	}
 }
 
@@ -760,18 +758,20 @@ static xzval *tag_handler_shareable_exit(dec_context *ctx, xzval *value, stack_i
 			}
 			RETURN_CB_ERROR_V(value, CBOR_ERROR_INTERNAL);
 		}
+		Z_ADDREF_P(real_v);
 	} else {
 		real_v = tmp_v;
-		ZVAL_COPY_VALUE(real_v, &item->v.tag_h.v.shareable.value);
-		if (Z_TYPE_P(real_v) == IS_TRUE) {
-			zend_update_property(CBOR_CE(shareable), Z_OBJ_P(real_v), ZEND_STRL("value"), value);
-		} else if (Z_TYPE_P(real_v) == IS_REFERENCE) {
+		ZVAL_COPY(real_v, &item->v.tag_h.v.shareable.value);
+		if (ctx->args.shared_ref == OPT_SHAREABLE) {
+			assert(Z_TYPE_P(real_v) == IS_OBJECT);
+			zend_update_property_ex(CBOR_CE(shareable), Z_OBJ_P(real_v), ZSTR_KNOWN(ZEND_STR_VALUE), value);
+		} else if (ctx->args.shared_ref == OPT_UNSAFE_REF) {
+			assert(Z_TYPE_P(real_v) == IS_REFERENCE);
 			zval *shareable_ref = real_v;
 			ZVAL_DEREF(shareable_ref);
 			ZVAL_COPY(shareable_ref, value);  /* move into ref content */
 		}
 	}
-	Z_ADDREF_P(real_v);  /* returning */
 	return real_v;
 }
 

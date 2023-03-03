@@ -7,6 +7,7 @@
 ### Removed
 ### Fixed
 ### Security
+- Fix crash when decoding some type with `'shared_ref'` => `'shareable'`.
 ### Deprecated
 
 [0.4.4]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.3...v0.4.4
