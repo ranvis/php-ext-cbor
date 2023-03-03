@@ -25,6 +25,7 @@ run(function () {
     $instance->value = 12.0;
     eq(12.0, (float)$instance);
     eq(12.0, $instance->value);
+    eq(1, (int)$instance); // Warning; direct cast to int is unsupported!
     $instance->value = INF;
     eq(INF, (float)$instance);
     $instance->value = -INF;
@@ -52,9 +53,12 @@ run(function () {
     eq($instance, eval('return ' . var_export($instance, true) . ';'));
     $instance->value = 1.5;
     eq(['value' => 1.5], get_object_vars($instance));
+    throws(TypeError::class, fn () => Cbor\Float32::__set_state(true));
+    throws(Error::class, fn () => Cbor\Float32::__set_state([]));
     // invalid type
     throws(TypeError::class, fn () => new Cbor\Float32('abcd'));
     throws(TypeError::class, fn () => Cbor\Float32::fromBinary([]));
+    throws(ValueError::class, fn () => Cbor\Float32::fromBinary('ab'));
     throws(TypeError::class, function () use ($instance) {
         $instance->value = false;
     });
@@ -83,5 +87,6 @@ run(function () {
 });
 
 ?>
---EXPECT--
+--EXPECTF--
+Warning: Object of class Cbor\Float16 could not be converted to int in %s on line %d
 Done.

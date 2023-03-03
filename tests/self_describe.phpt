@@ -22,6 +22,7 @@ run(function () {
     eq('0x' . $nullWithSd, cenc(null, CBOR_SELF_DESCRIBE));
 
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, bin2hex(CBOR_SELF_DESCRIBE_DATA));
+    cdecThrows(CBOR_ERROR_TRUNCATED_DATA, bin2hex(substr(CBOR_SELF_DESCRIBE_DATA, 0, -1)));
 
 });
 

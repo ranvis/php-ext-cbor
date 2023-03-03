@@ -26,15 +26,27 @@ run(function () {
     eq($value[0][0], false);
 
     $sh = new Cbor\Shareable('');
-    eq([$sh, $sh], cdec('82d81c40d81d00', options: ['shared_ref' => 'shareable']));
+    eq([$sh, $sh, $sh], $dec = cdec('83d81c40d81d00d81d00', options: ['shared_ref' => 'shareable']));
+    ok($dec[0] === $dec[1]);
+    $sh = new Cbor\Shareable([0]);
+    eq([$sh, $sh, $sh], $dec = cdec('83d81c8100d81d00d81d00', options: ['shared_ref' => 'shareable']));
+    ok($dec[0] === $dec[1]);
+    $sh = [0];
+    eq([$sh, $sh, $sh], $dec = cdec('83d81c8100d81d00d81d00', options: ['shared_ref' => 'unsafe_ref']));
+    $dec[0][0] = 1;
+    eq(1, $dec[1][0]);
+
     eq('', cdec('d81c40', options: ['shared_ref' => 'unsafe_ref']));
 
     cdecThrows(CBOR_ERROR_TAG_SYNTAX, 'd81cd81c00', options: ['shared_ref' => 'shareable']);
     cdecThrows(CBOR_ERROR_TAG_SYNTAX, 'd81cd81c00', options: ['shared_ref' => 'unsafe_ref']);
+    cdecThrows(CBOR_ERROR_INVALID_OPTIONS, 'd81cd81c00', options: ['shared_ref' => 'foo']);
+    cdecThrows(CBOR_ERROR_INVALID_OPTIONS, 'd81cd81c00', options: ['shared_ref' => null]);
     cdecThrows(CBOR_ERROR_TAG_TYPE, '83d81c80d81d6080', options: ['shared_ref' => 'shareable']);
     cdecThrows(CBOR_ERROR_TAG_TYPE, '83d81c80d81d6080', options: ['shared_ref' => 'unsafe_ref']);
     cdecThrows(CBOR_ERROR_TAG_TYPE, '83d81c80d81d2080', options: ['shared_ref' => true]);
     cdecThrows(CBOR_ERROR_TAG_TYPE, '83d81c8100d81d2080', options: ['shared_ref' => true]);
+    cdecThrows(CBOR_ERROR_TAG_VALUE, 'd81d20', options: ['shared_ref' => true]);
     cdecThrows(CBOR_ERROR_TAG_VALUE, '83d81d00d81c8080', options: ['shared_ref' => true]);
 
     cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a1d81c4140d81d00', options: ['shared_ref' => 'shareable']);
@@ -68,6 +80,7 @@ run(function () {
     // redundant shareable
     eq('0x81a0', cenc([new stdClass()], options: ['shared_ref' => true]));
     eq('0x81d81ca0', cenc([$tmp = new stdClass()], options: ['shared_ref' => true]));
+    eq(new Cbor\Shareable(1), cdec('d81c01', options: ['shared_ref' => 'shareable']));
 
     // Shareable is always shared
     $sh = new Cbor\Shareable('123');

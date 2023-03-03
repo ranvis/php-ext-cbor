@@ -23,6 +23,13 @@ run(function () {
     eq($expected, cdec('99000301820203820405'));
     eq($expected, cdec('9a0000000301820203820405'));
     eq($expected, cdec('9b000000000000000301820203820405'));
+
+    // list (repackable)
+    $list = [3 => 3, 0 => 0, 1 => 1, 2 => 2];
+    unset($list[3]);
+    eq('0x83000102', cenc($list));
+
+    cdecThrows(CBOR_ERROR_UNSUPPORTED_SIZE, '9b0000000100000000');
 });
 
 ?>

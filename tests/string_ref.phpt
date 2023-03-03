@@ -24,6 +24,9 @@ run(function () {
     $value[3] = new Cbor\Tag(Cbor\Tag::STRING_REF_NS, $value[3]);
     eq('0x' . $data, cenc($value, CBOR_TEXT, ['string_ref' => true]));
 
+    // to-object
+    $str = new Cbor\Byte('000');
+    eq([$str, $str], cdec('d901008243303030d81900', 0));
     // indefinite-string
     $value = ['000', '@@@', '111', '000', '111', ['000', '111']];
     $data = 'd901009f433030305f43404040ff43313131d81900d819019fd81900d81901ffff';

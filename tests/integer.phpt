@@ -63,6 +63,12 @@ run(function () {
         cdecThrows(CBOR_ERROR_UNSUPPORTED_VALUE, '3b8000000000000000');
         cdecThrows(CBOR_ERROR_UNSUPPORTED_VALUE, '1bffffffffffffffff');
         cdecThrows(CBOR_ERROR_UNSUPPORTED_VALUE, '3bffffffffffffffff');
+
+        // each type has its own error handling for int overflow
+        cdecThrows(CBOR_ERROR_UNSUPPORTED_VALUE, '811b8000000000000000'); // array
+        cdecThrows(CBOR_ERROR_UNSUPPORTED_VALUE, 'a141311b8000000000000000'); // map
+        cdecThrows(CBOR_ERROR_UNSUPPORTED_VALUE, 'c61b8000000000000000'); // tag
+        cdecThrows(CBOR_ERROR_UNSUPPORTED_VALUE, 'd81c1b8000000000000000', options: ['shared_ref' => 'shareable']); // tag shareable
     } else {
         cdecThrows(CBOR_ERROR_UNSUPPORTED_VALUE, '1a80000000');
         cdecThrows(CBOR_ERROR_UNSUPPORTED_VALUE, '3a80000000');

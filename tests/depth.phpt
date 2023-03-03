@@ -11,6 +11,9 @@ run(function () {
     $data = '00';
     $value = cdec($data, options: ['max_depth' => 0]);
     eq('0x' . $data, cenc($value, options: ['max_depth' => 0]));
+    cdecThrows(CBOR_ERROR_INVALID_OPTIONS, $data, options: ['max_depth' => -1]);
+    cdecThrows(CBOR_ERROR_INVALID_OPTIONS, $data, options: ['max_depth' => 16777216]);
+    cdecThrows(CBOR_ERROR_INVALID_OPTIONS, $data, options: ['max_depth' => true]);
 
     $data = 'd82600';
     cdecThrows(CBOR_ERROR_DEPTH, $data, options: ['max_depth' => 0]);

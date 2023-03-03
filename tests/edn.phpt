@@ -11,6 +11,7 @@ run(function () {
     $data = '9f404201026443424f52438090a001827f657374726561646d696e67fffa47c35000a1f97e00f4bf82f6d5826161bf61626163fff5fff8f0ff';
     $diag = '[_ h\'\', h\'0102\', "CBOR", h\'8090a0\', 1, [(_ "strea", "ming"), 100000.0_2], {NaN_1: false}, {_ [null, 21(["a", {_ "b": "c"}])]: true}, simple(240)]';
     eq($diag, cdec($data, CBOR_EDN));
+    eq($diag, cdec($data, CBOR_EDN, ['indent' => false]));
     eq(str_replace(' ', '', $diag), cdec($data, CBOR_EDN, ['space' => false]));
     $diag = <<<'END'
         [_
@@ -49,15 +50,19 @@ run(function () {
     cdecThrows(CBOR_ERROR_INVALID_OPTIONS, $data, CBOR_EDN, ['indent' => 30]);
     cdecThrows(CBOR_ERROR_INVALID_OPTIONS, $data, CBOR_EDN, ['space' => 4]);
     cdecThrows(CBOR_ERROR_INVALID_OPTIONS, $data, CBOR_EDN, ['indent' => ">"]);
+    cdecThrows(CBOR_ERROR_INVALID_OPTIONS, $data, CBOR_EDN, ['indent' => true]);
 
     // byte_space, byte_wrap
     $data = '581c00000000000000001111111111111111222222222222222233333333';
     eq('h\'00000000000000001111111111111111222222222222222233333333\'', cdec($data, CBOR_EDN));
+    eq('h\'00000000000000001111111111111111222222222222222233333333\'', cdec($data, CBOR_EDN, ['byte_wrap' => false]));
+    cdecThrows(CBOR_ERROR_INVALID_OPTIONS, $data, CBOR_EDN, ['byte_wrap' => true]);
     eq('h\'00 00 00 00 00 00 00 00 11 11 11 11 11 11 11 11 22 22 22 22 22 22 22 22 33 33 33 33\'', cdec($data, CBOR_EDN, ['byte_space' => 1]));
     eq('h\'00000000 00000000  11111111 11111111  22222222 22222222  33333333\'', cdec($data, CBOR_EDN, ['byte_space' => 4 | 8]));
     eq('h\'0000000000000000 1111111111111111\'
 h\'2222222222222222 33333333\'', cdec($data, CBOR_EDN, ['byte_space' => 8, 'byte_wrap' => 16, 'indent' => 2]));
     eq('h\'00000000000000\' h\'00111111111111\' h\'11112222222222\' h\'22222233333333\'', cdec($data, CBOR_EDN, ['byte_space' => 8, 'byte_wrap' => 7]));
+    cdecThrows(CBOR_ERROR_INVALID_OPTIONS, $data, CBOR_EDN, ['byte_space' => ~0]);
     cdecThrows(CBOR_ERROR_INVALID_OPTIONS, $data, CBOR_EDN, ['byte_space' => false]);
     cdecThrows(CBOR_ERROR_INVALID_OPTIONS, $data, CBOR_EDN, ['byte_wrap' => 0]);
 
@@ -99,6 +104,11 @@ h\'2222222222222222 33333333\'', cdec($data, CBOR_EDN, ['byte_space' => 8, 'byte
     // empty indefinite string
     eq('\'\'_', cdec('5fff', CBOR_EDN));
     eq('""_', cdec('7fff', CBOR_EDN));
+
+    // inconsistent string type
+    eq(' /ERROR:' . CBOR_ERROR_SYNTAX . '/', cdec('5f60ff', CBOR_EDN));
+    // break in definite length
+    eq('[ /ERROR:' . CBOR_ERROR_SYNTAX . '/', cdec('81ff', CBOR_EDN));
 });
 
 ?>

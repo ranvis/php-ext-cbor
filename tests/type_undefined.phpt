@@ -40,6 +40,15 @@ run(function () {
     });
     throws(Error::class, fn () => $x = &$instance->abc);
     throws(Error::class, fn () => new Cbor\Undefined());
+    $ctor = (new ReflectionClass(Cbor\Undefined::class))->getMethod('__construct');
+    ok($ctor->isPrivate());
+    if (PHP_VERSION_ID < 80100) {
+        $ctor->setAccessible(true);
+    }
+    throws(Error::class, fn () => $ctor->invoke(Cbor\Undefined::get()));
+    eq(1, (int)$instance);  // Warning; Same as (int)new stdClass
+
+    ok(!isset($instance->foo));
 
     // uniqueness for serialization
     $serialized = 'C:14:"Cbor\Undefined":0:{}';
@@ -56,5 +65,6 @@ run(function () {
 });
 
 ?>
---EXPECT--
+--EXPECTF--
+Warning: Object of class Cbor\Undefined could not be converted to int in %s on line %d
 Done.

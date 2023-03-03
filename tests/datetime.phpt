@@ -10,8 +10,10 @@ require_once __DIR__ . '/common.php';
 run(function () {
     // RFC 8949 example
     $dt = new DateTimeImmutable('2013-03-21T20:04:00Z');
-    eq('0xc074323031332d30332d32315432303a30343a30305a', cenc($dt, CBOR_BYTE));
-    eq('0xc074323031332d30332d32315432303a30343a30305a', cenc($dt, CBOR_TEXT));
+    $encoded = '0xc074323031332d30332d32315432303a30343a30305a';
+    eq($encoded, cenc($dt, CBOR_BYTE));
+    eq($encoded, cenc($dt, CBOR_TEXT));
+    eq($encoded, cenc($dt, CBOR_TEXT, ['datetime' => true]));
 
     $dt = new DateTimeImmutable('@981173106');
     eq('0xc074' . bin2hex('2001-02-03T04:05:06Z'), cenc($dt));

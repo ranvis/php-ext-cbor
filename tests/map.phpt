@@ -72,9 +72,13 @@ run(function () {
 
     cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a1614b01', CBOR_KEY_BYTE);
     cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a1414b01', CBOR_KEY_TEXT);
+    cencThrows(CBOR_ERROR_INVALID_FLAGS, ['a' => 1], CBOR_KEY_BYTE | CBOR_KEY_TEXT);
 
+    eq('0xa10101', cenc([1 => 1], CBOR_KEY_BYTE | CBOR_INT_KEY));
     eq('0xa10101', cenc((object)[1 => 1], CBOR_KEY_BYTE | CBOR_INT_KEY));
+    eq('0xa1413101', cenc([1 => 1], CBOR_KEY_BYTE));
     eq('0xa1413101', cenc((object)[1 => 1], CBOR_KEY_BYTE));
+    cencThrows(CBOR_ERROR_INVALID_FLAGS, [1 => 1], 0);
     cencThrows(CBOR_ERROR_INVALID_FLAGS, (object)[1 => 1], 0);
     eq('0xa10101', cenc([1 => 1], CBOR_KEY_BYTE | CBOR_INT_KEY));
     eq('0xa1413101', cenc([1 => 1], CBOR_KEY_BYTE));
@@ -85,6 +89,7 @@ run(function () {
     cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a1413101', CBOR_KEY_TEXT);
     cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a1613101', CBOR_KEY_BYTE);
     eq((object)['1' => 1], cdec('a10101', CBOR_INT_KEY));
+    eq('0xa157313233343536373839303132333435363738393031323301', cenc(['12345678901234567890123' => 1], CBOR_KEY_BYTE | CBOR_INT_KEY));  // obviously too long
     cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a10101', 0);
 
     eq([1 => 1, 2 => 2], cdec('a24131010202', CBOR_MAP_AS_ARRAY | CBOR_KEY_BYTE | CBOR_INT_KEY));
@@ -95,6 +100,14 @@ run(function () {
     eq((object)[], cdec('bfff', 0));
     cdecThrows(CBOR_ERROR_SYNTAX, 'bf01ff', CBOR_INT_KEY);
     cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a1818000');
+    cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a1f400');
+    cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a1f500');
+    cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a1f600');
+    cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a1f700');
+    cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a1f93c0000'); // as float object
+    cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a1f93c0000', CBOR_FLOAT16); // as float
+    cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a1c60000');
+    cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_TYPE, 'a1a000');
     cdecThrows(CBOR_ERROR_UNSUPPORTED_KEY_VALUE, 'a1410000');
 
     // duplicate key
@@ -103,10 +116,14 @@ run(function () {
     eq((object)['1' => 2], cdec('a20101613102', CBOR_INT_KEY | CBOR_KEY_TEXT));
     cdecThrows(CBOR_ERROR_DUPLICATE_KEY, 'a20101613102', CBOR_INT_KEY | CBOR_KEY_TEXT | CBOR_MAP_NO_DUP_KEY);
     cdecThrows(CBOR_ERROR_DUPLICATE_KEY, 'a20101613102', CBOR_INT_KEY | CBOR_KEY_TEXT | CBOR_MAP_AS_ARRAY | CBOR_MAP_NO_DUP_KEY);
+    cdecThrows(CBOR_ERROR_DUPLICATE_KEY, 'a26131010102', CBOR_INT_KEY | CBOR_KEY_TEXT | CBOR_MAP_AS_ARRAY | CBOR_MAP_NO_DUP_KEY);
     eq((object)['@' => 2], cdec('a2414001414002'));
     cdecThrows(CBOR_ERROR_DUPLICATE_KEY, 'a2414001414002', CBOR_KEY_BYTE | CBOR_MAP_NO_DUP_KEY);
     eq(['@' => 2], cdec('a2414001414002', CBOR_KEY_BYTE | CBOR_MAP_AS_ARRAY));
+    eq(['@' => 2], cdec('bf414001414002ff', CBOR_KEY_BYTE | CBOR_MAP_AS_ARRAY));
     cdecThrows(CBOR_ERROR_DUPLICATE_KEY, 'a2414001414002', CBOR_KEY_BYTE | CBOR_MAP_AS_ARRAY | CBOR_MAP_NO_DUP_KEY);
+
+    cdecThrows(CBOR_ERROR_UNSUPPORTED_SIZE, 'bb0000000100000000');
 });
 
 ?>

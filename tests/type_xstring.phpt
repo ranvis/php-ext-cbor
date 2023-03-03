@@ -12,7 +12,7 @@ run(function () {
     eq('abc', $instance->value);
     // cast
     eq('abc', (string)$instance);
-    //eq('', (int)$instance); // warns. how do you test?
+    eq(1, (int)$instance);  // Warning
     // clone
     $copy = clone $instance;
     eq((string)$instance, (string)$copy);
@@ -38,6 +38,8 @@ run(function () {
     // export/restore
     eq($instance, eval('return ' . var_export($instance, true) . ';'));
     eq(['value' => 'abc'], get_object_vars($instance));
+    throws(TypeError::class, fn () => Cbor\Text::__set_state(true));
+    throws(Error::class, fn () => Cbor\Text::__set_state([]));
     // cannot set to ref
     throws(Error::class, function () use ($instance) {
         $v = 'abc';
@@ -56,5 +58,6 @@ run(function () {
 });
 
 ?>
---EXPECT--
+--EXPECTF--
+Warning: Object of class Cbor\Text could not be converted to int in %s on line %d
 Done.

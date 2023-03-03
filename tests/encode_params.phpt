@@ -14,6 +14,11 @@ run(function () {
         new Cbor\EncodeParams((object)['1' => '1'], ['flags' => CBOR_TEXT | CBOR_KEY_TEXT]),
         '0',
     ], CBOR_BYTE | CBOR_KEY_BYTE));
+    eq('0xa3613061306131a14131413161326130', cenc((object)[
+        '0',
+        new Cbor\EncodeParams((object)['1' => '1'], ['flags' => CBOR_BYTE | CBOR_KEY_BYTE]),
+        '0',
+    ], CBOR_TEXT | CBOR_KEY_TEXT));
     // nesting
     eq('0x834130836131413061314130', cenc([
         '0',
@@ -26,6 +31,8 @@ run(function () {
     ], CBOR_BYTE));
     // invalid flags
     cencThrows(CBOR_ERROR_INVALID_FLAGS, new Cbor\EncodeParams(0, ['flags' => CBOR_BYTE | CBOR_TEXT]));
+    cencThrows(CBOR_ERROR_INVALID_FLAGS, new Cbor\EncodeParams(0, ['flags' => true]));
+    cencThrows(CBOR_ERROR_INVALID_FLAGS, new Cbor\EncodeParams(0, ['flags_clear' => true]));
     // flags_clear
     eq('0x83f90000fa00000000f90000', cenc([0.0, new Cbor\EncodeParams(0.0, ['flags_clear' => CBOR_FLOAT16]), 0.0], CBOR_FLOAT16 | CBOR_FLOAT32));
     // options

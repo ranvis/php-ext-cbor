@@ -10,6 +10,7 @@ require_once __DIR__ . '/common.php';
 run(function () {
     eq([0, 1, 2, 3], cdec('8400010203', 0, ['offset' => 0, 'length' => null]));
     eq([0, 1, 2, 3], cdec('8400010203', 0, ['offset' => 0, 'length' => 5]));
+    cdecThrows(CBOR_ERROR_INVALID_OPTIONS, '8400010203', 0, ['offset' => -1]);
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, '8400010203', 0, ['length' => 6]);
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, '8400010203', 0, ['offset' => 5]);
     cdecThrows(CBOR_ERROR_TRUNCATED_DATA, '8400010203', 0, ['offset' => 6]);
