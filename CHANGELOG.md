@@ -1,14 +1,18 @@
 # Changelog
 
-[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.4...HEAD
+[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.5...HEAD
 ## [Unreleased]
 ### Added
 ### Changed
 ### Removed
 ### Fixed
 ### Security
-- Fix crash when decoding some type with `'shared_ref'` => `'shareable'`.
 ### Deprecated
+
+[0.4.5]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.4...v0.4.5
+## [0.4.5] - 2023-03-04
+### Security
+- Fix crash when decoding some type with `'shared_ref'` => `'shareable'`.
 
 [0.4.4]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.3...v0.4.4
 ## [0.4.4] - 2023-02-28
