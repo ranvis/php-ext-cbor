@@ -70,7 +70,7 @@
 ### Fixed
 - Fix CBOR_FLOAT* flags check on decoding.
 
-[0.3.0]: https://github.com/ranvis/php-ext-cbor/releases/tag/v0.3.0
+[0.3.0]: https://github.com/ranvis/php-ext-cbor/commits/v0.3.0
 ## [0.3.0] - 2022-04-11
 ### Added
 - Add encoding of `\DateTimeInterface`, `\GMP`, `\Decimal`.
