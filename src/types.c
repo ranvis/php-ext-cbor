@@ -4,6 +4,7 @@
  */
 
 #include "cbor.h"
+#include "cbor_globals.h"
 #include "types.h"
 #include "compatibility.h"
 

@@ -6,6 +6,7 @@
 #include "cbor.h"
 #include "compatibility.h"
 #include "cbor_arginfo.h"
+#include "cbor_globals.h"
 #include "cbor_ns_arginfo.h"
 #include "codec.h"
 #include "tags.h"
