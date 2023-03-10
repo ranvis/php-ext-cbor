@@ -138,7 +138,7 @@ static cbor_error validate_flags(uint32_t flags)
 	return 0;
 }
 
-cbor_error php_cbor_encode(zval *value, zend_string **data, const cbor_encode_args *args)
+cbor_error php_cbor_encode(zval *value, zend_string **data, cbor_encode_args *args)
 {
 	cbor_error error;
 	enc_context ctx;
@@ -179,6 +179,7 @@ cbor_error php_cbor_encode(zval *value, zend_string **data, const cbor_encode_ar
 	if (!error) {
 		*data = smart_str_extract(&buf);
 	} else {
+		args->error_args = ctx.args.error_args;
 		smart_str_free(&buf);
 	}
 	return error;
@@ -271,6 +272,7 @@ RETRY:
 				error = enc_uri(ctx, value);
 			} else {
 				error = CBOR_ERROR_UNSUPPORTED_TYPE;
+				ctx->args.error_args.u.ce_name = ce->name;
 			}
 		}
 		break;

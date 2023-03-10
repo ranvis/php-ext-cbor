@@ -31,6 +31,74 @@ final class TestStats
     }
 }
 
+interface TesterInterface
+{
+    public function test(): bool|string;
+}
+
+class BoolTester implements TesterInterface
+{
+    public function __construct(
+        public mixed $value,
+    ) {
+    }
+
+    public function test(): bool|string
+    {
+        if ($this->value) {
+            return true;
+        }
+        $value = var_export($value, true);
+        return "Value   : " . $value . "\n";
+    }
+}
+
+class EqTester implements TesterInterface
+{
+    public function __construct(
+        private mixed $exp,
+        private mixed $act,
+    ) {
+    }
+
+    public function test(): bool|string
+    {
+        $exp = $this->exp;
+        $act = $this->act;
+        $exported = !is_string($exp) || !is_string($act);
+        if ($exported) {
+            $exp = var_export($exp, true);
+            $act = var_export($act, true);
+        }
+        if ($exp === $act) {
+            return true;
+        }
+        if (!$exported) {
+            $exp = var_export($exp, true);
+            $act = var_export($act, true);
+        }
+        return "Expected: " . $exp . "\n"
+            . "Actual  : " . $act . "\n";
+    }
+}
+
+class RegExTester implements TesterInterface
+{
+    public function __construct(
+        private string $exp,
+        private string $act,
+    ) {
+    }
+
+    public function test(): bool|string
+    {
+        if (preg_match($this->exp, $this->act)) {
+            return true;
+        }
+        return sprintf("Expected: regex %s\nActual  : %s\n", $this->exp, $this->act);
+    }
+}
+
 function run($func): void
 {
     TestStats::reset();
@@ -49,34 +117,32 @@ function run($func): void
     echo "Done.\n";
 }
 
-function eq($exp, $act, int $depth = 0): void
+function ok(mixed $value, int $depth = 0): void
 {
-    TestStats::inc('assertCompare');
-    $exported = !is_string($exp) || !is_string($act);
-    if ($exported) {
-        $exp = var_export($exp, true);
-        $act = var_export($act, true);
-    }
-    if ($exp === $act) {
-        return;
-    }
-    if (!$exported) {
-        $exp = var_export($exp, true);
-        $act = var_export($act, true);
-    }
-    echo "Expected: " . $exp . "\n";
-    echo "Actual  : " . $act . "\n";
-    trace($depth + 1);
+    xTest(new BoolTester($value), $depth + 1);
 }
 
-function ok($value, int $depth = 0): void
+function eq(mixed $exp, mixed $act, int $depth = 0): void
+{
+    xTest(new EqTester($exp, $act), $depth + 1);
+}
+
+function eqRegEx(string $exp, string $act, int $depth = 0): void
+{
+    xTest(new RegExTester($exp, $act), $depth + 1);
+}
+
+function xTest(TesterInterface $tester, int $depth = 0): void
 {
     TestStats::inc('assertCompare');
-    if ($value) {
+    $result = $tester->test();
+    if ($result === true) {
         return;
     }
-    $value = var_export($value, true);
-    echo "Value   : " . $value . "\n";
+    if ($result === false) {
+        throw new LogicException($tester::class . ' should return an error message instead of false when test is failed.');  // true return type: PHP>=8.2
+    }
+    echo $result;
     trace($depth + 1);
 }
 

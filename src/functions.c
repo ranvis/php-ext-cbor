@@ -27,7 +27,7 @@ PHP_FUNCTION(cbor_encode)
 		error = php_cbor_encode(value, &str, &args);
 	}
 	if (error) {
-		php_cbor_throw_error(error, false, 0);
+		php_cbor_throw_error(error, false, &args.error_args);
 		RETURN_THROWS();
 	}
 	assert(str);
@@ -55,7 +55,7 @@ PHP_FUNCTION(cbor_decode)
 		error = php_cbor_decode(data, &value, &args);
 	}
 	if (error) {
-		php_cbor_throw_error(error, true, args.error_arg);
+		php_cbor_throw_error(error, true, &args.error_args);
 		RETURN_THROWS();
 	}
 	RETVAL_COPY_VALUE(&value);
@@ -67,11 +67,12 @@ PHP_FUNCTION(cbor_decode)
 		goto MSG_SET; \
 	} while (0)
 
-void php_cbor_throw_error(cbor_error error, bool has_arg, size_t arg)
+void php_cbor_throw_error(cbor_error error, bool decoding, const cbor_error_args *args)
 {
 	const char *message = "Unknown error code";
 	const char *desc_msg = "";
-	bool can_have_arg = true;
+	bool is_formatted = false;
+	bool can_have_offset = true;
 	if (error == CBOR_ERROR_EXCEPTION && EG(exception)) {
 		return;
 	}
@@ -80,7 +81,7 @@ void php_cbor_throw_error(cbor_error error, bool has_arg, size_t arg)
 	switch (error_code) {
 	case CBOR_ERROR_INVALID_FLAGS:
 		message = "Invalid flags are specified";
-		can_have_arg = false;
+		can_have_offset = false;
 		switch (error_desc) {
 		case CBOR_ERROR_INVALID_FLAGS__BOTH_STRING_FLAG:
 			DESC_MSG("CBOR_BYTE and CBOR_TEXT flags cannot be specified simultaneously on encoding");
@@ -94,14 +95,14 @@ void php_cbor_throw_error(cbor_error error, bool has_arg, size_t arg)
 		break;
 	case CBOR_ERROR_INVALID_OPTIONS:
 		message = "Invalid options are specified";
-		can_have_arg = false;
+		can_have_offset = false;
 		break;
 	case CBOR_ERROR_DEPTH:
 		message = "Depth limit exceeded";
 		break;
 	case CBOR_ERROR_RECURSION:
 		message = "Recursion is detected";
-		can_have_arg = false;
+		can_have_offset = false;
 		break;
 	case CBOR_ERROR_SYNTAX:
 		message = "Data syntax error";
@@ -121,6 +122,13 @@ void php_cbor_throw_error(cbor_error error, bool has_arg, size_t arg)
 		break;
 	case CBOR_ERROR_UNSUPPORTED_TYPE:
 		message = "Unsupported type of data";
+		if (!decoding) {
+			if (args->u.ce_name) {
+				is_formatted = true;
+				message = "Encoding of %s is not supported.";
+				desc_msg = ZSTR_VAL(args->u.ce_name);
+			}
+		}
 		switch (error_desc) {
 		case CBOR_ERROR_UNSUPPORTED_TYPE__SIMPLE:
 			DESC_MSG("Unknown simple value");
@@ -214,9 +222,13 @@ void php_cbor_throw_error(cbor_error error, bool has_arg, size_t arg)
 		break;
 	}
 MSG_SET:
-	if (can_have_arg && has_arg) {
-		zend_throw_exception_ex(CBOR_CE(exception), error_code, "%s%s; at offset %zu", message, desc_msg, arg);
+	if (can_have_offset && decoding && args) {
+		zend_throw_exception_ex(CBOR_CE(exception), error_code, "%s%s; at offset %zu", message, desc_msg, args->offset);
 	} else {
-		zend_throw_exception_ex(CBOR_CE(exception), error_code, "%s%s.", message, desc_msg);
+		if (is_formatted) {
+			zend_throw_exception_ex(CBOR_CE(exception), error_code, message, desc_msg);
+		} else {
+			zend_throw_exception_ex(CBOR_CE(exception), error_code, "%s%s.", message, desc_msg);
+		}
 	}
 }

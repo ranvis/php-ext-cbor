@@ -66,7 +66,7 @@ PHP_METHOD(Cbor_Decoder, __construct)
 	base->args.flags = (uint32_t)flags;
 	cbor_error error = php_cbor_set_decode_options(&base->args, options);
 	if (error) {
-		php_cbor_throw_error(error, false, 0);
+		php_cbor_throw_error(error, true, NULL);
 		RETURN_THROWS();
 	}
 }
@@ -82,7 +82,7 @@ PHP_METHOD(Cbor_Decoder, decode)
 	cbor_decode_args args = base->args;  /* Make a copy of decoding args. */
 	cbor_error error = php_cbor_decode(data, &value, &args);
 	if (error) {
-		php_cbor_throw_error(error, true, args.error_arg);
+		php_cbor_throw_error(error, true, &args.error_args);
 		RETURN_THROWS();
 	}
 	RETVAL_COPY_VALUE(&value);
@@ -172,7 +172,7 @@ PHP_METHOD(Cbor_Decoder, add)
 			append_len = min((zend_ulong)data_len, append_len);
 		}
 		if (append_len > SIZE_MAX - base->mem.length) {
-			php_cbor_throw_error(CBOR_ERROR_UNSUPPORTED_SIZE, false, 0);
+			php_cbor_throw_error(CBOR_ERROR_UNSUPPORTED_SIZE, true, NULL);
 			RETURN_THROWS();
 		}
 		if (!IS_STR_OWNED(base->buffer)) {
@@ -212,7 +212,7 @@ PHP_METHOD(Cbor_Decoder, process)
 		base->buffer = zend_string_realloc(base->buffer, base->mem.length, false);
 	}
 	if (error) {
-		php_cbor_throw_error(error, true, base->args.error_arg);
+		php_cbor_throw_error(error, true, &base->args.error_args);
 		RETURN_THROWS();
 	}
 	RETVAL_BOOL(Z_TYPE(base->data) != IS_UNDEF);

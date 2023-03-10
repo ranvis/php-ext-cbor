@@ -68,7 +68,7 @@ static cbor_error zv_dec_finish(dec_context *ctx, cbor_decode_args *args, cbor_e
 			zend_unwrap_reference(value);
 		}
 	} else {
-		args->error_arg = ctx->args.error_arg;
+		args->error_args = ctx->args.error_args;
 		zval_ptr_dtor(&ctx->u.zv.root);
 	}
 	ZVAL_UNDEF(&ctx->u.zv.root);

@@ -89,8 +89,16 @@ enum {
 };
 
 typedef struct {
+	size_t offset;
+	union {
+		zend_string *ce_name;
+	} u;
+} cbor_error_args;
+
+typedef struct {
 	uint32_t flags;
 	uint32_t max_depth;
+	cbor_error_args error_args;
 	uint8_t string_ref;
 	uint8_t shared_ref;
 	bool datetime;
@@ -105,7 +113,7 @@ typedef struct {
 	uint32_t max_size;
 	zend_long offset;
 	zend_long length;
-	size_t error_arg;
+	cbor_error_args error_args;
 	bool string_ref;
 	uint8_t shared_ref;
 	struct {
@@ -135,10 +143,10 @@ cbor_error php_cbor_override_encode_options(cbor_encode_args *args, HashTable *o
 cbor_error php_cbor_set_encode_options(cbor_encode_args *args, HashTable *options);
 cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *options);
 
-void php_cbor_throw_error(cbor_error error, bool has_arg, size_t arg);
+void php_cbor_throw_error(cbor_error error, bool decoding, const cbor_error_args *args);
 
 /* encode */
-cbor_error php_cbor_encode(zval *value, zend_string **data, const cbor_encode_args *args);
+cbor_error php_cbor_encode(zval *value, zend_string **data, cbor_encode_args *args);
 
 /* decode */
 cbor_error php_cbor_decode(zend_string *data, zval *value, cbor_decode_args *args);
