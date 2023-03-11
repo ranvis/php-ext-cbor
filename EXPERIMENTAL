@@ -1,3 +1,4 @@
 - Flag values are subject to change.
 - Error names and values are subject to change.
 - The default value of 'string_ref' decode option may be changed to false.
+- The default value of 'shared_ref' decode option is likely to be changed to false.

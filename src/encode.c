@@ -58,6 +58,7 @@ typedef struct {
 typedef struct {
 	cbor_encode_args args;
 	uint32_t cur_depth;
+	uint32_t in_enc_params;
 	smart_str *buf;
 	srns_item *srns; /* string ref namespace */
 	HashTable *refs, *ref_lock; /* shared ref, lock is actually not needed fow now */
@@ -147,6 +148,7 @@ cbor_error php_cbor_encode(zval *value, zend_string **data, cbor_encode_args *ar
 	assert(IS_UNDEF == 0);
 	ctx.args = *args;
 	ctx.cur_depth = 0;
+	ctx.in_enc_params = 0;
 	ctx.buf = &buf;
 	if ((error = validate_flags(ctx.args.flags)) != 0) {
 		return error;
@@ -188,6 +190,7 @@ cbor_error php_cbor_encode(zval *value, zend_string **data, cbor_encode_args *ar
 static cbor_error enc_zval(enc_context *ctx, zval *value)
 {
 	cbor_error error = 0;
+	bool is_ref = false;
 	if (ctx->cur_depth++ > ctx->args.max_depth) {
 		return CBOR_ERROR_DEPTH;
 	}
@@ -218,7 +221,7 @@ RETRY:
 		ENC_RESULT(enc_hash(ctx, value, HASH_ARRAY));
 	case IS_OBJECT: {
 		zend_class_entry *ce = Z_OBJCE_P(value);
-		/* Cbor types are 'final' */
+		/* Cbor types are 'final'; it is safe to compare using == */
 		if (ce == CBOR_CE(undefined)) {
 			cbor_di_write_undef(ctx->buf);
 		} else if (ce == CBOR_CE(byte)) {
@@ -234,7 +237,7 @@ RETRY:
 		} else if (ce == CBOR_CE(shareable)) {
 			error = enc_shareable(ctx, value);
 		} else if (ce == zend_standard_class_def) {
-			if (ctx->args.shared_ref && Z_REFCOUNT_P(value) > 1) {
+			if (ctx->args.shared_ref && (Z_REFCOUNT_P(value) > 1 || is_ref || ctx->in_enc_params)) {
 				error = enc_ref_counted(ctx, value);
 				if (error != CBOR_STATUS_VALUE_FOLLOWS) {
 					ENC_RESULT(error);
@@ -287,6 +290,7 @@ RETRY:
 			}
 		}
 		ZVAL_DEREF(value);
+		is_ref = true;
 		goto RETRY;
 	default:
 		error = CBOR_ERROR_UNSUPPORTED_TYPE;
@@ -709,6 +713,10 @@ static cbor_error enc_encodeparams(enc_context *ctx, zval *ins)
 	zend_long flags;
 	HashTable *ht;
 	saved_args = ctx->args;
+	bool may_be_shared = Z_REFCOUNT_P(ins) > 1;
+	if (may_be_shared) {
+		ctx->in_enc_params++;
+	}
 	if (Z_IS_RECURSIVE_P(ins)) {
 		ENC_RESULT(CBOR_ERROR_RECURSION);
 	}
@@ -752,6 +760,9 @@ static cbor_error enc_encodeparams(enc_context *ctx, zval *ins)
 	error = enc_zval(ctx, value);
 	Z_UNPROTECT_RECURSION_P(ins);
 ENCODED:
+	if (may_be_shared) {
+		ctx->in_enc_params--;
+	}
 	ctx->args = saved_args;
 	return error;
 }

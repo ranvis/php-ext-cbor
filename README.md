@@ -428,13 +428,13 @@ Constants:
 
 The tag {sharedref} can refer the previously-defined data.
 
-If the option is enabled, CBOR maps tagged as {shareable} once decoded into PHP object will share the instance among {sharedref} references. If other type of values like CBOR array is tagged {shareable}, it triggers an error. See other option values for possible workarounds.
+If the option is enabled, CBOR maps tagged as {shareable} once decoded into PHP object will share the instance among {sharedref} references. If other type of value including CBOR array or tag is tagged {shareable}, it triggers an error. See other option values for possible workarounds.
 
 The option is enabled by default on decoding.
 
-On encoding, potentially shared PHP objects (i.e. there are variables holding the object somewhere) are tagged {shareable}, and once reused, {sharedref} tag is emitted. A reference to variable is dereferenced.
+On encoding, potentially shared (i.e. there are variables holding the instance somewhere) PHP `stdClass` objects are tagged {shareable}. When such object is reused, {sharedref} tag is emitted. A reference to variable is dereferenced.
 
-If `'shareable'` is specified, non-object CBOR values tagged as {shareable} is wrapped into `Cbor\Shareable` object on decoding and the instance is reused on {sharedref} tag. On encoding, an instance of `Cbor\Shareable` is tagged {shareable} regardless of the option value.
+If `'shareable'` is specified, non-map CBOR values tagged as {shareable} is wrapped into `Cbor\Shareable` object on decoding and the instance is reused on {sharedref} tag. On encoding, an instance of `Cbor\Shareable` is tagged {shareable} regardless of the option value.
 
 If `'unsafe_ref'` is specified, {shareable} tagged data that decoded to non-object becomes PHP `&` reference. On encoding a reference to variable is tagged {shareable} too.
 At first glance it may seem natural to use PHP reference for shared scalars and arrays. But this may cause unwanted side effects when the decoded structure contains references that you don't expect. You replace a single scalar value, and somewhere else is changed too!

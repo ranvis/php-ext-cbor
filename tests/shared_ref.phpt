@@ -70,12 +70,17 @@ run(function () {
     $value->{'@'} = &$value;  // intentional & (must be skipped for encoding)
     eq('0xd81ca14140d81d00', cenc($value, options: ['shared_ref' => true]));
     eq('0xd81ca14140d81d00', cenc($value, options: ['shared_ref' => 'unsafe_ref']));
-    $sc = new stdClass();
-    $value = [$sc, $sc];
+    // refcount=2 stdClass
+    $value = [new stdClass()];
+    $value[1] = $value[0];
     eq('0x82d81ca0d81d00', cenc($value, options: ['shared_ref' => true]));
-    $value = [$sc];
+    // refcount=2 reference containing refcount=1 stdClass
+    $value = [new stdClass()];
     $value[1] = &$value[0];
     eq('0x82d81ca0d81d00', cenc($value, options: ['shared_ref' => true]));
+    // refcount=1 stdClass in EncodeParams
+    $ins = new Cbor\EncodeParams([new stdClass()], []);
+    eq('0x8281d81ca081d81d00', cenc([$ins, $ins], options: ['shared_ref' => true]));
 
     // redundant shareable
     eq('0x81a0', cenc([new stdClass()], options: ['shared_ref' => true]));
