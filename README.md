@@ -101,7 +101,7 @@ See "Supported Tags" below for the following options:
 
 - `'shared_ref'`:
   - Encode: default: `false`; values: `bool` | `'unsafe_ref'`
-  - Decode: default: `true`; values: `bool` | `'shareable'` | `'unsafe_ref'`
+  - Decode: default: `true`; values: `bool` | `'shareable'` | `'shareable_only'` | `'unsafe_ref'`
 
 Unknown key names are silently ignored.
 
@@ -420,7 +420,7 @@ It is recommended to explicity enable the `string_ref` option on decoding if you
 Option:
 - `'shared_ref'`:
   - Encode: default: `false`; values: `bool` | `'unsafe_ref'`
-  - Decode: default: `true`; values: `bool` | `'shareable'` | `'unsafe_ref'`
+  - Decode: default: `true`; values: `bool` | `'shareable'` | `'shareable_only'` | `'unsafe_ref'`
 
 Constants:
 - `Cbor\Tag::SHAREABLE`
@@ -435,6 +435,8 @@ The option is enabled by default on decoding.
 On encoding, potentially shared (i.e. there are variables holding the instance somewhere) PHP `stdClass` objects are tagged {shareable}. When such object is reused, {sharedref} tag is emitted. A reference to variable is dereferenced.
 
 If `'shareable'` is specified, non-map CBOR values tagged as {shareable} is wrapped into `Cbor\Shareable` object on decoding and the instance is reused on {sharedref} tag. On encoding, an instance of `Cbor\Shareable` is tagged {shareable} regardless of the option value.
+
+If `'shareable_only'` works similar to `'shareable'`. But CBOR map is also wrapped into `Cbor\Shareable` too.
 
 If `'unsafe_ref'` is specified, {shareable} tagged data that decoded to non-object becomes PHP `&` reference. On encoding a reference to variable is tagged {shareable} too.
 At first glance it may seem natural to use PHP reference for shared scalars and arrays. But this may cause unwanted side effects when the decoded structure contains references that you don't expect. You replace a single scalar value, and somewhere else is changed too!

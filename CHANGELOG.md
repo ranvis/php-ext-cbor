@@ -3,6 +3,7 @@
 [Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.5...HEAD
 ## [Unreleased]
 ### Added
+- Add decode option `'shared_ref'` => `shareable_only`.
 ### Changed
 ### Removed
 ### Fixed

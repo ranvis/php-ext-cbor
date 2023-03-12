@@ -85,7 +85,8 @@ enum {
 
 	/* shared ref */
 	OPT_SHAREABLE = 2,
-	OPT_UNSAFE_REF = 3,
+	OPT_SHAREABLE_ONLY = 3,
+	OPT_UNSAFE_REF = 4,
 };
 
 typedef struct {

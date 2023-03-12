@@ -708,7 +708,7 @@ static void tag_handler_shareable_child(dec_context *ctx, stack_item_zv *item, s
 		real_v = &item->v.map.dest;
 		ZVAL_COPY(&self->v.tag_h.v.shareable.value, real_v);
 	} else {
-		if (ctx->args.shared_ref == OPT_SHAREABLE) {
+		if (ctx->args.shared_ref == OPT_SHAREABLE || ctx->args.shared_ref == OPT_SHAREABLE_ONLY) {
 			ZVAL_TRUE(&tmp_v);
 			if (!create_value_object(&self->v.tag_h.v.shareable.value, &tmp_v, CBOR_CE(shareable))) {
 				RETURN_CB_ERROR(CBOR_ERROR_INTERNAL);
@@ -736,7 +736,7 @@ static xzval *tag_handler_shareable_exit(dec_context *ctx, xzval *value, stack_i
 	}
 	if (Z_TYPE(item->v.tag_h.v.shareable.value) == IS_NULL) {
 		/* child handler is not called */
-		if (Z_TYPE_P(value) == IS_OBJECT || ctx->args.shared_ref == OPT_UNSAFE_REF) {
+		if ((Z_TYPE_P(value) == IS_OBJECT && ctx->args.shared_ref != OPT_SHAREABLE_ONLY) || ctx->args.shared_ref == OPT_UNSAFE_REF) {
 			if (Z_TYPE_P(value) != IS_OBJECT) {
 				real_v = tmp_v;
 				ZVAL_COPY(real_v, value);
@@ -744,7 +744,7 @@ static xzval *tag_handler_shareable_exit(dec_context *ctx, xzval *value, stack_i
 			} else {
 				real_v = value;
 			}
-		} else if (ctx->args.shared_ref == OPT_SHAREABLE) {
+		} else if (ctx->args.shared_ref == OPT_SHAREABLE || ctx->args.shared_ref == OPT_SHAREABLE_ONLY) {
 			real_v = tmp_v;
 			if (!create_value_object(real_v, value, CBOR_CE(shareable))) {
 				RETURN_CB_ERROR_V(value, CBOR_ERROR_INTERNAL);
@@ -762,7 +762,7 @@ static xzval *tag_handler_shareable_exit(dec_context *ctx, xzval *value, stack_i
 	} else {
 		real_v = tmp_v;
 		ZVAL_COPY(real_v, &item->v.tag_h.v.shareable.value);
-		if (ctx->args.shared_ref == OPT_SHAREABLE) {
+		if (ctx->args.shared_ref == OPT_SHAREABLE || ctx->args.shared_ref == OPT_SHAREABLE_ONLY) {
 			assert(Z_TYPE_P(real_v) == IS_OBJECT);
 			zend_update_property_ex(CBOR_CE(shareable), Z_OBJ_P(real_v), ZSTR_KNOWN(ZEND_STR_VALUE), value);
 		} else if (ctx->args.shared_ref == OPT_UNSAFE_REF) {

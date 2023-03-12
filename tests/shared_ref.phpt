@@ -35,6 +35,13 @@ run(function () {
     eq([$sh, $sh, $sh], $dec = cdec('83d81c8100d81d00d81d00', options: ['shared_ref' => 'unsafe_ref']));
     $dec[0][0] = 1;
     eq(1, $dec[1][0]);
+    // map is decoded to stdClass unless if shared_ref = shareable_only
+    $ins = new stdClass();
+    eq([$ins, $ins], $dec = cdec('82d81ca0d81d00', options: ['shared_ref' => 'shareable']));
+    ok($dec[0] === $dec[1]);
+    $ins = new Cbor\Shareable(new stdClass());
+    eq([$ins, $ins], $dec = cdec('82d81ca0d81d00', options: ['shared_ref' => 'shareable_only']));
+    ok($dec[0] === $dec[1]);
 
     eq('', cdec('d81c40', options: ['shared_ref' => 'unsafe_ref']));
 

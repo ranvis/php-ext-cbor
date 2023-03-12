@@ -126,7 +126,7 @@ cbor_error php_cbor_set_encode_options(cbor_encode_args *args, HashTable *option
 	}
 	CHECK_ERROR(uint32_option(&args->max_depth, ZEND_STRL("max_depth"), 0, 10000, options));
 	CHECK_ERROR(bool_n_option(&args->string_ref, ZEND_STRL("string_ref"), "explicit\0", options));
-	CHECK_ERROR(bool_n_option(&args->shared_ref, ZEND_STRL("shared_ref"), "-\0unsafe_ref\0", options));
+	CHECK_ERROR(bool_n_option(&args->shared_ref, ZEND_STRL("shared_ref"), "-\0-\0unsafe_ref\0", options));
 	CHECK_ERROR(php_cbor_override_encode_options(args, options));
 FINALLY:
 	return error;
@@ -158,7 +158,7 @@ cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *option
 	/* no negative length like substr() */
 	CHECK_ERROR(long_option(&args->length, ZEND_STRL("length"), 0, ZEND_LONG_MAX, options, true));
 	CHECK_ERROR(bool_option(&args->string_ref, ZEND_STRL("string_ref"), options));
-	CHECK_ERROR(bool_n_option(&args->shared_ref, ZEND_STRL("shared_ref"), "shareable\0unsafe_ref\0", options));
+	CHECK_ERROR(bool_n_option(&args->shared_ref, ZEND_STRL("shared_ref"), "shareable\0shareable_only\0unsafe_ref\0", options));
 	if (args->flags & CBOR_EDN) {
 		zval *opt_val;
 		opt_val = zend_hash_str_find_deref(options, ZEND_STRL("indent"));
