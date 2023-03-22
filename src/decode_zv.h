@@ -298,11 +298,19 @@ static bool zv_append(dec_context *ctx, xzval *value)
 #error "abs(ZEND_LONG_MIN) must be (ZEND_LONG_MAX + 1)"
 #endif
 #if SIZEOF_ZEND_LONG == 4
+#if ZEND_LONG_MAX == 0x7ffffffful
+#define TEST_OVERFLOW_XINT32(val)  ((val) & 0x80000000ul)
+#else
 #define TEST_OVERFLOW_XINT32(val)  ((val) > ZEND_LONG_MAX)
+#endif
 #define TEST_OVERFLOW_XINT64(val)  true
 #elif SIZEOF_ZEND_LONG == 8
 #define TEST_OVERFLOW_XINT32(val)  false
+#if ZEND_LONG_MAX == 0x7fffffffffffffffull
+#define TEST_OVERFLOW_XINT64(val)  ((val) & 0x8000000000000000ull)
+#else
 #define TEST_OVERFLOW_XINT64(val)  ((val) > ZEND_LONG_MAX)
+#endif
 #else
 #error unimplemented
 #endif

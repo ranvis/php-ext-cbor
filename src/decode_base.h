@@ -4,10 +4,8 @@
  */
 
 #define SET_READ_ERROR(result)  do { \
-		if (!result) { \
-			error = out->req_len ? CBOR_ERROR_TRUNCATED_DATA \
-				: CBOR_ERROR_MALFORMED_DATA; \
-			goto FINALLY; \
+		if (UNEXPECTED(!result)) { \
+			goto DI_FAILURE; \
 		} \
 	} while (0)
 
@@ -36,7 +34,7 @@ static cbor_error METHOD(dec_item)(const uint8_t *data, size_t len, cbor_di_deco
 		break;
 	case DI_BSTR:
 		SET_READ_ERROR(cbor_di_read_str(data, len, out));
-		if (out->v.str.val) {
+		if (EXPECTED(out->v.str.val)) {
 			METHOD(proc_byte_string)(ctx, out->v.str.val, out->v.str.len);
 		} else {
 			METHOD(proc_byte_string_start)(ctx);
@@ -44,7 +42,7 @@ static cbor_error METHOD(dec_item)(const uint8_t *data, size_t len, cbor_di_deco
 		break;
 	case DI_TSTR:
 		SET_READ_ERROR(cbor_di_read_str(data, len, out));
-		if (out->v.str.val) {
+		if (EXPECTED(out->v.str.val)) {
 			METHOD(proc_text_string)(ctx, out->v.str.val, out->v.str.len);
 		} else {
 			METHOD(proc_text_string_start)(ctx);
@@ -52,7 +50,7 @@ static cbor_error METHOD(dec_item)(const uint8_t *data, size_t len, cbor_di_deco
 		break;
 	case DI_ARRAY:
 		SET_READ_ERROR(cbor_di_read_list(data, len, out));
-		if (!out->v.ext.is_indef) {
+		if (EXPECTED(!out->v.ext.is_indef)) {
 			if (out->v.i64 > 0xffffffff) {
 				return CBOR_ERROR_UNSUPPORTED_SIZE;
 			}
@@ -63,7 +61,7 @@ static cbor_error METHOD(dec_item)(const uint8_t *data, size_t len, cbor_di_deco
 		break;
 	case DI_MAP:
 		SET_READ_ERROR(cbor_di_read_list(data, len, out));
-		if (!out->v.ext.is_indef) {
+		if (EXPECTED(!out->v.ext.is_indef)) {
 			if (out->v.i64 > 0xffffffff) {
 				return CBOR_ERROR_UNSUPPORTED_SIZE;
 			}
@@ -119,6 +117,10 @@ static cbor_error METHOD(dec_item)(const uint8_t *data, size_t len, cbor_di_deco
 		out->read_len = 0;
 		return CBOR_ERROR_MALFORMED_DATA;
 	}
+	goto FINALLY;
+DI_FAILURE:
+	error = out->req_len ? CBOR_ERROR_TRUNCATED_DATA : CBOR_ERROR_MALFORMED_DATA;
+	goto FINALLY;
 FINALLY:
 	return error;
 }
