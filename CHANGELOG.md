@@ -8,6 +8,7 @@
 ### Removed
 ### Fixed
 - When `'shared_ref'` is active, objects (whether as a reference or in a `EncodeParams` instance) are not shared if there are multiple references to a value, but only one to the pointing object directly.
+- NaN fraction bits are not preserved when cast to float internally.
 ### Security
 ### Deprecated
 

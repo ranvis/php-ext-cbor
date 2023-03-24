@@ -330,11 +330,10 @@ static void enc_z_double(enc_context *ctx, zval *value, bool is_small)
 		}
 	}
 	if (float_type == CBOR_FLOAT16) {
-		/* XXX: Reusing float-to-half. For precise rounding, double may have to be used. */
-		uint16_t binary16 = cbor_to_float16((float)Z_DVAL_P(value));
+		uint16_t binary16 = cbor_to_float16(Z_DVAL_P(value));
 		cbor_di_write_float16(ctx->buf, binary16);
 	} else if (float_type == CBOR_FLOAT32) {
-		cbor_di_write_float32(ctx->buf, (float)Z_DVAL_P(value));
+		cbor_di_write_float32(ctx->buf, cbor_to_float32(Z_DVAL_P(value)));
 	} else {
 		cbor_di_write_float64(ctx->buf, Z_DVAL_P(value));
 	}

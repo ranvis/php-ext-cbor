@@ -1,7 +1,11 @@
 --TEST--
 float values
 --SKIPIF--
-<?php if (!extension_loaded('cbor')) echo 'skip  extension is not loaded'; ?>
+<?php
+if (!extension_loaded('cbor')) echo 'skip  extension is not loaded';
+// assumes IEEE 754 floating-point, binary32
+elseif (bin2hex(pack('G', INF)) !== '7f800000') echo 'skip  unknown float implementation';
+?>
 --FILE--
 <?php
 
@@ -24,10 +28,16 @@ run(function () {
 
     eq('0xfb7ff0000000000000', cenc(INF));
     eq('0xfaff800000', cenc(-INF, CBOR_FLOAT32));
-    /* NaN, don't use PHP constant as its bit notation is compiler dependent */
+    // NaN, don't use PHP constant as its bit notation is compiler dependent
     eq('0xf97e00', cenc(hex2double('7ff8000000000000'), CBOR_FLOAT16));
     eq('0xfb0000000000000000', cenc(0.0));
     eq('0xfb8000000000000000', cenc(-0.0));
+    // sNaN preservation during internal cast
+    eq('0xfb7ff0040000000000', cenc(cdec('f97c01', CBOR_FLOAT16)));
+    eq('0xfa7f802000', cenc(cdec('f97c01', CBOR_FLOAT16), CBOR_FLOAT32));
+    eq('0xf97c01', cenc(cdec('f97c01', CBOR_FLOAT16), CBOR_FLOAT16));
+    eq('0xf97c01', cenc(cdec('f97c01', CBOR_FLOAT16), CBOR_FLOAT16 | CBOR_FLOAT32));
+    eq('0xf97e00', cenc(cdec('fa7f800001', CBOR_FLOAT32), CBOR_FLOAT16));
 
     eq(1.5, (float)new Cbor\Float32(1.5));
     eq(1.5, (float)new Cbor\Float16(1.5));

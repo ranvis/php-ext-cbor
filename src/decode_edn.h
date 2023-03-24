@@ -4,6 +4,7 @@
  */
 
 #include "compatibility.h"
+#include <math.h>
 #include <Zend/zend_strtod.h>
 
 typedef struct stack_item_edn {

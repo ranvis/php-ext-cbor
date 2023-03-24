@@ -41,7 +41,8 @@ zend_object *cbor_floatx_create(zend_class_entry *ce);
 bool cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw);
 size_t cbor_floatx_get_value(zend_object *obj, char *out);
 double cbor_from_float16(uint16_t value);
-uint16_t cbor_to_float16(float value);
+float cbor_to_float32(double value);
+uint16_t cbor_to_float16(double value);
 
 /* decoder */
 void php_cbor_minit_decoder();

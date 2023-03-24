@@ -7,6 +7,7 @@
 #include "cbor_globals.h"
 #include "types.h"
 #include "compatibility.h"
+#include <math.h>
 
 #define DEF_THIS(name, prop_literal)  CBOR_CE(name), Z_OBJ_P(ZEND_THIS)
 
@@ -502,16 +503,12 @@ bool cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw)
 	if (value) {
 		int type = Z_TYPE_P(value);
 		if (type == IS_DOUBLE || type == IS_LONG) {
-			float f_value;
-			if (type == IS_DOUBLE) {
-				f_value = (float)Z_DVAL_P(value);
-			} else {  /* from write_property */
-				f_value = (float)Z_LVAL_P(value);
-			}
+			// IS_LONG if called from write_property.
+			double d_value = (type == IS_LONG) ? Z_LVAL_P(value) : Z_DVAL_P(value);
 			if (base->std.ce == CBOR_CE(float32)) {
-				base->v.binary32.f = f_value;
+				base->v.binary32.f = cbor_to_float32(d_value);
 			} else {
-				base->v.binary16 = cbor_to_float16(f_value);
+				base->v.binary16 = cbor_to_float16(d_value);
 			}
 			return true;
 		} else if (type == IS_STRING) {
@@ -691,16 +688,42 @@ double cbor_from_float16(uint16_t value)
 	return bin64.f;
 }
 
-uint16_t cbor_to_float16(float value)
+float cbor_to_float32(double value)
 {
-	binary32_alias binary32;
+	if (EXPECTED(!isnan(value))) {
+		return (float)value;
+	}
+	// sNaN may become qNaN as defined in IEEE 754 when cast.
+	// (1, 11, 52) bits => (1, 8, 23) bits
+	binary64_alias d_value;
+	d_value.f = value;
+	binary32_alias f_value;
+	f_value.i = 0x7f800000; // sNaN
+	uint32_t fraction = (uint32_t)((d_value.i & (0x7fffffull << 29)) >> 29);
+	f_value.i |= fraction;
+	if (!fraction) {
+		f_value.i |= 1 << 22; // INF => qNaN
+	}
+	return f_value.f;
+}
+
+uint16_t cbor_to_float16(double value)
+{
 	uint16_t binary16 = 0;
-	binary32.f = (float)value;
-	if (UNEXPECTED(CBOR_B32A_ISNAN(binary32))) {
-		binary16 = 0x7e00  /* qNaN (or sNaN may become INF), 0b0_11111_10_0000_0000 */
-			| (uint16_t)((binary32.i & 0x80000000) >> 16)  /* sign */
-			| (uint16_t)((binary32.i & (0x03ff << 13)) >> 13);  /* high 10-bit fract, 0b11_1111_1111 << 13 */
+	// (1, 11, 52) bits => (1, 5, 10) bits
+	if (UNEXPECTED(isnan(value))) {
+		binary64_alias binary64;
+		binary64.f = value;
+		binary16 = 0x7c00  // sNaN 0b0_11111_10_0000_0000
+			| (uint16_t)((binary64.i & 0x8000000000000000) >> 48)  // sign
+			| (uint16_t)((binary64.i & (0x3ffull << 42)) >> 42);  // high 10-bit fract, 0b11_1111_1111 << 42
+		if (binary16 == 0x7c00) {
+			binary16 = 0x7e00; // INF => qNaN
+		}
 	} else {
+		// For precise rounding, double may have to be used.
+		binary32_alias binary32;
+		binary32.f = (float)value;
 		uint32_t exp = ((binary32.i & (0xff << 23)) >> 23);  /* 0b0_1111_1111 << 23 */
 		if (exp < 127 - 24) {  /* Too small */
 			binary16 = (uint16_t)((binary32.i & 0x80000000) >> 16);  /* sign */
