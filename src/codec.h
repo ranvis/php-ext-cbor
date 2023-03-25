@@ -144,6 +144,8 @@ void php_cbor_minit_decode();
 /* options */
 cbor_error php_cbor_override_encode_options(cbor_encode_args *args, HashTable *options);
 cbor_error php_cbor_set_encode_options(cbor_encode_args *args, HashTable *options);
+void php_cbor_init_decode_options(cbor_decode_args *args);
+void php_cbor_free_decode_options(cbor_decode_args *args);
 cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *options);
 
 void php_cbor_throw_error(cbor_error error, bool decoding, const cbor_error_args *args);

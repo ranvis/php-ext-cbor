@@ -132,9 +132,9 @@ FINALLY:
 	return error;
 }
 
-cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *options)
+void php_cbor_init_decode_options(cbor_decode_args *args)
 {
-	cbor_error error = 0;
+	args->flags = CBOR_BYTE | CBOR_KEY_BYTE;
 	args->max_depth = 64;
 	args->max_size = 65536;
 	args->offset = 0;
@@ -146,6 +146,15 @@ cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *option
 	args->edn.space = true;
 	args->edn.byte_space = 0;
 	args->edn.byte_wrap = 0;
+}
+
+void php_cbor_free_decode_options(cbor_decode_args *args)
+{
+}
+
+cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *options)
+{
+	cbor_error error = 0;
 	if (options == NULL) {
 		return 0;
 	}

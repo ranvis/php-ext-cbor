@@ -30,6 +30,7 @@ static zend_object *decoder_create(zend_class_entry *ce)
 	decoder_class *base = zend_object_alloc(sizeof(decoder_class), ce);
 	base->buffer = zend_empty_string;
 	base->mem.base = base->mem.offset = base->mem.length = base->mem.limit = 0;
+	php_cbor_init_decode_options(&base->args);
 	base->ctx = NULL;
 	base->is_processing = false;
 	ZVAL_UNDEF(&base->data);
@@ -45,6 +46,7 @@ static void decoder_free(zend_object *obj)
 		php_cbor_decode_delete(base->ctx);
 	}
 	zend_string_release(base->buffer);
+	php_cbor_free_decode_options(&base->args);
 	zend_object_std_dtor(obj);
 }
 

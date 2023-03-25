@@ -49,11 +49,13 @@ PHP_FUNCTION(cbor_decode)
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|lh!", &data, &flags, &options) != SUCCESS) {
 		RETURN_THROWS();
 	}
+	php_cbor_init_decode_options(&args);
 	args.flags = (uint32_t)flags;
 	error = php_cbor_set_decode_options(&args, options);
 	if (!error) {
 		error = php_cbor_decode(data, &value, &args);
 	}
+	php_cbor_free_decode_options(&args);
 	if (error) {
 		php_cbor_throw_error(error, true, &args.error_args);
 		RETURN_THROWS();
