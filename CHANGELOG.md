@@ -3,7 +3,7 @@
 [Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.5...HEAD
 ## [Unreleased]
 ### Added
-- Add decode option `'shared_ref'` => `shareable_only`.
+- Add decode option `'shared_ref'` => `'shareable_only'`.
 ### Changed
 ### Removed
 ### Fixed
@@ -31,7 +31,7 @@
 - Add `$offset` and `$length` parameters to Cbor\Decoder::add().
 - Add encoding of `Traversable` to `map`.
 ### Changed
-- '`max_size`' on decode is enforced for indefinite-length elements too.
+- `'max_size'` on decode is enforced for indefinite-length elements too.
 ### Fixed
 - Fix redundant representation of EDN string if text string has some sort of invalid UTF-8 sequences.
 

@@ -53,7 +53,7 @@ Encodes to or decodes from a CBOR data item.
 
 ```php
 try {
-    echo bin2hex(cbor_encode(['binary', 1, 2, null])) . "\n";
+    echo bin2hex(cbor_encode(['binary', 1, 2, null])), "\n";
     // 844662696e6172790102f6
     var_export(cbor_decode(hex2bin('844662696e6172790102f6')));
     // array (
@@ -63,7 +63,7 @@ try {
     //  3 => NULL,
     // )
 } catch (Cbor\Exception $e) {
-    echo $e->getMessage();
+    echo $e->getMessage(), "\n";
 }
 ```
 
@@ -115,7 +115,7 @@ var_dump(cbor_decode(hex2bin('83010243030405'), CBOR_EDN)); // string(17) "[1, 2
 ```
 `$flags` except `CBOR_SELF_DESCRIBE` and `$options` for decoding are ignored for this mode.
 
-Formatting `$options` may be specified:
+Formatting `$options` can be specified:
 
 - `'indent'` (default: `false`; values: `false` | `0`..`16` | `"\t"`)
   Number of space characters for indentation.
@@ -184,7 +184,7 @@ If another data item follows (CBOR sequences), call `add()` and/or `process()` a
 With the class, large data can be decoded progressively without loading the whole data in memory at once:
 
 ```php
-if (($fp = fopen($filePath, 'rb')) === false) {
+if (!($fp = fopen($filePath, 'rb'))) {
     throw new RuntimeException('Cannot open file');
 }
 $decoder = new Cbor\Decoder();
@@ -398,7 +398,7 @@ The tag {stringref} is like a compression, that "references" the string previous
 On encode, it can save payload size by replacing the string already seen with the tag + index (or at the worst case increase by 3-bytes overall when single-namespaced).
 Note that if smaller payload is desired, it should perform better to apply a data compression instead of this tag.
 
-On decode, the use of tag can save memory of decoded value because PHP can share the identical `string` sequences until one of them is going to be modified (copy-on-write).
+On decode, the use of tag can save memory of decoded value because of copy-on-write; PHP can share the identical `string` sequences until one of them is going to be modified.
 
 For decoding, the option is enabled as `true` by default, while encoding it should be specified explicitly.
 
@@ -434,9 +434,9 @@ The option is enabled by default on decoding.
 
 On encoding, potentially shared (i.e. there are variables holding the instance somewhere) PHP `stdClass` objects are tagged {shareable}. When such object is reused, {sharedref} tag is emitted. A reference to variable is dereferenced.
 
-If `'shareable'` is specified, non-map CBOR values tagged as {shareable} is wrapped into `Cbor\Shareable` object on decoding and the instance is reused on {sharedref} tag. On encoding, an instance of `Cbor\Shareable` is tagged {shareable} regardless of the option value.
+If `'shareable'` is specified, values tagged as {shareable} which are decoded to non-object are wrapped into `Cbor\Shareable` object on decoding, and the instances are reused on {sharedref} tag. On encoding, an instance of `Cbor\Shareable` is tagged {shareable} regardless of the option value.
 
-If `'shareable_only'` works similar to `'shareable'`. But CBOR map is also wrapped into `Cbor\Shareable` too.
+If `'shareable_only'` works similar to `'shareable'`. But CBOR maps tagged {shareable} are also wrapped into `Cbor\Shareable` instead of `object`.
 
 If `'unsafe_ref'` is specified, {shareable} tagged data that decoded to non-object becomes PHP `&` reference. On encoding a reference to variable is tagged {shareable} too.
 At first glance it may seem natural to use PHP reference for shared scalars and arrays. But this may cause unwanted side effects when the decoded structure contains references that you don't expect. You replace a single scalar value, and somewhere else is changed too!
