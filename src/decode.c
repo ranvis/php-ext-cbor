@@ -13,8 +13,6 @@
 #include <Zend/zend_smart_str.h>
 #include <assert.h>
 
-#define SIZE_INIT_LIMIT  4096
-
 #define _CB_SET_ERROR(error)  do { \
 		assert(error); \
 		if (!ctx->cb_error) { \

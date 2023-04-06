@@ -3,6 +3,7 @@
 [Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.5...HEAD
 ## [Unreleased]
 ### Added
+- Add `CBOR_MAP_NO_DUP_KEY` encode flag.
 - Add decode option `'shared_ref'` => `'shareable_only'`.
 ### Changed
 ### Removed

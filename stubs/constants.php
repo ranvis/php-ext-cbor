@@ -66,6 +66,7 @@ const CBOR_UNSAFE_TEXT = (1 << 5);
 const CBOR_MAP_AS_ARRAY = (1 << 6);
 
 /**
+ * Encode: Error if Traversable contains duplicate key.
  * Decode: Error if map key overwrites an existing key.
  */
 const CBOR_MAP_NO_DUP_KEY = (1 << 7);

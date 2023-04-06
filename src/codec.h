@@ -5,6 +5,8 @@
 
 #include "flags.h"
 
+#define SIZE_INIT_LIMIT  4096
+
 /* error codes */
 typedef enum {
 	/* E D   */ CBOR_ERROR_INVALID_FLAGS = 1,
@@ -15,7 +17,7 @@ typedef enum {
 	/* E D   */ CBOR_ERROR_UTF8,
 	/* E D   */ CBOR_ERROR_UNSUPPORTED_TYPE = 17,
 	/* E D   */ CBOR_ERROR_UNSUPPORTED_VALUE,
-	/*   D   */ CBOR_ERROR_UNSUPPORTED_SIZE,
+	/* E D   */ CBOR_ERROR_UNSUPPORTED_SIZE,
 	/*   D   */ CBOR_ERROR_UNSUPPORTED_KEY_TYPE = 25,
 	/*   D   */ CBOR_ERROR_UNSUPPORTED_KEY_VALUE,
 	/*   D   */ CBOR_ERROR_UNSUPPORTED_KEY_SIZE,

@@ -7,28 +7,22 @@ traversables
 
 require_once __DIR__ . '/common.php';
 
-function gen(): Generator
+class NoKey {}
+
+function makeGen(array $list): callable
 {
-    yield 1;
-    yield 2;
-    yield 4;
-    yield 8;
+    return fn () => genFrom($list);
 }
 
-function genKeyed(): Generator
+function genFrom(array $list): Generator
 {
-    yield 1 => 1;
-    yield '2' => 2;
-    yield true => 4;
-    yield [[]] => 8;
-}
-
-function genPartialKey(): Generator
-{
-    yield 5 => 1;
-    yield 2;
-    yield 5 => 4;
-    yield 8;
+    foreach ($list as [$key, $value]) {
+        if ($key instanceof NoKey) {
+            yield $value;
+        } else {
+            yield $key => $value;
+        }
+    }
 }
 
 function genThrows(): Generator
@@ -65,15 +59,53 @@ class SerializeGenerator extends CountedGenerator implements Cbor\Serializable
 }
 
 run(function () {
-    eq('0xbf0001010202040308ff', cenc(gen()));
-    eq('0xbf0101413202f504818008ff', cenc(genKeyed()));
-    eq('0xbf0501060205040708ff', cenc(genPartialKey()));
-    eq('0xa40001010202040308', cenc(new CountedGenerator(4, gen())));
-    cencThrows(CBOR_ERROR_EXTRANEOUS_DATA, new CountedGenerator(3, gen()));
-    cencThrows(CBOR_ERROR_TRUNCATED_DATA, new CountedGenerator(5, gen()));
+    $noKey = new NoKey();
+    $items = makeGen([
+        [$noKey, 1],
+        [$noKey, 2],
+        [$noKey, 4],
+        [$noKey, 8],
+    ]);
+    eq('0xbf0001010202040308ff', cenc($items()));
+    $keyedItems = makeGen([
+        [1, 1],
+        ['2', 2],
+        [true, 4],
+        [[[]], 8],
+    ]);
+    eq('0xbf0101413202f504818008ff', cenc($keyedItems()));
+    $partialKeyedItems = makeGen([
+        [5, 1],
+        [$noKey, 2],
+        [5, 4],
+        [$noKey, 8],
+    ]);
+    eq('0xbf0501060205040708ff', cenc($partialKeyedItems()));
+    eq('0xa40001010202040308', cenc(new CountedGenerator(4, $items())));
+    cencThrows(CBOR_ERROR_EXTRANEOUS_DATA, new CountedGenerator(3, $items()));
+    cencThrows(CBOR_ERROR_TRUNCATED_DATA, new CountedGenerator(5, $items()));
     cencThrows(RuntimeException::class, genThrows());
     // Serializable has precedence
-    eq('0x8401020408', cenc(new SerializeGenerator(4, gen())));
+    eq('0x8401020408', cenc(new SerializeGenerator(4, $items())));
+    //  duplicate key
+    cencThrows(CBOR_ERROR_DUPLICATE_KEY, $partialKeyedItems(), CBOR_MAP_NO_DUP_KEY);
+    $zeroOneItems = makeGen([
+        [0, true],
+        [-17, true], // 0x30
+        [new Cbor\Byte('0'), true],
+        [new Cbor\Text('0'), true],
+        [new Cbor\Float16(0.0), true],
+        [1, true],
+        [-18, true], // 0x31
+        [new Cbor\Byte('1'), true],
+        [new Cbor\Text('1'), true],
+        [new Cbor\Float16(1.0), true],
+        [Cbor\Undefined::get(), true],
+        [null, true],
+        [false, true],
+        [true, true],
+    ]);
+    eq('0xbf00f530f54130f56130f5f90000f501f531f54131f56131f5f93c00f5f7f5f6f5f4f5f5f5ff', cenc($zeroOneItems(), CBOR_MAP_NO_DUP_KEY));
 });
 
 ?>

@@ -626,6 +626,9 @@ static cbor_error enc_traversable(enc_context *ctx, zval *value)
 	zend_object_iterator *it = NULL;
 	bool is_indef_length = !zend_is_countable(value);
 	zend_long count;
+	smart_str key_buf = {0};
+	zend_string *key_cbor = zend_empty_string;
+	HashTable *keys_ht = NULL;
 	if (is_indef_length) {
 		cbor_di_write_indef(ctx->buf, DI_MAP);
 		count = -1;
@@ -655,7 +658,13 @@ static cbor_error enc_traversable(enc_context *ctx, zval *value)
 			ENC_CHECK(EG(exception) ? CBOR_ERROR_EXCEPTION : CBOR_ERROR_INTERNAL);
 		}
 		count = Z_LVAL(z_count);
+		if (count > min(0x7fffffff, HT_MAX_SIZE)) {
+			ENC_RESULT(CBOR_ERROR_UNSUPPORTED_SIZE);
+		}
 		cbor_di_write_int(ctx->buf, DI_MAP, count);
+	}
+	if (count && ctx->args.flags & CBOR_MAP_NO_DUP_KEY) { // indef = -1
+		keys_ht = zend_new_array((uint32_t)max(0, min(SIZE_INIT_LIMIT, count)));
 	}
 	zend_object *obj = Z_OBJ_P(value);
 	zend_class_entry *ce = obj->ce;
@@ -679,7 +688,23 @@ static cbor_error enc_traversable(enc_context *ctx, zval *value)
 			ZVAL_LONG(&key, index);
 		}
 		index++;
-		ENC_CHECK(enc_zval(ctx, &key));
+		if (keys_ht) {
+			smart_str *saved_buf = ctx->buf;
+			ctx->buf = &key_buf;
+			cbor_error key_error = enc_zval(ctx, &key);
+			ctx->buf = saved_buf;
+			zend_string_release(key_cbor);
+			key_cbor = smart_str_extract(&key_buf);
+			ENC_CHECK(key_error);
+			zval *ht_value = zend_hash_find(keys_ht, key_cbor);
+			if (ht_value) {
+				ENC_RESULT(CBOR_ERROR_DUPLICATE_KEY);
+			}
+			smart_str_append(saved_buf, key_cbor);
+			ht_value = zend_hash_add_empty_element(keys_ht, key_cbor);
+		} else {
+			ENC_CHECK(enc_zval(ctx, &key));
+		}
 		zval_ptr_dtor(&key);
 		zval *current = (*it->funcs->get_current_data)(it);
 		ENC_CHECK_EXCEPTION();
@@ -698,6 +723,10 @@ static cbor_error enc_traversable(enc_context *ctx, zval *value)
 ENCODED:
 	if (it) {
 		zend_iterator_dtor(it);
+	}
+	zend_string_release(key_cbor);
+	if (keys_ht) {
+		zend_array_destroy(keys_ht);
 	}
 	Z_UNPROTECT_RECURSION_P(value);
 	return error;
