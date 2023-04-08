@@ -35,25 +35,21 @@ enum {
 	EXT_STR_ENC_SERIALIZE_FN,
 	EXT_STR_DATE_FORMAT_FN,
 	EXT_STR_DATE_FORMAT,
-	EXT_STR_GMP_CMP_FN,
-	EXT_STR_GMP_COM_FN,
-	EXT_STR_GMP_EXPORT_FN,
 	EXT_STR_DEC_ISNAN_FN,
 	EXT_STR_DEC_ISINF_FN,
 	EXT_STR_DEC_ISNEG_FN,
 	EXT_STR_DEC_TOSTR_FN,
 
-#if TARGET_PHP_API_LT_82
-	EXT_STR_COUNT,
-#endif
-
 	_EXT_STR_COUNT,
 };
 
-typedef struct {
-	zend_fcall_info fci;
-	zend_fcall_info_cache fcc;
-} enc_ctx_call_info;
+enum {
+	EXT_FN_COUNT = 0,
+	EXT_FN_GMP_CMP,
+	EXT_FN_GMP_COM,
+	EXT_FN_GMP_EXPORT,
+	_EXT_FN_COUNT,
+};
 
 typedef struct {
 	cbor_encode_args args;
@@ -68,9 +64,7 @@ typedef struct {
 		zend_class_entry *decimal;
 		zend_class_entry *uri_i;
 	} ce;
-	struct enc_ctx_call {
-		enc_ctx_call_info count;
-	} call;
+	zend_function *call[_EXT_FN_COUNT];
 	zend_string *str[_EXT_STR_COUNT];
 } enc_context;
 
@@ -169,9 +163,6 @@ cbor_error php_cbor_encode(zval *value, zend_string **data, cbor_encode_args *ar
 	}
 	if (ctx.ref_lock) {
 		zend_array_destroy(ctx.ref_lock);
-	}
-	if (!Z_ISUNDEF(ctx.call.count.fci.function_name)) {
-		/* release, if allocated string */
 	}
 	for (int i = 0; i < _EXT_STR_COUNT; i++) {
 		if (ctx.str[i]) {
@@ -633,28 +624,20 @@ static cbor_error enc_traversable(enc_context *ctx, zval *value)
 		cbor_di_write_indef(ctx->buf, DI_MAP);
 		count = -1;
 	} else {
-		if (Z_ISUNDEF(ctx->call.count.fci.function_name)) {
-			zval z_count_str;
+		if (!ctx->call[EXT_FN_COUNT]) {
 #if TARGET_PHP_API_LT_82
-			if (!ctx->str[EXT_STR_COUNT]) {
-				ctx->str[EXT_STR_COUNT] = MAKE_ZSTR("count");
-			}
-			ZVAL_STR(&z_count_str, ctx->str[EXT_STR_COUNT]);
+			ctx->call[EXT_FN_COUNT] = zend_fetch_function_str(ZEND_STRL("count"));
 #else
-			ZVAL_STR(&z_count_str, ZSTR_KNOWN(ZEND_STR_COUNT));
+			ctx->call[EXT_FN_COUNT] = zend_fetch_function(ZSTR_KNOWN(ZEND_STR_COUNT));
 #endif
-			if (zend_fcall_info_init(&z_count_str, 0, &ctx->call.count.fci, &ctx->call.count.fcc, NULL, NULL) != SUCCESS) {
+			if (!ctx->call[EXT_FN_COUNT]) {
 				ENC_RESULT(EG(exception) ? CBOR_ERROR_EXCEPTION : CBOR_ERROR_INTERNAL);
 			}
 		}
-		zend_fcall_info *fci = &ctx->call.count.fci;
 		zval z_count;
-		fci->retval = &z_count;
-		fci->params = value;
-		fci->param_count = 1;
-		zend_result call_result = zend_call_function(fci, &ctx->call.count.fcc);
+		zend_call_known_function(ctx->call[EXT_FN_COUNT], NULL, NULL, &z_count, 1, value, NULL);
 		zval_ptr_dtor(&z_count); /* Can free safely before accessing as IS_LONG is the only valid type */
-		if (UNEXPECTED(call_result != SUCCESS || EG(exception) || Z_TYPE(z_count) != IS_LONG || Z_LVAL(z_count) < 0)) {
+		if (EG(exception) || Z_TYPE(z_count) != IS_LONG || Z_LVAL(z_count) < 0) {
 			ENC_CHECK(EG(exception) ? CBOR_ERROR_EXCEPTION : CBOR_ERROR_INTERNAL);
 		}
 		count = Z_LVAL(z_count);
@@ -966,27 +949,25 @@ static cbor_error enc_bignum(enc_context *ctx, zval *value)
 	bool is_negative;
 	ZVAL_UNDEF(&r_value);
 	ZVAL_UNDEF(&com_value);
-	if (!ctx->str[EXT_STR_GMP_EXPORT_FN]) {
-		ctx->str[EXT_STR_GMP_CMP_FN] = MAKE_ZSTR("gmp_cmp");
-		ctx->str[EXT_STR_GMP_COM_FN] = MAKE_ZSTR("gmp_com");
-		ctx->str[EXT_STR_GMP_EXPORT_FN] = MAKE_ZSTR("gmp_export");
+	if (!ctx->call[EXT_FN_GMP_EXPORT]) {
+		ctx->call[EXT_FN_GMP_CMP] = zend_fetch_function_str(ZEND_STRL("gmp_cmp"));
+		ctx->call[EXT_FN_GMP_COM] = zend_fetch_function_str(ZEND_STRL("gmp_com"));
+		ctx->call[EXT_FN_GMP_EXPORT] = zend_fetch_function_str(ZEND_STRL("gmp_export"));
+		if (!ctx->call[EXT_FN_GMP_CMP] || !ctx->call[EXT_FN_GMP_COM] || !ctx->call[EXT_FN_GMP_EXPORT]) {
+			ctx->call[EXT_FN_GMP_EXPORT] = NULL;
+			return CBOR_ERROR_INTERNAL;
+		}
 	}
 	ZVAL_COPY_VALUE(&params[0], value);
 	ZVAL_LONG(&params[1], 0);
-	if (call_fn(NULL, ctx->str[EXT_STR_GMP_CMP_FN], &r_value, 2, params) != SUCCESS) {
-		return CBOR_ERROR_INTERNAL;
-	}
+	zend_call_known_function(ctx->call[EXT_FN_GMP_CMP], NULL, NULL, &r_value, 2, params, NULL);
 	is_negative = Z_LVAL(r_value) < 0;
 	if (is_negative) {
-		if (call_fn(NULL, ctx->str[EXT_STR_GMP_COM_FN], &com_value, 1, params) != SUCCESS) {
-			return CBOR_ERROR_INTERNAL;
-		}
+		zend_call_known_function(ctx->call[EXT_FN_GMP_COM], NULL, NULL, &com_value, 1, params, NULL);
 		value = &com_value;
 		ZVAL_COPY_VALUE(&params[0], value);
 	}
-	if (call_fn(NULL, ctx->str[EXT_STR_GMP_EXPORT_FN], &r_value, 1, params) != SUCCESS) {
-		ENC_RESULT(CBOR_ERROR_INTERNAL);
-	}
+	zend_call_known_function(ctx->call[EXT_FN_GMP_EXPORT], NULL, NULL, &r_value, 1, params, NULL);
 	r_str = Z_STR(r_value);
 	len = ZSTR_LEN(r_str);
 	if (len <= 8) {
