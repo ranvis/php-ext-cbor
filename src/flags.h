@@ -87,9 +87,3 @@
  * Decode: Decode data to Extended Diagnostic Notation string.
  */
 #define CBOR_EDN              (1 << 14)
-
-/**
- * Encode: Store length of arrays/maps as indefinite if number of elements are large enough. While it makes encoded stream shorter by a byte or two per group, decoding can have a little overhead due to inefficient memory allocations.
- * Any use case?
- */
-/* EXPERIMENTAL: */ #define CBOR_PACKED           (1 << 31)

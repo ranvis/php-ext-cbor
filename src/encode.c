@@ -447,8 +447,7 @@ static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 	}
 	is_list = type == HASH_ARRAY && zend_array_is_list(ht);
 	count = zend_hash_num_elements(ht);
-	if ((type == HASH_OBJ && count)
-			|| UNEXPECTED(count > 0xff && (ctx->args.flags & CBOR_PACKED))) {
+	if (type == HASH_OBJ && count) {  // HASH_OBJ is not anywhere yet
 		is_indef_length = true;
 		cbor_di_write_indef(ctx->buf, is_list ? DI_ARRAY : DI_MAP);
 	} else {
