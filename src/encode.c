@@ -27,12 +27,7 @@ typedef struct {
 } srns_item;
 
 enum {
-	EXT_STR_GMP_CN = 0,
-	EXT_STR_DEC_MN,
-	EXT_STR_DEC_CN,
-	EXT_STR_URI_IN,
-
-	EXT_STR_ENC_SERIALIZE_FN,
+	EXT_STR_ENC_SERIALIZE_FN = 0,
 	EXT_STR_DATE_FORMAT_FN,
 	EXT_STR_DATE_FORMAT,
 	EXT_STR_DEC_ISNAN_FN,
@@ -244,17 +239,21 @@ RETRY:
 		} else {
 			if (!ctx->ce.date_i) {
 				ctx->ce.date_i = php_date_get_interface_ce();  /* in core */
-				ctx->str[EXT_STR_GMP_CN] = MAKE_ZSTR("gmp");
-				if (zend_hash_exists(&module_registry, ctx->str[EXT_STR_GMP_CN])) {
-					ctx->ce.gmp = zend_lookup_class_ex(ctx->str[EXT_STR_GMP_CN], ctx->str[EXT_STR_GMP_CN], ZEND_FETCH_CLASS_NO_AUTOLOAD);
+				zend_string *gmp_cn_str = MAKE_ZSTR("gmp");
+				if (zend_hash_exists(&module_registry, gmp_cn_str)) {
+					ctx->ce.gmp = zend_lookup_class_ex(gmp_cn_str, gmp_cn_str, ZEND_FETCH_CLASS_NO_AUTOLOAD);
 				}
-				ctx->str[EXT_STR_DEC_MN] = MAKE_ZSTR("decimal");
-				ctx->str[EXT_STR_DEC_CN] = MAKE_ZSTR("decimal\\decimal");
-				if (zend_hash_exists(&module_registry, ctx->str[EXT_STR_DEC_MN])) {
-					ctx->ce.decimal = zend_lookup_class_ex(ctx->str[EXT_STR_DEC_CN], ctx->str[EXT_STR_DEC_CN], ZEND_FETCH_CLASS_NO_AUTOLOAD);
+				zend_string_release(gmp_cn_str);
+				zend_string *dec_mn_str = MAKE_ZSTR("decimal");
+				if (zend_hash_exists(&module_registry, dec_mn_str)) {
+					zend_string *dec_cn_str = MAKE_ZSTR("decimal\\decimal");
+					ctx->ce.decimal = zend_lookup_class_ex(dec_cn_str, dec_cn_str, ZEND_FETCH_CLASS_NO_AUTOLOAD);
+					zend_string_release(dec_cn_str);
 				}
-				ctx->str[EXT_STR_URI_IN] = MAKE_ZSTR("psr\\http\\message\\uriinterface");
-				ctx->ce.uri_i = zend_lookup_class_ex(ctx->str[EXT_STR_URI_IN], ctx->str[EXT_STR_URI_IN], ZEND_FETCH_CLASS_NO_AUTOLOAD);
+				// If code executed during encoding autoloads UriInterface, the extension may not be able to identify it. It is unlikely to happen in real code though.
+				zend_string *uri_in_str = MAKE_ZSTR("psr\\http\\message\\uriinterface");
+				ctx->ce.uri_i = zend_lookup_class_ex(uri_in_str, uri_in_str, ZEND_FETCH_CLASS_NO_AUTOLOAD);
+				zend_string_release(uri_in_str);
 			}
 			if (ctx->args.datetime && instanceof_function(ce, ctx->ce.date_i)) {
 				error = enc_datetime(ctx, value);
