@@ -9,6 +9,8 @@
 ### Fixed
 - When `'shared_ref'` is active, objects (whether as a reference or in a `EncodeParams` instance) are not shared if there are multiple references to a value, but only one to the pointing object directly.
 - NaN fraction bits are not preserved when cast to float internally.
+- Correct the documentation of the default value for the option `'shared_ref'`. It had been `false` since alpha release.
+- Correct the documentation of encoding float with flags. Informational loss is not prevented on encoding if either `CBOR_FLOAT16` or `CBOR_FLOAT32` is specified, because it forces type of PHP `float` to the specified size.
 ### Security
 ### Deprecated
 

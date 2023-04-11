@@ -101,7 +101,7 @@ See "Supported Tags" below for the following options:
 
 - `'shared_ref'`:
   - Encode: default: `false`; values: `bool` | `'unsafe_ref'`
-  - Decode: default: `true`; values: `bool` | `'shareable'` | `'shareable_only'` | `'unsafe_ref'`
+  - Decode: default: `false`; values: `bool` | `'shareable'` | `'shareable_only'` | `'unsafe_ref'`
 
 Unknown key names are silently ignored.
 
@@ -242,7 +242,9 @@ CBOR `float` has three sizes. 64-bit values are translated to PHP `float`.
 32-bit values and 16-bit values are decoded to PHP `Cbor\Float32` and `Cbor\Float16` respectively.
 But if the flags `CBOR_FLOAT32` and/or `CBOR_FLOAT16` are passed, they are decoded to PHP `float`.
 
-When encoding PHP `float`, values are stored with the smallest possible type if a flag is set; therefore no informational loss is expected.
+When encoding PHP `float`, values are stored with 64-bit value.
+If either of the flags is specified, values are stored in that size.
+If both flags are set, the smallest possible type is used; therefore no informational loss is expected.
 
 #### Strings
 
@@ -420,7 +422,7 @@ It is recommended to explicity enable the `string_ref` option on decoding if you
 Option:
 - `'shared_ref'`:
   - Encode: default: `false`; values: `bool` | `'unsafe_ref'`
-  - Decode: default: `true`; values: `bool` | `'shareable'` | `'shareable_only'` | `'unsafe_ref'`
+  - Decode: default: `false`; values: `bool` | `'shareable'` | `'shareable_only'` | `'unsafe_ref'`
 
 Constants:
 - `Cbor\Tag::SHAREABLE`

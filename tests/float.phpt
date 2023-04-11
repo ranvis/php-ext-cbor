@@ -28,6 +28,10 @@ run(function () {
 
     eq('0xfb7ff0000000000000', cenc(INF));
     eq('0xfaff800000', cenc(-INF, CBOR_FLOAT32));
+    eq('0xf97c00', cenc(INF, CBOR_FLOAT16 | CBOR_FLOAT32));
+    eq('0xf97c00', cenc(123456.0, CBOR_FLOAT16));
+    eq('0xfa47f12000', cenc(123456.0, CBOR_FLOAT32));
+    eq('0xfa47f12000', cenc(123456.0, CBOR_FLOAT16 | CBOR_FLOAT32));
     // NaN, don't use PHP constant as its bit notation is compiler dependent
     eq('0xf97e00', cenc(hex2double('7ff8000000000000'), CBOR_FLOAT16));
     eq('0xfb0000000000000000', cenc(0.0));
