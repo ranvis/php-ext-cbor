@@ -24,6 +24,10 @@ run(function () {
     eq(cenc(NAN), cenc(new Decimal(NAN)));
     eq(cenc(INF), cenc(new Decimal(INF)));
     eq(cenc(-INF), cenc(new Decimal(-INF)));
+    eq('0xfa7f800000', cenc(new Decimal(INF), CBOR_FLOAT32));
+    eq('0xf97c00', cenc(new Decimal(INF), CBOR_FLOAT16 | CBOR_FLOAT32));
+    eq('0xf97c00', cenc(new Decimal(INF), CBOR_CDE));
+    eq(cenc(NAN, CBOR_FLOAT16), cenc(new Decimal(NAN), CBOR_CDE));
     eq('0x1bffffffffffffffff', cenc(new Decimal('18446744073709551615')));
     eq('0x3bffffffffffffffff', cenc(new Decimal('-18446744073709551616')));
     eq('0xc48200c249010000000000000000', cenc(new Decimal('18446744073709551616')));

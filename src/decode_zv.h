@@ -537,9 +537,9 @@ static void zv_do_floatx(dec_context *ctx, uint32_t raw, int bits)
 		if (bits == 32) {
 			binary32_alias binary32;
 			binary32.i = raw;
-			ZVAL_DOUBLE(&value, (double)binary32.f);
+			ZVAL_DOUBLE(&value, cbor_from_fp32(binary32.f));
 		} else {
-			ZVAL_DOUBLE(&value, cbor_from_float16((uint16_t)raw));
+			ZVAL_DOUBLE(&value, cbor_from_fp16i((cbor_fp16i)raw));
 		}
 		zv_append(ctx, &value);
 		return;

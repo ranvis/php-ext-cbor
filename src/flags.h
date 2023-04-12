@@ -84,6 +84,15 @@
 #define CBOR_FLOAT32          (1 << 9)
 
 /**
+ * Encode: Comply core deterministic encoding requirements.
+ *
+ * The flags CBOR_MAP_NO_DUP_KEY, CBOR_FLOAT16 and CBOR_FLOAT32 are implied.
+ *
+ * The flag CBOR_UNSAFE_TEXT is not voided.
+ */
+#define CBOR_CDE              (1 << 13)
+
+/**
  * Decode: Decode data to Extended Diagnostic Notation string.
  */
 #define CBOR_EDN              (1 << 14)

@@ -54,6 +54,8 @@ run(function () {
     eq('0x' . $data, cenc($value));
     cdecThrows(CBOR_ERROR_TAG_VALUE, $data);
     cencThrows(CBOR_ERROR_TAG_VALUE, $value, options: ['string_ref' => true]);
+
+    cencThrows(CBOR_ERROR_INVALID_FLAGS, 1, CBOR_CDE, ['string_ref' => true]);
 });
 
 ?>

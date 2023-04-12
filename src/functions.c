@@ -21,9 +21,9 @@ PHP_FUNCTION(cbor_encode)
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z|lh!", &value, &flags, &options) != SUCCESS) {
 		RETURN_THROWS();
 	}
-	args.flags = (uint32_t)flags;
-	error = php_cbor_set_encode_options(&args, options);
-	if (!error) {
+	args.u_flags = (uint32_t)flags;
+	if ((error = php_cbor_set_encode_options(&args, options)) == 0
+			&& (error = php_cbor_check_encode_params(&args)) == 0) {
 		error = php_cbor_encode(value, &str, &args);
 	}
 	if (error) {
@@ -93,6 +93,10 @@ void php_cbor_throw_error(cbor_error error, bool decoding, const cbor_error_args
 			DESC_MSG("Either CBOR_BYTE or CBOR_TEXT flag must be specified to encode string");
 		case CBOR_ERROR_INVALID_FLAGS__NO_KEY_STRING_FLAG:
 			DESC_MSG("Either CBOR_KEY_BYTE or CBOR_KEY_TEXT flag must be specified to encode string as key");
+		case CBOR_ERROR_INVALID_FLAGS__CONTEXTUAL_CDE:
+			DESC_MSG("CBOR_CDE flag cannot be used in conjunction with options that makes CBOR data contextual");
+		case CBOR_ERROR_INVALID_FLAGS__CLEAR_CDE:
+			DESC_MSG("CBOR_CDE flag cannot be cleared during encoding");
 		}
 		break;
 	case CBOR_ERROR_INVALID_OPTIONS:

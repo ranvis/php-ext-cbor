@@ -17,7 +17,7 @@
 #include <Zend/zend_smart_str.h>
 #include <assert.h>
 
-#define CTX_TEXT_FLAG(ctx)  (((ctx)->args.flags & CBOR_TEXT) != 0)
+#define CTX_TEXT_FLAG(ctx)  (((ctx)->args.e_flags & CBOR_TEXT) != 0)
 
 #define MAKE_ZSTR(ls)  zend_string_init(ZEND_STRL(ls), false)
 
@@ -71,7 +71,7 @@ typedef enum {
 
 static cbor_error enc_zval(enc_context *ctx, zval *value);
 static void enc_long(enc_context *ctx, zend_long value);
-static void enc_z_double(enc_context *ctx, zval *value, bool is_small);
+static void enc_z_double(enc_context *ctx, zval *value);
 static cbor_error enc_string(enc_context *ctx, zend_string *value, bool to_text);
 static cbor_error enc_string_len(enc_context *ctx, const char *value, size_t length, zend_string *v_str, bool to_text);
 static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type);
@@ -117,17 +117,6 @@ void php_cbor_minit_encode()
 		} \
 	} while (0)
 
-static cbor_error validate_flags(uint32_t flags)
-{
-	if (flags & CBOR_BYTE && flags & CBOR_TEXT) {
-		return E_DESC(CBOR_ERROR_INVALID_FLAGS, BOTH_STRING_FLAG);
-	}
-	if (flags & CBOR_KEY_BYTE && flags & CBOR_KEY_TEXT) {
-		return E_DESC(CBOR_ERROR_INVALID_FLAGS, BOTH_KEY_STRING_FLAG);
-	}
-	return 0;
-}
-
 cbor_error php_cbor_encode(zval *value, zend_string **data, cbor_encode_args *args)
 {
 	cbor_error error;
@@ -139,10 +128,7 @@ cbor_error php_cbor_encode(zval *value, zend_string **data, cbor_encode_args *ar
 	ctx.cur_depth = 0;
 	ctx.in_enc_params = 0;
 	ctx.buf = &buf;
-	if ((error = validate_flags(ctx.args.flags)) != 0) {
-		return error;
-	}
-	if (ctx.args.flags & CBOR_SELF_DESCRIBE) {
+	if (ctx.args.e_flags & CBOR_SELF_DESCRIBE) {
 		enc_tag_bare(&ctx, CBOR_TAG_SELF_DESCRIBE);
 	}
 	if (ctx.args.string_ref == OPT_TRUE) {
@@ -195,10 +181,10 @@ RETRY:
 		enc_long(ctx, Z_LVAL_P(value));
 		break;
 	case IS_DOUBLE:
-		enc_z_double(ctx, value, false);
+		enc_z_double(ctx, value);
 		break;
 	case IS_STRING:
-		if (UNEXPECTED(!(ctx->args.flags & (CBOR_BYTE | CBOR_TEXT)))) {
+		if (UNEXPECTED(!(ctx->args.e_flags & (CBOR_BYTE | CBOR_TEXT)))) {
 			error = E_DESC(CBOR_ERROR_INVALID_FLAGS, NO_STRING_FLAG);
 			break;
 		}
@@ -299,31 +285,33 @@ static void enc_long(enc_context *ctx, zend_long value)
 	}
 }
 
-static void enc_z_double(enc_context *ctx, zval *value, bool is_small)
+static void enc_z_float_compact(enc_context *ctx, float value)
 {
-	int float_type = ctx->args.flags & (CBOR_FLOAT16 | CBOR_FLOAT32);
+	assert(ctx->args.e_flags & CBOR_CDE);
+	if (test_fp32_size(value) == 2) {
+		cbor_fp16i binary16 = cbor_float_32_to_16(value);
+		cbor_di_write_float16(ctx->buf, binary16);
+	} else {
+		cbor_di_write_float32(ctx->buf, value);
+	}
+}
+
+static void enc_z_double(enc_context *ctx, zval *value)
+{
+	int float_type = ctx->args.e_flags & (CBOR_FLOAT16 | CBOR_FLOAT32);
 	if (float_type == (CBOR_FLOAT16 | CBOR_FLOAT32)) {
-		/* Test if smaller type will fit. (But not to denormalized numbers.) */
-		binary64_alias bin64;
-		bin64.f = Z_DVAL_P(value);
-		unsigned exp = (bin64.i >> 52) & 0x7ff;  /* exp */
-		uint64_t frac = bin64.i & 0xfffffffffffff;  /* fraction */
-		bool is_inf_nan = exp == 0x7ff;
-		if (bin64.i == 0) { /* 0.0 */
+		int size = test_fp64_size(Z_DVAL_P(value));
+		if (size == 2) {
 			float_type = CBOR_FLOAT16;
-		} else if ((is_inf_nan || (exp >= 1023 - 126 && exp <= 1023 + 127)) && !(frac & 0x1fffffff)) {  /* fraction: 52 to 23 */
-			if ((is_inf_nan || (exp >= 1023 - 14 && exp <= 1023 + 15)) && !(frac & 0x3ffffffffff)) {  /* fraction: 52 to 10 */
-				float_type = CBOR_FLOAT16;
-			} else {
-				float_type = CBOR_FLOAT32;
-			}
+		} else if (size == 4) {
+			float_type = CBOR_FLOAT32;
 		}
 	}
 	if (float_type == CBOR_FLOAT16) {
-		uint16_t binary16 = cbor_to_float16(Z_DVAL_P(value));
+		cbor_fp16i binary16 = cbor_float_64_to_16(Z_DVAL_P(value));
 		cbor_di_write_float16(ctx->buf, binary16);
 	} else if (float_type == CBOR_FLOAT32) {
-		cbor_di_write_float32(ctx->buf, cbor_to_float32(Z_DVAL_P(value)));
+		cbor_di_write_float32(ctx->buf, cbor_to_fp32(Z_DVAL_P(value)));
 	} else {
 		cbor_di_write_float64(ctx->buf, Z_DVAL_P(value));
 	}
@@ -360,7 +348,7 @@ static cbor_error enc_string_len(enc_context *ctx, const char *value, size_t len
 		}
 	}
 	if (to_text) {
-		if (!(ctx->args.flags & CBOR_UNSAFE_TEXT)
+		if (!(ctx->args.e_flags & CBOR_UNSAFE_TEXT)
 				&& !is_utf8((uint8_t *)value, length)) {
 			return CBOR_ERROR_UTF8;
 		}
@@ -427,16 +415,52 @@ static bool convert_string_to_int(zend_string *str, uint64_t *value, bool *is_ne
 	return true;
 }
 
+static int bucket_cmp_key_cde(Bucket *a, Bucket *b)
+{
+	assert(a->key && b->key);
+	return zend_binary_strcmp(ZSTR_VAL(a->key), ZSTR_LEN(a->key), ZSTR_VAL(b->key), ZSTR_LEN(b->key));
+}
+
+static cbor_error enc_cde_map(enc_context *ctx, HashTable *ht)
+{
+	if (GC_REFCOUNT(ht) > 1) {
+		return CBOR_ERROR_INTERNAL;
+	}
+	zend_ulong count = zend_hash_num_elements(ht);
+	cbor_di_write_int(ctx->buf, DI_MAP, count);
+	if (!count) {
+		return 0;
+	}
+	cbor_error error = 0;
+	zend_hash_sort(ht, bucket_cmp_key_cde, false);
+	zend_string *key;
+	zval *val;
+	ZEND_HASH_FOREACH_STR_KEY_VAL(ht, key, val) {
+		if (!key) {
+			ENC_RESULT(CBOR_ERROR_INTERNAL);
+		}
+		smart_str_append(ctx->buf, key);
+		ENC_CHECK(enc_zval(ctx, val));
+		count--;
+	}
+	ZEND_HASH_FOREACH_END();
+	if (count) {
+		ENC_RESULT(CBOR_ERROR_INTERNAL);
+	}
+ENCODED:
+	return error;
+}
+
 static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 {
 	cbor_error error = 0;
 	HashTable *ht = NULL;
 	zend_ulong count;
-	bool to_text = (ctx->args.flags & CBOR_KEY_TEXT) != 0;
-	bool key_flag_error = !(ctx->args.flags & (CBOR_KEY_BYTE | CBOR_KEY_TEXT));
+	bool to_text = (ctx->args.e_flags & CBOR_KEY_TEXT) != 0;
+	bool key_flag_error = !(ctx->args.e_flags & (CBOR_KEY_BYTE | CBOR_KEY_TEXT));
 	bool is_list;
 	bool is_indef_length = false;
-	bool use_int_key = ctx->args.flags & CBOR_INT_KEY;
+	bool use_int_key = ctx->args.e_flags & CBOR_INT_KEY;
 	if (Z_IS_RECURSIVE_P(value)) {
 		return CBOR_ERROR_RECURSION;
 	}
@@ -447,7 +471,11 @@ static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 	}
 	is_list = type == HASH_ARRAY && zend_array_is_list(ht);
 	count = zend_hash_num_elements(ht);
-	if (type == HASH_OBJ && count) {  // HASH_OBJ is not anywhere yet
+	smart_str key_buf = {0};
+	HashTable *cde_ht = NULL;
+	if (count && ctx->args.e_flags & CBOR_CDE && !is_list) {
+		cde_ht = zend_new_array((uint32_t)max(0, min(SIZE_INIT_LIMIT, count)));
+	} else if (type == HASH_OBJ && count) {  // HASH_OBJ is not anywhere yet
 		is_indef_length = true;
 		cbor_di_write_indef(ctx->buf, is_list ? DI_ARRAY : DI_MAP);
 	} else {
@@ -456,15 +484,20 @@ static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 	if (count) {
 		zend_ulong index;
 		zend_string *key;
-		zval *data;
+		zval *val;
 		Z_PROTECT_RECURSION_P(value);
-		ZEND_HASH_FOREACH_KEY_VAL_IND(ht, index, key, data) {
+		smart_str *out_buf = ctx->buf;
+		ZEND_HASH_FOREACH_KEY_VAL_IND(ht, index, key, val) {
 			if (!is_list) {
+				if (cde_ht) {
+					ctx->buf = &key_buf;
+				}
 				if (key) {
 					uint64_t key_int;
 					bool is_negative;
 					/* check property visibility if it is object and not stdClass */
 					if (type == HASH_OBJ && *ZSTR_VAL(key) == '\0' && ZSTR_LEN(key) > 0) {
+						ctx->buf = out_buf;
 						continue; /* skip if not a public property */
 					}
 					if (use_int_key && convert_string_to_int(key, &key_int, &is_negative)) {
@@ -487,12 +520,23 @@ static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 					enc_long(ctx, (zend_long)index);
 					error = 0;
 				}
+				if (cde_ht) {
+					zend_string *key_cbor = smart_str_extract(&key_buf);
+					ctx->buf = out_buf;
+					if (EXPECTED(!error)) {
+						Z_TRY_ADDREF_P(val);
+						zend_hash_add_new(cde_ht, key_cbor, val);
+					}
+					zend_string_release(key_cbor);
+				}
 			}
 			if (UNEXPECTED(error)) {
 				break;
 			}
-			if ((error = enc_zval(ctx, data)) != 0) {
-				break;
+			if (!cde_ht) {
+				if ((error = enc_zval(ctx, val)) != 0) {
+					break;
+				}
 			}
 			count--;
 		}
@@ -505,7 +549,12 @@ static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 	if (type != HASH_ARRAY) {
 		zend_release_properties(ht);
 	}
-	if (is_indef_length) {
+	if (cde_ht) {
+		if (!error) {
+			error = enc_cde_map(ctx, cde_ht);
+		}
+		zend_array_destroy(cde_ht);
+	} else if (is_indef_length) {
 		cbor_di_write_break(ctx->buf);
 	}
 	return error;
@@ -528,8 +577,12 @@ static cbor_error enc_typed_text(enc_context *ctx, zval *ins)
 static void enc_typed_floatx(enc_context *ctx, zval *ins, int bits)
 {
 	assert(Z_TYPE_P(ins) == IS_OBJECT);
+	if (bits == 32 && (ctx->args.e_flags & CBOR_CDE)) {
+		enc_z_float_compact(ctx, cbor_float32_get_value(Z_OBJ_P(ins)));
+		return;
+	}
 	uint8_t *ptr = cbor_di_write_float_head(ctx->buf, bits);
-	cbor_floatx_get_value(Z_OBJ_P(ins), (char *)ptr);
+	cbor_floatx_get_value_be(Z_OBJ_P(ins), (char *)ptr);
 }
 
 static void enc_tag_bare(enc_context *ctx, zend_long tag_id)
@@ -613,15 +666,18 @@ static cbor_error enc_traversable(enc_context *ctx, zval *value)
 	Z_PROTECT_RECURSION_P(value);
 	cbor_error error = 0;
 	zend_object_iterator *it = NULL;
-	bool is_indef_length = !zend_is_countable(value);
+	bool is_indef_length = (ctx->args.e_flags & CBOR_CDE) || !zend_is_countable(value);
 	zend_long count;
 	smart_str key_buf = {0};
-	zend_string *key_cbor = zend_empty_string;
 	HashTable *keys_ht = NULL;
-	if (is_indef_length) {
+	if (ctx->args.e_flags & CBOR_CDE) {
+		assert(is_indef_length);
+		count = -1;
+	} else if (is_indef_length) {
 		cbor_di_write_indef(ctx->buf, DI_MAP);
 		count = -1;
 	} else {
+		assert(!(ctx->args.e_flags & CBOR_CDE));
 		if (!ctx->call[EXT_FN_COUNT]) {
 #if TARGET_PHP_API_LT_82
 			ctx->call[EXT_FN_COUNT] = zend_fetch_function_str(ZEND_STRL("count"));
@@ -629,7 +685,7 @@ static cbor_error enc_traversable(enc_context *ctx, zval *value)
 			ctx->call[EXT_FN_COUNT] = zend_fetch_function(ZSTR_KNOWN(ZEND_STR_COUNT));
 #endif
 			if (!ctx->call[EXT_FN_COUNT]) {
-				ENC_RESULT(EG(exception) ? CBOR_ERROR_EXCEPTION : CBOR_ERROR_INTERNAL);
+				ENC_RESULT(CBOR_ERROR_INTERNAL);
 			}
 		}
 		zval z_count;
@@ -644,7 +700,7 @@ static cbor_error enc_traversable(enc_context *ctx, zval *value)
 		}
 		cbor_di_write_int(ctx->buf, DI_MAP, count);
 	}
-	if (count && ctx->args.flags & CBOR_MAP_NO_DUP_KEY) { // indef = -1
+	if (count && ctx->args.e_flags & CBOR_MAP_NO_DUP_KEY) { // indef = -1
 		keys_ht = zend_new_array((uint32_t)max(0, min(SIZE_INIT_LIMIT, count)));
 	}
 	zend_object *obj = Z_OBJ_P(value);
@@ -656,6 +712,7 @@ static cbor_error enc_traversable(enc_context *ctx, zval *value)
 	}
 	ENC_CHECK_EXCEPTION();
 	zend_long index = 0;
+	smart_str *out_buf = ctx->buf;
 	while ((*it->funcs->valid)(it) == SUCCESS) {
 		ENC_CHECK_EXCEPTION();
 		if (!is_indef_length) {
@@ -671,43 +728,54 @@ static cbor_error enc_traversable(enc_context *ctx, zval *value)
 			ZVAL_LONG(&key, index);
 		}
 		index++;
+		zval *ht_value = NULL;
 		if (keys_ht) {
-			smart_str *saved_buf = ctx->buf;
 			ctx->buf = &key_buf;
-			cbor_error key_error = enc_zval(ctx, &key);
-			ctx->buf = saved_buf;
-			zend_string_release(key_cbor);
-			key_cbor = smart_str_extract(&key_buf);
-			ENC_CHECK(key_error);
-			zval *ht_value = zend_hash_find(keys_ht, key_cbor);
-			if (ht_value) {
-				ENC_RESULT(CBOR_ERROR_DUPLICATE_KEY);
+			error = enc_zval(ctx, &key);
+			ctx->buf = out_buf;
+			zend_string *key_cbor = smart_str_extract(&key_buf);
+			if (!error) {
+				if (zend_hash_find(keys_ht, key_cbor)) {
+					error = CBOR_ERROR_DUPLICATE_KEY;
+				} else {
+					if (!(ctx->args.e_flags & CBOR_CDE)) {
+						smart_str_append(out_buf, key_cbor);
+					}
+					ht_value = zend_hash_add_empty_element(keys_ht, key_cbor);
+				}
 			}
-			smart_str_append(saved_buf, key_cbor);
-			ht_value = zend_hash_add_empty_element(keys_ht, key_cbor);
+			zend_string_release(key_cbor);
 		} else {
-			ENC_CHECK(enc_zval(ctx, &key));
+			assert(!(ctx->args.e_flags & CBOR_CDE));
+			error = enc_zval(ctx, &key);
 		}
 		zval_ptr_dtor(&key);
+		ENC_CHECK(error);
 		zval *current = (*it->funcs->get_current_data)(it);
 		ENC_CHECK_EXCEPTION();
 		/* CBOR_INT_KEY is not applied here. For traversable keys are not coerced, users can cast freely */
-		ENC_CHECK(enc_zval(ctx, current));
-		zval_ptr_dtor(current);
+		if (!keys_ht || !(ctx->args.e_flags & CBOR_CDE)) {
+			ENC_CHECK(enc_zval(ctx, current));
+			zval_ptr_dtor(current);
+		} else {
+			ZVAL_COPY_VALUE(ht_value, current);
+		}
 		(*it->funcs->move_forward)(it);
 		ENC_CHECK_EXCEPTION();
 	}
 	ENC_CHECK_EXCEPTION();
-	if (is_indef_length) {
+	if (ctx->args.e_flags & CBOR_CDE) {
+		ENC_CHECK(enc_cde_map(ctx, keys_ht));
+	} else if (is_indef_length) {
 		cbor_di_write_break(ctx->buf);
 	} else if (index != count) {
+		assert(!(ctx->args.e_flags & CBOR_CDE));
 		ENC_RESULT(CBOR_ERROR_TRUNCATED_DATA);
 	}
 ENCODED:
 	if (it) {
 		zend_iterator_dtor(it);
 	}
-	zend_string_release(key_cbor);
 	if (keys_ht) {
 		zend_array_destroy(keys_ht);
 	}
@@ -743,7 +811,10 @@ static cbor_error enc_encodeparams(enc_context *ctx, zval *ins)
 			ENC_RESULT(CBOR_ERROR_INVALID_FLAGS);
 		}
 		flags = Z_LVAL_P(conf);
-		ctx->args.flags &= ~flags;
+		if (flags & CBOR_CDE) {
+			ENC_RESULT(E_DESC(CBOR_ERROR_INVALID_FLAGS, CLEAR_CDE));
+		}
+		ctx->args.u_flags &= ~flags;
 	}
 	conf = zend_hash_str_find_deref(ht, ZEND_STRL("flags"));
 	if (conf) {
@@ -762,11 +833,11 @@ static cbor_error enc_encodeparams(enc_context *ctx, zval *ins)
 		} else if (flags & CBOR_KEY_TEXT) {
 			mutex_flags |= CBOR_KEY_BYTE;
 		}
-		ctx->args.flags &= ~mutex_flags;
-		ctx->args.flags |= flags;
+		ctx->args.u_flags &= ~mutex_flags;
+		ctx->args.u_flags |= flags;
 	}
-	ENC_CHECK(validate_flags(ctx->args.flags));
 	ENC_CHECK(php_cbor_override_encode_options(&ctx->args, ht));
+	ENC_CHECK(php_cbor_check_encode_params(&ctx->args));
 	Z_PROTECT_RECURSION_P(ins);
 	error = enc_zval(ctx, value);
 	Z_UNPROTECT_RECURSION_P(ins);
@@ -842,6 +913,7 @@ static cbor_error enc_ref_counted(enc_context *ctx, zval *value)
 #if ZEND_ULONG_MAX < UINTPTR_MAX
 #error "Unimplemented: maybe use pointer as a binary string key?"
 #endif
+	assert(!(ctx->args.e_flags & CBOR_CDE));
 	zend_ulong key_index = (zend_ulong)Z_COUNTED_P(value);
 	zval new_index, *ref_index;
 	assert(Z_REFCOUNTED_P(value));
@@ -862,6 +934,9 @@ static cbor_error enc_ref_counted(enc_context *ctx, zval *value)
 
 static cbor_error enc_shareable(enc_context *ctx, zval *value)
 {
+	if (ctx->args.e_flags & CBOR_CDE) {
+		return CBOR_ERROR_INTERNAL;
+	}
 	cbor_error error = 0;
 	zval tmp_v;
 	error = enc_ref_counted(ctx, value);
@@ -1015,7 +1090,7 @@ static cbor_error enc_decimal(enc_context *ctx, zval *value)
 	}
 	if (Z_TYPE(r_value) == IS_TRUE) {
 		zval *nan = zend_get_constant_str(ZEND_STRL("NAN"));  /* use PHP's constant, not the extension's compiler's */
-		enc_z_double(ctx, nan, true);
+		enc_z_double(ctx, nan);
 		goto ENCODED;
 	}
 	if (call_fn(value, ctx->str[EXT_STR_DEC_ISINF_FN], &r_value, 0, NULL) != SUCCESS) {
@@ -1026,7 +1101,7 @@ static cbor_error enc_decimal(enc_context *ctx, zval *value)
 			return CBOR_ERROR_INTERNAL;
 		}
 		ZVAL_DOUBLE(&r_value, (Z_TYPE(r_value) == IS_TRUE) ? -INFINITY : INFINITY);
-		enc_z_double(ctx, &r_value, true);
+		enc_z_double(ctx, &r_value);
 		goto ENCODED;
 	}
 	if (call_fn(value, ctx->str[EXT_STR_DEC_TOSTR_FN], &r_value, 0, NULL) != SUCCESS) {

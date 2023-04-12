@@ -97,6 +97,9 @@ run(function () {
     // Shareable is always shared
     $sh = new Cbor\Shareable('123');
     eq('0x82d81c43313233d81d00', cenc([$sh, $sh], options: ['shared_ref' => false]));
+
+    cencThrows(CBOR_ERROR_INVALID_FLAGS, 1, CBOR_CDE, ['shared_ref' => true]);
+    cencThrows(CBOR_ERROR_INTERNAL, $sh, CBOR_CDE);
 });
 
 ?>

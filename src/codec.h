@@ -41,6 +41,8 @@ typedef enum {
 	CBOR_ERROR_INVALID_FLAGS__BOTH_KEY_STRING_FLAG,
 	CBOR_ERROR_INVALID_FLAGS__NO_STRING_FLAG,
 	CBOR_ERROR_INVALID_FLAGS__NO_KEY_STRING_FLAG,
+	CBOR_ERROR_INVALID_FLAGS__CONTEXTUAL_CDE,
+	CBOR_ERROR_INVALID_FLAGS__CLEAR_CDE,
 
 	CBOR_ERROR_SYNTAX__BREAK_UNDERFLOW = 1,
 	CBOR_ERROR_SYNTAX__BREAK_UNEXPECTED,
@@ -99,7 +101,8 @@ typedef struct {
 } cbor_error_args;
 
 typedef struct {
-	uint32_t flags;
+	uint32_t e_flags;
+	uint32_t u_flags;
 	uint32_t max_depth;
 	cbor_error_args error_args;
 	uint8_t string_ref;
@@ -144,6 +147,7 @@ void php_cbor_minit_decode();
 /* options */
 cbor_error php_cbor_override_encode_options(cbor_encode_args *args, HashTable *options);
 cbor_error php_cbor_set_encode_options(cbor_encode_args *args, HashTable *options);
+cbor_error php_cbor_check_encode_params(cbor_encode_args *args);
 void php_cbor_init_decode_options(cbor_decode_args *args);
 void php_cbor_free_decode_options(cbor_decode_args *args);
 cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *options);

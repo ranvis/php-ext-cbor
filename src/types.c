@@ -5,7 +5,9 @@
 
 #include "cbor.h"
 #include "cbor_globals.h"
+#include "cpu_id.h"
 #include "types.h"
+#include "type_float_cast.h"
 #include "compatibility.h"
 #include <math.h>
 
@@ -19,7 +21,7 @@ typedef struct {
 typedef struct {
 	union floatx_class_v {
 		binary32_alias binary32;
-		uint16_t binary16;
+		cbor_fp16i binary16;
 	} v;
 	zend_object std;
 } floatx_class;
@@ -375,14 +377,14 @@ zend_object *cbor_floatx_create(zend_class_entry *ce)
 
 #define THIS()  DEF_THIS(floatx, prop_literal)
 
-static double floatx_to_double(zend_object *obj)
+static double floatx_to_fp64(zend_object *obj)
 {
 	floatx_class *base = CUSTOM_OBJ(floatx_class, obj);
 	double value;
 	if (obj->ce == CBOR_CE(float32)) {
-		value = (double)base->v.binary32.f;
+		value = cbor_from_fp32(base->v.binary32.f);
 	} else {
-		value = cbor_from_float16(base->v.binary16);
+		value = cbor_from_fp16i(base->v.binary16);
 	}
 	return value;
 }
@@ -393,7 +395,7 @@ static zend_result_82 floatx_cast(zend_object *obj, zval *retval, int type)
 		/* IS_STRING cast may not be necessarily desirable. */
 		return FAILURE;
 	}
-	ZVAL_DOUBLE(retval, floatx_to_double(obj));
+	ZVAL_DOUBLE(retval, floatx_to_fp64(obj));
 	return SUCCESS;
 }
 
@@ -494,7 +496,7 @@ PHP_METHOD(Cbor_FloatX, jsonSerialize)
 	zend_object *obj = Z_OBJ_P(ZEND_THIS);
 	zend_parse_parameters_none();
 	TEST_FLOATX_CLASS(obj->ce);
-	RETURN_DOUBLE(floatx_to_double(obj));
+	RETURN_DOUBLE(floatx_to_fp64(obj));
 }
 
 bool cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw)
@@ -506,9 +508,9 @@ bool cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw)
 			// IS_LONG if called from write_property.
 			double d_value = (type == IS_LONG) ? Z_LVAL_P(value) : Z_DVAL_P(value);
 			if (base->std.ce == CBOR_CE(float32)) {
-				base->v.binary32.f = cbor_to_float32(d_value);
+				base->v.binary32.f = cbor_to_fp32(d_value);
 			} else {
-				base->v.binary16 = cbor_to_float16(d_value);
+				base->v.binary16 = cbor_float_64_to_16(d_value);
 			}
 			return true;
 		} else if (type == IS_STRING) {
@@ -522,7 +524,7 @@ bool cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw)
 			if (base->std.ce == CBOR_CE(float32)) {
 				raw = ((uint32_t)ptr[0] << 24) | ((uint32_t)ptr[1] << 16) | ((uint32_t)ptr[2] << 8) | ptr[3];
 			} else {
-				raw = ((uint16_t)ptr[0] << 8) | ptr[1];
+				raw = ((cbor_fp16i)ptr[0] << 8) | ptr[1];
 			}
 		} else {
 			zend_type_error("Invalid value type.");
@@ -532,7 +534,7 @@ bool cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw)
 	if (base->std.ce == CBOR_CE(float32)) {
 		base->v.binary32.i = raw;
 	} else {
-		base->v.binary16 = (uint16_t)raw;
+		base->v.binary16 = (cbor_fp16i)raw;
 	}
 	return true;
 }
@@ -550,7 +552,7 @@ static zend_object *floatx_clone(zend_object *obj)
 static zval *floatx_read_property(zend_object *obj, zend_string *member, int type, void **cache_slot, zval *rv)
 {
 	if (zend_string_equals_literal(member, "value")) {
-		ZVAL_DOUBLE(rv, floatx_to_double(obj));
+		ZVAL_DOUBLE(rv, floatx_to_fp64(obj));
 	} else {
 		rv = zend_std_read_property(obj, member, type, cache_slot, rv);
 	}
@@ -597,7 +599,7 @@ static void floatx_unset_property(zend_object *obj, zend_string *member, void **
 	zend_std_unset_property(obj, member, cache_slot);
 }
 
-size_t cbor_floatx_get_value(zend_object *obj, char *out)
+size_t cbor_floatx_get_value_be(zend_object *obj, char *out)
 {
 	floatx_class *base = CUSTOM_OBJ(floatx_class, obj);
 	if (obj->ce == CBOR_CE(float32)) {
@@ -610,6 +612,16 @@ size_t cbor_floatx_get_value(zend_object *obj, char *out)
 	out[0] = (char)(base->v.binary16 >> 8);
 	out[1] = (char)(base->v.binary16 & 0xff);
 	return 2;
+}
+
+float cbor_float32_get_value(zend_object *obj)
+{
+	floatx_class *base = CUSTOM_OBJ(floatx_class, obj);
+	if (obj->ce == CBOR_CE(float32)) {
+		return base->v.binary32.f;
+	}
+	assert(obj->ce == CBOR_CE(float32));
+	return 0;
 }
 
 static bool floatx_copy_properties(zend_object *obj, zend_prop_purpose purpose, zend_array *props)
@@ -632,15 +644,15 @@ static bool floatx_copy_properties(zend_object *obj, zend_prop_purpose purpose, 
 	if (decode) {
 		double value;
 		if (obj->ce == CBOR_CE(float32)) {
-			value = (double)base->v.binary32.f;
+			value = cbor_from_fp32(base->v.binary32.f);
 		} else {
-			value = cbor_from_float16(base->v.binary16);
+			value = cbor_from_fp16i(base->v.binary16);
 		}
 		ZVAL_DOUBLE(&zv, value);
 		zend_hash_update(props, ZSTR_KNOWN(ZEND_STR_VALUE), &zv);
 	} else {
 		char bin[4];
-		size_t len = cbor_floatx_get_value(obj, bin);
+		size_t len = cbor_floatx_get_value_be(obj, bin);
 		ZVAL_STRINGL(&zv, bin, len);
 		zend_hash_index_update(props, 0, &zv);
 	}
@@ -666,12 +678,17 @@ static HashTable *floatx_get_properties(zend_object *obj)
 	return obj->properties;
 }
 
-double cbor_from_float16(uint16_t value)
+double cbor_from_fp16i(cbor_fp16i value)
 {
+	if (has_f16c()) {
+		if ((value & 0x7e00) != 0x7c00) { // not sNaN-ish
+			return fp16_to_fp32_i(value);
+		}
+	}
 	/* Based on RFC 8949 code */
 	binary64_alias bin64;
-	uint16_t exp = (value >> 10) & 0x1f;  /* 0b11111 */
-	uint16_t frac = value & 0x3ff;  /* 0b11_1111_1111 */
+	cbor_fp16i exp = (value >> 10) & 0x1f;  /* 0b11111 */
+	cbor_fp16i frac = value & 0x3ff;  /* 0b11_1111_1111 */
 	if (exp == 0x00) {  /* 0b00000 */
 		bin64.f = ldexp(frac, -24);
 	} else if (exp != 0x1f) {
@@ -688,68 +705,39 @@ double cbor_from_float16(uint16_t value)
 	return bin64.f;
 }
 
-float cbor_to_float32(double value)
+double cbor_from_fp32(float value)
+{
+	if (EXPECTED(!isnan(value))) {
+		return (double)value;
+	}
+	// Cast but preserve sNaN when possible
+	binary32_alias f_value;
+	f_value.f = value;
+	binary64_alias d_value;
+	d_value.i = F64_EXP_FILL << F64_FRAC_BITS;
+	F64_UINT_TYPE fraction = ((F64_UINT_TYPE)(f_value.i & F32_FRAC_MASK)) << (F64_FRAC_BITS - F32_FRAC_BITS);
+	d_value.i |= fraction;
+	if (!fraction) {
+		d_value.i |= 1ull << (F64_FRAC_BITS - 1); // INF => qNaN
+	}
+	return d_value.f;
+}
+
+float cbor_to_fp32(double value)
 {
 	if (EXPECTED(!isnan(value))) {
 		return (float)value;
 	}
-	// sNaN may become qNaN as defined in IEEE 754 when cast.
-	// (1, 11, 52) bits => (1, 8, 23) bits
 	binary64_alias d_value;
 	d_value.f = value;
 	binary32_alias f_value;
-	f_value.i = 0x7f800000; // sNaN
-	uint32_t fraction = (uint32_t)((d_value.i & (0x7fffffull << 29)) >> 29);
+	f_value.i = F32_EXP_FILL << F32_FRAC_BITS;
+	F32_UINT_TYPE fraction = (F32_UINT_TYPE)((d_value.i & ((F64_UINT_TYPE)F32_FRAC_MASK << (F64_FRAC_BITS - F32_FRAC_BITS))) >> (F64_FRAC_BITS - F32_FRAC_BITS));
 	f_value.i |= fraction;
 	if (!fraction) {
-		f_value.i |= 1 << 22; // INF => qNaN
+		f_value.i |= 1 << (F32_FRAC_BITS - 1); // INF => qNaN
 	}
 	return f_value.f;
-}
-
-uint16_t cbor_to_float16(double value)
-{
-	uint16_t binary16 = 0;
-	// (1, 11, 52) bits => (1, 5, 10) bits
-	if (UNEXPECTED(isnan(value))) {
-		binary64_alias binary64;
-		binary64.f = value;
-		binary16 = 0x7c00  // sNaN 0b0_11111_10_0000_0000
-			| (uint16_t)((binary64.i & 0x8000000000000000) >> 48)  // sign
-			| (uint16_t)((binary64.i & (0x3ffull << 42)) >> 42);  // high 10-bit fract, 0b11_1111_1111 << 42
-		if (binary16 == 0x7c00) {
-			binary16 = 0x7e00; // INF => qNaN
-		}
-	} else {
-		// For precise rounding, double may have to be used.
-		binary32_alias binary32;
-		binary32.f = (float)value;
-		uint32_t exp = ((binary32.i & (0xff << 23)) >> 23);  /* 0b0_1111_1111 << 23 */
-		if (exp < 127 - 24) {  /* Too small */
-			binary16 = (uint16_t)((binary32.i & 0x80000000) >> 16);  /* sign */
-			/* For exp = 127 - 25, think this does round to even to avoid negative shift below */
-		} else if (exp < 127 - 14) {  /* binary32: 8bits; binary16: 5bits, with rounding */
-			uint32_t frac = binary32.i & 0x7fffff; /* 0b111_1111_1111_1111_1111_1111 */;
-			binary16 = (uint16_t)(0
-				| ((binary32.i & 0x80000000) >> 16)  /* sign */
-				| (1 << (exp - 127 + 24))  /* exp to fract; << 0..9 */
-				| (((frac >> (127 - exp - 2)) + 1) >> 1)  /* Round half away from zero for simplicity; >> 22..13 */
-			);
-		} else if (exp < 127 + 16) {
-			uint32_t frac = binary32.i & 0x7fffff; /* 0b111_1111_1111_1111_1111_1111 */;
-			binary16 = (uint16_t)(0
-				| ((binary32.i & 0x80000000) >> 16)  /* sign */
-				| ((exp - 112) << 10)  /* exp, 113..142 > 1..29 */
-				| (((frac >> 12) + 1) >> 1)  /* Round half away from zero for simplicity */
-			);
-		} else {
-			binary16 = (uint16_t)(0
-				| ((binary32.i & 0x80000000) >> 16)  /* sign */
-				| (0x1f << 10) /* exp, 0b11111 */
-			);
-		}
-	}
-	return binary16;
 }
 
 #undef THIS
@@ -833,5 +821,6 @@ void php_cbor_minit_types()
 	floatx_handlers.get_properties = &floatx_get_properties;
 	floatx_handlers.get_properties_for = &floatx_get_properties_for;
 
+	php_cbor_minit_types_float_cast();
 	php_cbor_minit_decoder();
 }

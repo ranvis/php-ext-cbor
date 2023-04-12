@@ -484,7 +484,7 @@ static void edn_do_float(dec_context *ctx, double val, char indicator)
 
 static void edn_proc_float16(dec_context *ctx, uint16_t val)
 {
-	double val64 = cbor_from_float16(val);
+	double val64 = cbor_from_fp16i(val);
 	edn_do_float(ctx, val64, '1');
 }
 

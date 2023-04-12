@@ -28,7 +28,9 @@ run(function () {
 
     eq('0xfb7ff0000000000000', cenc(INF));
     eq('0xfaff800000', cenc(-INF, CBOR_FLOAT32));
+    eq('0xf97c00', cenc(INF, CBOR_FLOAT16));
     eq('0xf97c00', cenc(INF, CBOR_FLOAT16 | CBOR_FLOAT32));
+    eq('0xf9fc00', cenc(-INF, CBOR_FLOAT16 | CBOR_FLOAT32));
     eq('0xf97c00', cenc(123456.0, CBOR_FLOAT16));
     eq('0xfa47f12000', cenc(123456.0, CBOR_FLOAT32));
     eq('0xfa47f12000', cenc(123456.0, CBOR_FLOAT16 | CBOR_FLOAT32));
@@ -51,6 +53,13 @@ run(function () {
     eq('0xf97e01', cenc((double)Cbor\Float32::fromBinary(hex2bin('7fc02000')), CBOR_FLOAT16 | CBOR_FLOAT32));
     eq('0xfb3ff0000010000000', cenc(hex2double('3ff0000010000000'), CBOR_FLOAT16 | CBOR_FLOAT32));
     eq('0xfa3f800001', cenc(hex2double('3ff0000020000000'), CBOR_FLOAT16 | CBOR_FLOAT32));
+
+    eq('0xf93e00', cenc(1.5, CBOR_CDE));
+    eq('0xfa49742408', cenc(1000000.5, CBOR_CDE));
+    eq('0xfb416312d010000000', cenc(10000000.5, CBOR_CDE));
+    eq('0xf97c00', cenc(INF, CBOR_CDE));
+    eq('0xf9fc00', cenc(-INF, CBOR_CDE));
+    eq('0xf97e00', cenc(cdec('f97e00', CBOR_FLOAT16), CBOR_CDE));
 });
 
 function hex2double(string $str): float

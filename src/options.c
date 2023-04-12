@@ -132,6 +132,26 @@ FINALLY:
 	return error;
 }
 
+cbor_error php_cbor_check_encode_params(cbor_encode_args *args)
+{
+	uint32_t flags = args->u_flags;
+	if (flags & CBOR_BYTE && flags & CBOR_TEXT) {
+		return E_DESC(CBOR_ERROR_INVALID_FLAGS, BOTH_STRING_FLAG);
+	}
+	if (flags & CBOR_KEY_BYTE && flags & CBOR_KEY_TEXT) {
+		return E_DESC(CBOR_ERROR_INVALID_FLAGS, BOTH_KEY_STRING_FLAG);
+	}
+	if (flags & CBOR_CDE) {
+		if (args->string_ref || args->shared_ref) {
+			// The encoder encodes keys then sort them.
+			return E_DESC(CBOR_ERROR_INVALID_FLAGS, CONTEXTUAL_CDE);
+		}
+		flags |= CBOR_FLOAT16 | CBOR_FLOAT32 | CBOR_MAP_NO_DUP_KEY;
+	}
+	args->e_flags = flags;
+	return 0;
+}
+
 void php_cbor_init_decode_options(cbor_decode_args *args)
 {
 	args->flags = CBOR_BYTE | CBOR_KEY_BYTE;

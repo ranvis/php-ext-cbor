@@ -29,6 +29,10 @@ run(function () {
     unset($list[3]);
     eq('0x83000102', cenc($list));
 
+    // CDE, eventually sorted (not repacked)
+    $list = [3 => 3, 0 => 0, 1 => 1, 2 => 2];
+    eq('0xa40000010102020303', cenc($list, CBOR_CDE | CBOR_INT_KEY));
+
     cdecThrows(CBOR_ERROR_UNSUPPORTED_SIZE, '9b0000000100000000');
 });
 

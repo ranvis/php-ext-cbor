@@ -39,6 +39,10 @@ run(function () {
     $dt = new DateTimeImmutable('2013-03-21T20:04:00Z');
     eq('0x8200c074323031332d30332d32315432303a30343a30305a', cenc([new Cbor\EncodeParams(0, ['datetime'=> false]), $dt]));
     cencThrows(CBOR_ERROR_UNSUPPORTED_TYPE, new Cbor\EncodeParams($dt, ['datetime'=> false]));
+    // CDE
+    cencThrows(CBOR_ERROR_INVALID_FLAGS, new Cbor\EncodeParams(1, ['flags_clear' => CBOR_CDE]));
+    eq('0x01', cenc(new Cbor\EncodeParams(1, ['flags' => CBOR_CDE])));
+    cencThrows(CBOR_ERROR_INVALID_FLAGS, new Cbor\EncodeParams(1, ['flags' => CBOR_CDE]), options: ['shared_ref' => true]);
 });
 
 ?>

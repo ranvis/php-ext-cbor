@@ -110,6 +110,8 @@ final class Float16 extends FloatX
 
 /**
  * CBOR Single-precision (32-bit) float value
+ *
+ * The storage type on encoding can be changed by CBOR_CDE flag, but not by CBOR_FLOAT16 flag.
  */
 final class Float32 extends FloatX
 {

@@ -86,6 +86,15 @@ const CBOR_FLOAT16 = (1 << 8);
 const CBOR_FLOAT32 = (1 << 9);
 
 /**
+ * Encode: Comply core deterministic encoding requirements.
+ *
+ * The flags CBOR_MAP_NO_DUP_KEY, CBOR_FLOAT16 and CBOR_FLOAT32 are implied.
+ *
+ * The flag CBOR_UNSAFE_TEXT is not voided.
+ */
+const CBOR_CDE = (1 << 13);
+
+/**
  * Decode: Decode data to Extended Diagnostic Notation string.
  */
 const CBOR_EDN = (1 << 14);

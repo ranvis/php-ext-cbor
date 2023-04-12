@@ -3,6 +3,7 @@
 [Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.7...HEAD
 ## [Unreleased]
 ### Added
+- Add `CBOR_CDE` encode flag.
 ### Changed
 ### Removed
 ### Fixed

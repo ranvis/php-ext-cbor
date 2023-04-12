@@ -1,5 +1,5 @@
 --TEST--
-half-float values
+specific half-float values
 --SKIPIF--
 <?php
 if (!extension_loaded('cbor')) echo 'skip  extension is not loaded';
@@ -15,6 +15,7 @@ run(function () {
     // INF
     eq('7f800000', floatHex(cdec('f97c00', CBOR_FLOAT16)));
     eq('0xf97c00', cenc(INF, CBOR_FLOAT16));
+    eq('0xf97c00', cenc(65520.0, CBOR_FLOAT16));
     // -INF
     eq('ff800000', floatHex(cdec('f9fc00', CBOR_FLOAT16)));
     eq('0xf9fc00', cenc(-INF, CBOR_FLOAT16));

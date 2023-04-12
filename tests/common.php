@@ -166,6 +166,8 @@ function trace(int $depth = 0)
         } else {
             $phptMap[$phpt] = false;
         }
+    } else {
+        $phptMap[$phpt] = false;
     }
     echo "File    : " . $bt['file'] . "\n";
     echo "Line    : " . $bt['line'] . "\n";

@@ -105,6 +105,17 @@ See "Supported Tags" below for the following options:
 
 Unknown key names are silently ignored.
 
+### Core Deterministic Encoding
+
+You can use `CBOR_CDE` encoding flag to let encode data satisfy core deterministic encoding requirements.
+
+CBOR types can have multiple binary sequences to express the same value, but they are always encoded in the smallest possible form (well-formed) regardless of the flag.
+The exception is `float` value (see below).
+
+The `CBOR_CDE` flag enforces the `CBOR_MAP_NO_DUP_KEY`, `CBOR_FLOAT16` and `CBOR_FLOAT32` flags, while the `CBOR_UNSAFE_TEXT` flag can be used regardless.
+
+The flag cannot be used with options that make CBOR data contextual, which are mentioned later.
+
 ### Diagnostic Notation
 
 With the decoding flag `CBOR_EDN`, CBOR data (in binary) is decoded to Extended Diagnostic Notation (EDN) `string` defined in [RFC 8610 appendix G](https://datatracker.ietf.org/doc/html/rfc8610#appendix-G). (It does _not_ decode EDN string.)
@@ -156,10 +167,14 @@ This can be useful when you want to enforce specific parameters partially.
 
 - `'flags' => int`: Encoding flags to set.
 - `'flags_clear' => int`: Encoding flags to clear.
-Flags in `'flags_clear'` are cleared first then flags in `'flags'` are set.
+
+   Flags in `'flags_clear'` are cleared first then flags in `'flags'` are set.
 Note that you don't need to clear conflicting string flags, i.e. `CBOR_TEXT` is cleared when setting `CBOR_BYTE` and vice versa. The same applies for `CBOR_KEY_*` string flags.
+
+  You cannot clear `CBOR_CDE` flag.
 - Other `$options` values for encoding.
-You cannot change `'max_depth'` or options that make CBOR data contextual.
+
+  You cannot change `'max_depth'` or options that make CBOR data contextual.
 
 Unknown or unsupported key names are silently ignored.
 
@@ -246,6 +261,8 @@ When encoding PHP `float`, values are stored with 64-bit value.
 If either of the flags is specified, values are stored in that size.
 If both flags are set, the smallest possible type is used; therefore no informational loss is expected.
 
+For `Cbor\Float32` type, the size of the value is retained even if it can be expressed in half-precision type. The `CBOR_CDE` flag overrides this behavior to enforce the requirements.
+
 #### Strings
 
 CBOR has two types of strings: `byte string` (binary octets) and `text string` (UTF-8 encoded octets).
@@ -276,6 +293,8 @@ The extension may accept CBOR `integer` keys if the `CBOR_INT_KEY` flag is pass
 
 If the `CBOR_MAP_NO_DUP_KEY` flag is specified on decoding, encountering a duplicated key will throw an exception instead of overriding the former value. This may happen on valid CBOR `map`; e.g. all of unsigned integer `1`, text string `"1"`, and byte string `'1'` may be the same key for PHP.
 
+If the `CBOR_CDE` flag is specified on encoding, keys are sorted in the bytewise lexicographic order.
+
 #### Tags
 
 CBOR `tag` is translated to PHP `Cbor\Tag(int $tag, mixed $content)` object.
@@ -303,7 +322,7 @@ var_dump($undefined === clone $undefined); // true
 
 Instance of a class that implements `Traversable` is encoded to `map`.
 
-If the class does not implement `Countable` interface, it is encoded to an indefinite-length `map`.
+If the class does not implement `Countable`, the instance is encoded to an indefinite-length `map` unless the `CBOR_CDE` flag is specified.
 
 The `CBOR_INT_KEY` flag does not take effect on encoding `Traversable` objects, and the key is encoded according to the actual type.
 
@@ -436,7 +455,8 @@ If the option is enabled, CBOR maps tagged as {shareable} once decoded into PHP 
 
 On encoding, potentially shared (i.e. there are variables holding the instance somewhere) PHP `stdClass` objects are tagged {shareable}. When such object is reused, {sharedref} tag is emitted. A reference to variable is dereferenced.
 
-If `'shareable'` is specified, values tagged as {shareable} which are decoded to non-object are wrapped into `Cbor\Shareable` object on decoding, and the instances are reused on {sharedref} tag. On encoding, an instance of `Cbor\Shareable` is tagged {shareable} regardless of the option value.
+If `'shareable'` is specified, values tagged as {shareable} which are decoded to non-object are wrapped into `Cbor\Shareable` object on decoding, and the instances are reused on {sharedref} tag.
+On encoding, an instance of `Cbor\Shareable` is tagged {shareable} regardless of the option value, unless the flag `CBOR_CDE` is specified. In which case, the encoder throws an exception.
 
 `'shareable_only'` works similar to `'shareable'`. But CBOR maps tagged {shareable} are also wrapped into `Cbor\Shareable` instead of bare `object`.
 

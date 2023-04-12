@@ -94,18 +94,19 @@ run(function () {
         [-17, true], // 0x30
         [new Cbor\Byte('0'), true],
         [new Cbor\Text('0'), true],
-        [new Cbor\Float16(0.0), true],
+        [new Cbor\Float32(0.0), true],
         [1, true],
         [-18, true], // 0x31
         [new Cbor\Byte('1'), true],
         [new Cbor\Text('1'), true],
-        [new Cbor\Float16(1.0), true],
+        [new Cbor\Float32(1.0), true],
         [Cbor\Undefined::get(), true],
         [null, true],
         [false, true],
         [true, true],
     ]);
-    eq('0xbf00f530f54130f56130f5f90000f501f531f54131f56131f5f93c00f5f7f5f6f5f4f5f5f5ff', cenc($zeroOneItems(), CBOR_MAP_NO_DUP_KEY));
+    eq('0xbf00f530f54130f56130f5fa00000000f501f531f54131f56131f5fa3f800000f5f7f5f6f5f4f5f5f5ff', cenc($zeroOneItems(), CBOR_MAP_NO_DUP_KEY));
+    eq('0xae00f501f530f531f54130f54131f56130f56131f5f4f5f5f5f6f5f7f5f90000f5f93c00f5', cenc($zeroOneItems(), CBOR_CDE));
 });
 
 ?>

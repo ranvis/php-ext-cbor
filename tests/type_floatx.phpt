@@ -84,6 +84,14 @@ run(function () {
     eq(1.0, (float)$instance);
     // multiple calls to get_properties during iteration
     array_walk($instance, fn ($v, $k) => true);
+
+    eq('0xfa3fc00000', cenc(new Cbor\Float32(1.5), CBOR_FLOAT16));
+    eq('0xfa3fc00000', cenc(new Cbor\Float32(1.5), CBOR_FLOAT16 | CBOR_FLOAT32));
+    eq('0xf93e00', cenc(new Cbor\Float16(1.5), CBOR_CDE));
+    eq('0xf93e00', cenc(new Cbor\Float32(1.5), CBOR_CDE));
+    eq('0xf93c01', cenc(new Cbor\Float32(1 + 1 / 1024), CBOR_CDE));
+    eq('0xfa3f801000', cenc(new Cbor\Float32(1 + 1 / 2048), CBOR_CDE));
+    eq('0xf9fc00', cenc(new Cbor\Float32(-INF), CBOR_CDE));
 });
 
 ?>
