@@ -124,6 +124,7 @@ abstract class FloatX implements \JsonSerializable
 final class Float16 extends FloatX
 {
     //public function __toFloat(): float {}
+    public function toFloat32(): Float32 {}
 }
 
 /**
@@ -134,6 +135,7 @@ final class Float16 extends FloatX
 final class Float32 extends FloatX
 {
     //public function __toFloat(): float {}
+    public function toFloat16(): Float16 {}
 }
 
 /**

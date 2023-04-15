@@ -83,6 +83,9 @@ run(function () {
     });
     $instance = Cbor\Float16::fromBinary(hex2bin('3c00'));
     eq(1.0, (float)$instance);
+    $instance = $instance->toFloat32();
+    eq(Cbor\Float32::class, get_class($instance));
+    $instance = $instance->toFloat16();
     eq('3c00', bin2hex($instance->toBinary()));
     // multiple calls to get_properties during iteration
     array_walk($instance, fn ($v, $k) => true);

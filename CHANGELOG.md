@@ -5,6 +5,7 @@
 ### Added
 - Add `CBOR_CDE` encode flag.
 - Add `FloatX->toBinary()` method.
+- Add `Float16->toFloat32()` and `Float32->toFloat16()`.
 ### Changed
 ### Removed
 ### Fixed

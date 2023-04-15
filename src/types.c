@@ -30,6 +30,8 @@ static zend_object_handlers undef_handlers;
 static zend_object_handlers xstring_handlers;
 static zend_object_handlers floatx_handlers;
 
+static void cbor_floatx_set_fp64(zend_object *obj, double value);
+
 #define THIS()  DEF_THIS(tag, prop_literal)
 
 PHP_METHOD(Cbor_EncodeParams, __construct)
@@ -424,9 +426,7 @@ PHP_METHOD(Cbor_FloatX, __construct)
 		RETURN_THROWS();
 	}
 	ZVAL_DOUBLE(&value, num);
-	if (!cbor_floatx_set_value(obj, &value, 0)) {
-		RETURN_THROWS();
-	}
+	cbor_floatx_set_fp64(obj, num);
 }
 
 PHP_METHOD(Cbor_FloatX, fromBinary)
@@ -509,6 +509,47 @@ PHP_METHOD(Cbor_FloatX, toBinary)
 	RETURN_STRINGL(buf, len);
 }
 
+static void cbor_floatx_to_floatx(INTERNAL_FUNCTION_PARAMETERS)
+{
+	zend_object *obj = Z_OBJ_P(ZEND_THIS);
+	zend_parse_parameters_none();
+	TEST_FLOATX_CLASS(obj->ce);
+	floatx_class *base = CUSTOM_OBJ(floatx_class, obj);
+	double value;
+	zend_class_entry *r_ce;
+	if (obj->ce == CBOR_CE(float16)) {
+		value = cbor_from_fp16i(base->v.binary16);
+		r_ce = CBOR_CE(float32);
+	} else {
+		assert(obj->ce == CBOR_CE(float32));
+		value = cbor_from_fp32(base->v.binary32.f);
+		r_ce = CBOR_CE(float16);
+	}
+	zend_object *r_obj = cbor_floatx_create(r_ce);
+	cbor_floatx_set_fp64(r_obj, value);
+	RETURN_OBJ(r_obj);
+}
+
+PHP_METHOD(Cbor_Float16, toFloat32)
+{
+	cbor_floatx_to_floatx(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+}
+
+PHP_METHOD(Cbor_Float32, toFloat16)
+{
+	cbor_floatx_to_floatx(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+}
+
+static void cbor_floatx_set_fp64(zend_object *obj, double value)
+{
+	floatx_class *base = CUSTOM_OBJ(floatx_class, obj);
+	if (base->std.ce == CBOR_CE(float32)) {
+		base->v.binary32.f = cbor_to_fp32(value);
+	} else {
+		base->v.binary16 = cbor_float_64_to_16(value);
+	}
+}
+
 bool cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw)
 {
 	floatx_class *base = CUSTOM_OBJ(floatx_class, obj);
@@ -517,11 +558,7 @@ bool cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw)
 		if (type == IS_DOUBLE || type == IS_LONG) {
 			// IS_LONG if called from write_property.
 			double d_value = (type == IS_LONG) ? Z_LVAL_P(value) : Z_DVAL_P(value);
-			if (base->std.ce == CBOR_CE(float32)) {
-				base->v.binary32.f = cbor_to_fp32(d_value);
-			} else {
-				base->v.binary16 = cbor_float_64_to_16(d_value);
-			}
+			cbor_floatx_set_fp64(obj, d_value);
 			return true;
 		} else if (type == IS_STRING) {
 			size_t req_len;
