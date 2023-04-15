@@ -4,6 +4,7 @@
 ## [Unreleased]
 ### Added
 - Add `CBOR_CDE` encode flag.
+- Add `FloatX->toBinary()` method.
 ### Changed
 ### Removed
 ### Fixed

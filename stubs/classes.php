@@ -90,7 +90,7 @@ abstract class FloatX implements \JsonSerializable
 
     /**
      * Create float value from binary data.
-     * @param string $value A binary value
+     * @param string $value A binary value of binary16/binary32.
      * @return FloatX
      */
     public static function fromBinary(string $value): FloatX {}
@@ -98,6 +98,12 @@ abstract class FloatX implements \JsonSerializable
     public static function __set_state(array $properties): FloatX {}
     public function __unserialize(array $data): void {}
     public function jsonSerialize(): mixed {}
+
+    /**
+     * Convert value to binary data.
+     * @return string $value A binary value of binary16/binary32.
+     */
+    public function toBinary(): string {}
 }
 
 /**

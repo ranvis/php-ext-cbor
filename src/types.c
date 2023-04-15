@@ -499,6 +499,16 @@ PHP_METHOD(Cbor_FloatX, jsonSerialize)
 	RETURN_DOUBLE(floatx_to_fp64(obj));
 }
 
+PHP_METHOD(Cbor_FloatX, toBinary)
+{
+	zend_object *obj = Z_OBJ_P(ZEND_THIS);
+	zend_parse_parameters_none();
+	TEST_FLOATX_CLASS(obj->ce);
+	char buf[4];
+	size_t len = cbor_floatx_get_value_be(obj, buf);
+	RETURN_STRINGL(buf, len);
+}
+
 bool cbor_floatx_set_value(zend_object *obj, zval *value, uint32_t raw)
 {
 	floatx_class *base = CUSTOM_OBJ(floatx_class, obj);

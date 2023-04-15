@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 75b83ec890edaedf93ea5974ecb632a3435e4827 */
+ * Stub hash: 80d897298e23f11a4e791bbc453a8894b1baa5b4 */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Serializable_cborSerialize, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
@@ -51,6 +51,9 @@ ZEND_END_ARG_INFO()
 
 #define arginfo_class_Cbor_FloatX_jsonSerialize arginfo_class_Cbor_Serializable_cborSerialize
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_FloatX_toBinary, 0, 0, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Cbor_Tag___construct, 0, 0, 2)
 	ZEND_ARG_TYPE_INFO(0, tag, IS_LONG, 0)
 	ZEND_ARG_TYPE_INFO(0, content, IS_MIXED, 0)
@@ -93,8 +96,7 @@ ZEND_END_ARG_INFO()
 
 #define arginfo_class_Cbor_Decoder_isProcessing arginfo_class_Cbor_Decoder_process
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Cbor_Decoder_getBuffer, 0, 0, IS_STRING, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_class_Cbor_Decoder_getBuffer arginfo_class_Cbor_FloatX_toBinary
 
 
 ZEND_METHOD(Cbor_EncodeParams, __construct);
@@ -111,6 +113,7 @@ ZEND_METHOD(Cbor_FloatX, fromBinary);
 ZEND_METHOD(Cbor_FloatX, __set_state);
 ZEND_METHOD(Cbor_FloatX, __unserialize);
 ZEND_METHOD(Cbor_FloatX, jsonSerialize);
+ZEND_METHOD(Cbor_FloatX, toBinary);
 ZEND_METHOD(Cbor_Tag, __construct);
 ZEND_METHOD(Cbor_Shareable, __construct);
 ZEND_METHOD(Cbor_Shareable, jsonSerialize);
@@ -177,6 +180,7 @@ static const zend_function_entry class_Cbor_FloatX_methods[] = {
 	ZEND_ME(Cbor_FloatX, __set_state, arginfo_class_Cbor_FloatX___set_state, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	ZEND_ME(Cbor_FloatX, __unserialize, arginfo_class_Cbor_FloatX___unserialize, ZEND_ACC_PUBLIC)
 	ZEND_ME(Cbor_FloatX, jsonSerialize, arginfo_class_Cbor_FloatX_jsonSerialize, ZEND_ACC_PUBLIC)
+	ZEND_ME(Cbor_FloatX, toBinary, arginfo_class_Cbor_FloatX_toBinary, ZEND_ACC_PUBLIC)
 	ZEND_FE_END
 };
 
