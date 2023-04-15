@@ -48,7 +48,7 @@ class BoolTester implements TesterInterface
         if ($this->value) {
             return true;
         }
-        $value = var_export($value, true);
+        $value = var_export($this->value, true);
         return "Value   : " . $value . "\n";
     }
 }

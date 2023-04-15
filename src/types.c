@@ -250,6 +250,24 @@ static zend_result_82 xstring_cast(zend_object *obj, zval *retval, int type)
 	return SUCCESS;
 }
 
+static int xstring_compare(zval *val1, zval *val2)
+{
+	if (Z_TYPE_P(val1) != Z_TYPE_P(val2)) {
+		return zend_std_compare_objects(val1, val2);
+	}
+	zend_object *obj1 = Z_OBJ_P(val1);
+	zend_object *obj2 = Z_OBJ_P(val2);
+	if (obj1 == obj2) {
+		return 0;
+	}
+	if (obj1->ce != obj2->ce) {
+		return ZEND_UNCOMPARABLE;
+	}
+	xstring_class *base1 = CUSTOM_OBJ(xstring_class, obj1);
+	xstring_class *base2 = CUSTOM_OBJ(xstring_class, obj2);
+	return zend_binary_strcmp(ZSTR_VAL(base1->str), ZSTR_LEN(base1->str), ZSTR_VAL(base2->str), ZSTR_LEN(base2->str));
+}
+
 static bool xstring_copy_properties(zend_object *obj, zend_prop_purpose purpose, zend_array *props)
 {
 	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
@@ -394,7 +412,8 @@ static double floatx_to_fp64(zend_object *obj)
 static zend_result_82 floatx_cast(zend_object *obj, zval *retval, int type)
 {
 	if (type != IS_DOUBLE) {
-		/* IS_STRING cast may not be necessarily desirable. */
+		// IS_LONG cast is not appropriate (implicit conversion may happen.)
+		// IS_STRING cast may not be necessarily desirable.
 		return FAILURE;
 	}
 	ZVAL_DOUBLE(retval, floatx_to_fp64(obj));
@@ -671,6 +690,125 @@ float cbor_float32_get_value(zend_object *obj)
 	return 0;
 }
 
+typedef enum {
+	// wider value must be defined later
+	FOT_INT,
+	FOT_FP16,
+	FOT_FP16_32, // intermediate type for FP16
+	FOT_FP32,
+	FOT_FP64,
+} float_operand_type;
+
+typedef struct {
+	float_operand_type type;
+	union {
+		zend_long i;
+		cbor_fp16i f16;
+		float f32;
+		double f64;
+	} v;
+} float_operand;
+
+static bool floatx_load_operand(float_operand *ope, zval *val)
+{
+	if (Z_TYPE_P(val) == IS_OBJECT) {
+		zend_object *obj = Z_OBJ_P(val);
+		floatx_class *base = CUSTOM_OBJ(floatx_class, obj);
+		if (obj->ce == CBOR_CE(float16)) {
+			ope->type = FOT_FP16;
+			ope->v.f16 = base->v.binary16;
+		} else if (obj->ce == CBOR_CE(float32)) {
+			ope->type = FOT_FP32;
+			ope->v.f32 = base->v.binary32.f;
+		} else {
+			return false;
+		}
+		return true;
+	} else if (Z_TYPE_P(val) == IS_LONG) {
+		ope->type = FOT_INT;
+		ope->v.i = Z_LVAL_P(val);
+		return true;
+	}
+	return false;
+}
+
+static bool floatx_cast_operands(float_operand *ope1, float_operand *ope2)
+{
+	if (ope1->type == ope2->type && ope1->type != FOT_FP16) {
+		return true;
+	}
+	if (ope1->type < ope2->type) {
+		return floatx_cast_operands(ope2, ope1);
+	}
+	if (ope1->type == FOT_FP16) {
+		ope1->v.f32 = (float)cbor_from_fp16i(ope1->v.f16);
+		ope1->type = FOT_FP16_32;
+		if (ope2->type == FOT_INT) {
+			ope2->v.f32 = (float)ope2->v.i;
+			ope2->type = FOT_FP16_32;
+		} else {
+			assert(ope2->type == FOT_FP16);
+			ope2->v.f32 = (float)cbor_from_fp16i(ope2->v.f16);
+			ope2->type = FOT_FP16_32;
+		}
+	} else if (ope1->type == FOT_FP32) {
+		if (ope2->type == FOT_INT) {
+			ope2->v.f32 = (float)ope2->v.i;
+		} else {
+			assert(ope2->type == FOT_FP16);
+			ope2->v.f32 = (float)cbor_from_fp16i(ope2->v.f16);
+		}
+		ope2->type = FOT_FP32;
+	} else if (ope1->type == FOT_FP64) {
+		if (ope2->type == FOT_INT) {
+			ope2->v.f64 = (double)ope2->v.i;
+		} else if (ope2->type == FOT_FP16) {
+			ope2->v.f64 = cbor_from_fp16i(ope2->v.f16);
+		} else {
+			assert(ope2->type == FOT_FP32);
+			ope2->v.f64 = cbor_from_fp32(ope2->v.f32);
+		}
+		ope2->type = FOT_FP64;
+	} else {
+		return false;
+	}
+	return true;
+}
+
+static int floatx_compare(zval *val1, zval *val2)
+{
+	if (Z_TYPE_P(val1) != Z_TYPE_P(val2)) {
+		return zend_std_compare_objects(val1, val2);
+	}
+	zend_object *obj1 = Z_OBJ_P(val1);
+	zend_object *obj2 = Z_OBJ_P(val2);
+	if (obj1 == obj2) {
+		return 0;
+	}
+	float_operand ope1, ope2;
+	if (!floatx_load_operand(&ope1, val1) || !floatx_load_operand(&ope2, val2)) {
+		return ZEND_UNCOMPARABLE;
+	}
+	if (!floatx_cast_operands(&ope1, &ope2)) {
+		return ZEND_UNCOMPARABLE;
+	}
+	assert(ope1.type == ope2.type);
+	switch (ope1.type) {
+	case FOT_FP16_32:
+	case FOT_FP32:
+		if (isnan(ope1.v.f32) || isnan(ope2.v.f32)) {
+			break;
+		}
+		return (ope1.v.f32 == ope2.v.f32) ? 0 : (ope1.v.f32 < ope2.v.f32) ? -1 : 1;
+	case FOT_FP64:
+		if (isnan(ope1.v.f64) || isnan(ope2.v.f64)) {
+			break;
+		}
+		return (ope1.v.f64 == ope2.v.f64) ? 0 : (ope1.v.f64 < ope2.v.f64) ? -1 : 1;
+	}
+	return ZEND_UNCOMPARABLE;
+}
+
 static bool floatx_copy_properties(zend_object *obj, zend_prop_purpose purpose, zend_array *props)
 {
 	/* While floatX can have custom properties for now, they are not dumped or restored. */
@@ -851,6 +989,7 @@ void php_cbor_minit_types()
 	xstring_handlers.has_property = &xstring_has_property;
 	xstring_handlers.unset_property = &xstring_unset_property;
 	xstring_handlers.cast_object = &xstring_cast;
+	xstring_handlers.compare = &xstring_compare;
 	xstring_handlers.get_properties = &xstring_get_properties;
 	xstring_handlers.get_properties_for = &xstring_get_properties_for;
 
@@ -865,6 +1004,7 @@ void php_cbor_minit_types()
 	floatx_handlers.has_property = &floatx_has_property;
 	floatx_handlers.unset_property = &floatx_unset_property;
 	floatx_handlers.cast_object = &floatx_cast;
+	floatx_handlers.compare = &floatx_compare;
 	floatx_handlers.get_properties = &floatx_get_properties;
 	floatx_handlers.get_properties_for = &floatx_get_properties_for;
 

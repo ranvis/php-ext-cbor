@@ -294,4 +294,5 @@ void php_cbor_minit_decoder()
 	decoder_handlers.offset = XtOffsetOf(decoder_class, std);
 	decoder_handlers.free_obj = &decoder_free;
 	decoder_handlers.clone_obj = NULL;
+	decoder_handlers.compare = zend_objects_not_comparable;
 }

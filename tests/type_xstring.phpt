@@ -27,6 +27,15 @@ run(function () {
     throws(Error::class, function () use ($copy) {
         unset($copy->value);
     });
+    // compare
+    $instance2 = new Cbor\Text('def');
+    $instance3 = new Cbor\Text((string)$instance2);
+    ok($instance == (string)$instance);
+    ok($instance == $instance);
+    ok($instance != $instance2);
+    ok($instance != (object)['value' => (string)$instance]);
+    ok($instance3 == $instance2);
+    ok($instance3 != new Cbor\Byte((string)$instance3));
     // encode
     eq('0x63616263', cenc($instance));
     $instance2 = new Cbor\Byte('abc');

@@ -40,6 +40,20 @@ run(function () {
     // clone
     $instance2 = clone $instance;
     ok($instance !== $instance2);
+    // compare
+    $f16a = new Cbor\Float16(1.5);
+    $f16c = new Cbor\Float16(4.5);
+    $f32b = new Cbor\Float32(2.5);
+    $f32d = new Cbor\Float32(8.5);
+    $f16e = new Cbor\Float16(16.5);
+    $fNan = new Cbor\Float16(NAN);
+    ok($f16a < $f16c);
+    ok($f32b < $f32d);
+    ok(!($f32d < $f32b));
+    ok($f32d < $f16e);
+    ok($fNan != $f16a);
+    ok(!($fNan < $f16a));
+    ok($fNan != clone $fNan);
     // int is accepted
     $instance->value = 0;
     ok(empty($instance->value));

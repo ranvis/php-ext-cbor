@@ -83,6 +83,9 @@ run(function () {
     throws(Exception::class, fn () => serialize($decoder));
     throws(Error::class, fn () => clone $decoder);
 
+    // compare
+    ok($decoder != new Cbor\Decoder());
+
     // large data
     $decoder->reset();
     eq(false, $decoder->hasValue());
