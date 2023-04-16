@@ -1,19 +1,24 @@
 # Changelog
 
-[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.5...HEAD
+[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.6...HEAD
 ## [Unreleased]
+### Added
+### Changed
+### Removed
+### Fixed
+### Security
+### Deprecated
+
+[0.4.6]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.5..v0.4.6
+## [0.4.6] - 2023-05-07
 ### Added
 - Add `CBOR_MAP_NO_DUP_KEY` encode flag.
 - Add decode option `'shared_ref'` => `'shareable_only'`.
-### Changed
-### Removed
 ### Fixed
 - When `'shared_ref'` is active, objects (whether as a reference or in a `EncodeParams` instance) are not shared if there are multiple references to a value, but only one to the pointing object directly.
 - NaN fraction bits are not preserved when cast to float internally.
 - Correct the documentation of the default value for the option `'shared_ref'`. It had been `false` since alpha release.
 - Correct the documentation of encoding float with flags. Informational loss is not prevented on encoding if either `CBOR_FLOAT16` or `CBOR_FLOAT32` is specified, because it forces type of PHP `float` to the specified size.
-### Security
-### Deprecated
 
 [0.4.5]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.4...v0.4.5
 ## [0.4.5] - 2023-03-04
