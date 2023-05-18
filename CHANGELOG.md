@@ -6,6 +6,7 @@
 ### Changed
 ### Removed
 ### Fixed
+- Fix crash on encoding `Traversable` without rewind handler.
 ### Security
 ### Deprecated
 

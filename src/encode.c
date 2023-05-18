@@ -652,7 +652,9 @@ static cbor_error enc_traversable(enc_context *ctx, zval *value)
 	zend_class_entry *ce = obj->ce;
 	it = ce->get_iterator(ce, value, 0);
 	ENC_CHECK_EXCEPTION();
-	(*it->funcs->rewind)(it);
+	if (it->funcs->rewind) {
+		(*it->funcs->rewind)(it);
+	}
 	ENC_CHECK_EXCEPTION();
 	zend_long index = 0;
 	while ((*it->funcs->valid)(it) == SUCCESS) {

@@ -16,7 +16,7 @@
 #include <ext/standard/info.h>
 #include <Zend/zend_exceptions.h>
 
-#define PHP_CBOR_VERSION "0.4.6"
+#define PHP_CBOR_VERSION "0.4.7-dev"
 
 ZEND_DECLARE_MODULE_GLOBALS(cbor)
 
