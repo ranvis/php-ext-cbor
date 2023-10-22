@@ -1,15 +1,20 @@
 # Changelog
 
-[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.6...HEAD
+[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.7...HEAD
 ## [Unreleased]
 ### Added
 ### Changed
 ### Removed
 ### Fixed
-- Fix the options parameter does not allow specifying `null`.
-- Fix crash on encoding `Traversable` without rewind handler.
 ### Security
 ### Deprecated
+
+[0.4.7]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.6..v0.4.7
+## [0.4.7] - 2023-10-22
+## [Unreleased]
+### Fixed
+- Fix the options parameter does not allow specifying `null`.
+- Fix crash on encoding `Traversable` without rewind handler.
 
 [0.4.6]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.5..v0.4.6
 ## [0.4.6] - 2023-05-07
