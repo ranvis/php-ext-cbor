@@ -9,6 +9,7 @@ require_once __DIR__ . '/common.php';
 
 run(function () {
     $decoder = new Cbor\Decoder();
+    ok(new Cbor\Decoder(options: null));
     // decode()
     eq(0, $decoder->decode(hex2bin('00')));
     xThrows(CBOR_ERROR_EXTRANEOUS_DATA, fn () => $decoder->decode(hex2bin('0001')));

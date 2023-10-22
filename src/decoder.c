@@ -60,7 +60,7 @@ PHP_METHOD(Cbor_Decoder, __construct)
 	decoder_class *base = CUSTOM_OBJ(decoder_class, Z_OBJ_P(ZEND_THIS));
 	zend_long flags = CBOR_BYTE | CBOR_KEY_BYTE;
 	HashTable *options = NULL;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|lh", &flags, &options) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|lh!", &flags, &options) != SUCCESS) {
 		RETURN_THROWS();
 	}
 	base->args.flags = (uint32_t)flags;

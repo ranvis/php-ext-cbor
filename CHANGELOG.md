@@ -6,6 +6,7 @@
 ### Changed
 ### Removed
 ### Fixed
+- Fix the options parameter does not allow specifying `null`.
 - Fix crash on encoding `Traversable` without rewind handler.
 ### Security
 ### Deprecated
