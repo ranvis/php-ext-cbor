@@ -30,15 +30,15 @@
 [0.4.4]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.3...v0.4.4
 ## [0.4.4] - 2023-02-28
 ### Fixed
-- Fix infinite loop when array_walk() is applied on CBOR value types.
-- Fix memory leak when decoding undefined value.
+- Fix infinite loop when `array_walk()` is applied on CBOR value types.
+- Fix memory leak when decoding `undefined` value.
 - Fix memory leak when encoding `Traversable`.
 
 [0.4.3]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.2...v0.4.3
 ## [0.4.3] - 2023-01-28
 ### Added
-- Add `'offset'` and `'length'` options to cbor_decode().
-- Add `$offset` and `$length` parameters to Cbor\Decoder::add().
+- Add `'offset'` and `'length'` options to `cbor_decode()`.
+- Add `$offset` and `$length` parameters to `Cbor\Decoder->add()`.
 - Add encoding of `Traversable` to `map`.
 ### Changed
 - `'max_size'` on decode is enforced for indefinite-length elements too.
@@ -60,7 +60,7 @@
 ### Fixed
 - Fix memory leak on `CBOR_ERROR_EXTRANEOUS_DATA` error.
 ### Security
-- Fix use-after-free on XString member access or string cast.
+- Fix use-after-free on `XString` member access or string cast.
 
 [0.4.0]: https://github.com/ranvis/php-ext-cbor/compare/v0.3.2...v0.4.0
 ## [0.4.0] - 2022-04-20

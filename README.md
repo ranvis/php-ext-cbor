@@ -255,7 +255,7 @@ If you specify the `CBOR_BYTE` flag (default) and/or the `CBOR_TEXT` flag on dec
 
 On encoding PHP `string`, you must specify either of the flags so that the extension knows to which you want your strings to be encoded. The default is `CBOR_BYTE`.
 
-`CBOR_KEY_BYTE` and `CBOR_KEY_TEXT` are for strings of CBOR `map` keys.
+The flags `CBOR_KEY_BYTE` and `CBOR_KEY_TEXT` are for strings of CBOR `map` keys.
 
 If `text string` is not a valid UTF-8 sequence, an exception is thrown unless you pass `CBOR_UNSAFE_TEXT` flag.
 
@@ -274,7 +274,7 @@ Keys must be of CBOR `string` type.
 
 The extension may accept CBOR `integer` keys if the `CBOR_INT_KEY` flag is passed. Likewise with the flag, it will encode PHP `int` key (including integer numeric `string` keys in the range of CBOR `integer`) as CBOR `integer` key.
 
-If the `CBOR_MAP_NO_DUP_KEY` flag is specified on decoding, a duplicated key will throw an exception instead of overriding the former value. This may happen on valid CBOR `map`; e.g. all of unsigned integer `1`, text string `"1"`, and byte string `'1'` may be the same key for PHP.
+If the `CBOR_MAP_NO_DUP_KEY` flag is specified on decoding, encountering a duplicated key will throw an exception instead of overriding the former value. This may happen on valid CBOR `map`; e.g. all of unsigned integer `1`, text string `"1"`, and byte string `'1'` may be the same key for PHP.
 
 #### Tags
 
@@ -301,7 +301,7 @@ var_dump($undefined === clone $undefined); // true
 
 #### PHP `Traversable`s
 
-Classes that implement `Traversable` interface are encoded to `map`.
+Instance of a class that implements `Traversable` is encoded to `map`.
 
 If the class does not implement `Countable` interface, it is encoded to an indefinite-length `map`.
 
@@ -398,7 +398,9 @@ Constants:
 The tag {stringref} is like a compression, that "references" the string previously appeared inside {stringref-namespace} tag. Note that it differs from PHP's reference to `string`; i.e. _not_ the concept of `$stringRef = &$string`.
 
 On encode, it can save payload size by replacing the string already seen with the tag + index (or at the worst case increase by 3-bytes overall when single-namespaced).
+
 Note that if smaller payload is desired, it should perform better to apply a data compression instead of this tag.
+Also, for maps, small `integer` keys (`1`..`23`, `-1`..`-24` are all 1-byte key) are often used to minimize a payload. You may want to avoid defining key `0` as it sometimes means the empty as a data definition convention. And also because when working with `CBOR_MAP_AS_ARRAY` flag, it can transform array to a "list" array in PHP.
 
 On decode, the use of tag can save memory of decoded value because of copy-on-write; PHP can share the identical `string` sequences until one of them is going to be modified.
 
@@ -432,16 +434,14 @@ The tag {sharedref} can refer the previously-defined data.
 
 If the option is enabled, CBOR maps tagged as {shareable} once decoded into PHP object will share the instance among {sharedref} references. If other type of value including CBOR array or tag is tagged {shareable}, it triggers an error. See other option values for possible workarounds.
 
-The option is enabled by default on decoding.
-
 On encoding, potentially shared (i.e. there are variables holding the instance somewhere) PHP `stdClass` objects are tagged {shareable}. When such object is reused, {sharedref} tag is emitted. A reference to variable is dereferenced.
 
 If `'shareable'` is specified, values tagged as {shareable} which are decoded to non-object are wrapped into `Cbor\Shareable` object on decoding, and the instances are reused on {sharedref} tag. On encoding, an instance of `Cbor\Shareable` is tagged {shareable} regardless of the option value.
 
-If `'shareable_only'` works similar to `'shareable'`. But CBOR maps tagged {shareable} are also wrapped into `Cbor\Shareable` instead of `object`.
+`'shareable_only'` works similar to `'shareable'`. But CBOR maps tagged {shareable} are also wrapped into `Cbor\Shareable` instead of bare `object`.
 
-If `'unsafe_ref'` is specified, {shareable} tagged data that decoded to non-object becomes PHP `&` reference. On encoding a reference to variable is tagged {shareable} too.
-At first glance it may seem natural to use PHP reference for shared scalars and arrays. But this may cause unwanted side effects when the decoded structure contains references that you don't expect. You replace a single scalar value, and somewhere else is changed too!
+If `'unsafe_ref'` is specified, {shareable}-tagged data that decoded to non-object becomes PHP `&` reference. On encoding a reference to variable is tagged {shareable} too.
+At first glance it may seem natural to use PHP reference for shared scalars and arrays. But this may cause unwanted side effects when the decoded structure contains references that you don't expect. You replace a single scalar value, and values elsewhere are changed too!
 
 Note that decoder's return value (decoding root value) cannot be a PHP reference. Moreover, a reference to a PHP object cannot be described even with this option.
 
