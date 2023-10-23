@@ -152,7 +152,7 @@ Invalid UTF-8 sequences are represented as byte string fragments inside text str
 #### Serializable
 
 When encoding classes that implement `Cbor\Serializable`, the encoder will call `cborSerialize()`.
-Implementors may return data structure to serialize the instance, or throw an Exception to stop serializing.
+Implementers may return data structure to serialize the instance, or throw an Exception to stop serializing.
 
 Although some classes such as `Traversable` and PSR-7 `UriInterface` are serializable by default as described below, `Serializable` can take precedence.
 
@@ -403,7 +403,7 @@ If the tag is to be prepended/skipped, it is handled specially and not counted a
 
 ### tag(256): stringref-namespace, tag(25): stringref
 
-\* This tag is not in the RFC but registerd in the CBOR Tags registry.
+\* This tag is not in the RFC but registered in the CBOR Tags registry.
 
 Option:
 - `'string_ref'`:
@@ -434,11 +434,11 @@ CBOR data that use {stringref} can be embedded in other CBOR. But data that does
 (As of now, the extension cannot embed raw CBOR data on encoding though.)
 
 Decoders without the support of this tag cannot decode data using {stringref} correctly.
-It is recommended to explicity enable the `string_ref` option on decoding if you are sure of the use of {stringref}, so that readers of the code will know of it.
+It is recommended to explicitly enable the `string_ref` option on decoding if you are sure of the use of {stringref}, so that readers of the code will know of it.
 
 ### tag(28): shareable, tag(29): sharedref
 
-\* This tag is not in the RFC but registerd in the CBOR Tags registry.
+\* This tag is not in the RFC but registered in the CBOR Tags registry.
 
 Option:
 - `'shared_ref'`:
