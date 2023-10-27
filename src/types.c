@@ -353,6 +353,7 @@ PHP_METHOD(Cbor_XString, __set_state)
 		RETURN_THROWS();
 	}
 	if (!xstring_restore(Z_OBJ(value), ht)) {
+		zval_ptr_dtor(&value);
 		RETURN_THROWS();
 	}
 	RETURN_COPY_VALUE(&value);

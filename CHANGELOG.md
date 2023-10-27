@@ -9,6 +9,7 @@
 ### Changed
 ### Removed
 ### Fixed
+- Fix a few memory leaks on encoding.
 ### Security
 ### Deprecated
 

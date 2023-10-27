@@ -236,6 +236,7 @@ RETRY:
 					ctx->ce.decimal = zend_lookup_class_ex(dec_cn_str, dec_cn_str, ZEND_FETCH_CLASS_NO_AUTOLOAD);
 					zend_string_release(dec_cn_str);
 				}
+				zend_string_release(dec_mn_str);
 				// If code executed during encoding autoloads UriInterface, the extension may not be able to identify it. It is unlikely to happen in real code though.
 				zend_string *uri_in_str = MAKE_ZSTR("psr\\http\\message\\uriinterface");
 				ctx->ce.uri_i = zend_lookup_class_ex(uri_in_str, uri_in_str, ZEND_FETCH_CLASS_NO_AUTOLOAD);
@@ -562,16 +563,22 @@ static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 
 #define PROP_L(prop_literal) prop_literal, sizeof prop_literal - 1
 
-static cbor_error enc_typed_byte(enc_context *ctx, zval *ins)
+static cbor_error enc_xstring(enc_context *ctx, zval *ins, bool to_text)
 {
 	zend_string *str = cbor_get_xstring_value(ins);
-	return enc_string(ctx, str, false);
+	cbor_error error = enc_string(ctx, str, to_text);
+	zend_string_release(str);
+	return error;
+}
+
+static cbor_error enc_typed_byte(enc_context *ctx, zval *ins)
+{
+	return enc_xstring(ctx, ins, false);
 }
 
 static cbor_error enc_typed_text(enc_context *ctx, zval *ins)
 {
-	zend_string *str = cbor_get_xstring_value(ins);
-	return enc_string(ctx, str, true);
+	return enc_xstring(ctx, ins, true);
 }
 
 static void enc_typed_floatx(enc_context *ctx, zval *ins, int bits)
