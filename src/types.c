@@ -46,6 +46,16 @@ PHP_METHOD(Cbor_EncodeParams, __construct)
 
 #undef THIS
 
+static zval *no_get_property_ptr_ptr(zend_object *obj, zend_string *member, int type, void **cache_slot)
+{
+	return NULL;
+}
+
+static void no_unset_property(zend_object *obj, zend_string *member, void **cache_slot)
+{
+	zend_throw_error(NULL, "%s cannot unset properties.", ZSTR_VAL(obj->ce->name));
+}
+
 /* PHP has IS_UNDEF type, but it is semantically different from CBOR's "undefined" value. */
 
 static int undef_serialize(zval *obj, unsigned char **buffer, size_t *buf_len, zend_serialize_data *data)
@@ -91,19 +101,9 @@ static zval *undef_write_property(zend_object *obj, zend_string *member, zval *v
 	return &EG(error_zval);
 }
 
-static zval *undef_get_property_ptr_ptr(zend_object *obj, zend_string *member, int type, void **cache_slot)
-{
-	return NULL;
-}
-
 static int undef_has_property(zend_object *obj, zend_string *member, int has_set_exists, void **cache_slot)
 {
 	return 0;
-}
-
-static void undef_unset_property(zend_object *obj, zend_string *member, void **cache_slot)
-{
-	zend_throw_error(NULL, "%s cannot unset properties.", ZSTR_VAL(obj->ce->name));
 }
 
 static zend_result_82 undef_cast(zend_object *obj, zval *retval, int type)
@@ -216,11 +216,6 @@ static zval *xstring_write_property(zend_object *obj, zend_string *member, zval 
 	return value;
 }
 
-static zval *xstring_get_property_ptr_ptr(zend_object *obj, zend_string *member, int type, void **cache_slot)
-{
-	return NULL;
-}
-
 static int xstring_has_property(zend_object *obj, zend_string *member, int has_set_exists, void **cache_slot)
 {
 	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
@@ -233,11 +228,6 @@ static int xstring_has_property(zend_object *obj, zend_string *member, int has_s
 		return 1; /* ZEND_PROPERTY_ISSET, ZEND_PROPERTY_EXISTS */
 	}
 	return 0;
-}
-
-static void xstring_unset_property(zend_object *obj, zend_string *member, void **cache_slot)
-{
-	zend_throw_error(NULL, "The property cannot be unset.");
 }
 
 static zend_result_82 xstring_cast(zend_object *obj, zval *retval, int type)
@@ -972,9 +962,9 @@ void php_cbor_minit_types()
 	undef_handlers.clone_obj = &undef_clone;
 	undef_handlers.read_property = &undef_read_property;
 	undef_handlers.write_property = &undef_write_property;
-	undef_handlers.get_property_ptr_ptr = &undef_get_property_ptr_ptr;
+	undef_handlers.get_property_ptr_ptr = &no_get_property_ptr_ptr;
 	undef_handlers.has_property = &undef_has_property;
-	undef_handlers.unset_property = &undef_unset_property;
+	undef_handlers.unset_property = &no_unset_property;
 	undef_handlers.cast_object = &undef_cast;
 
 	CBOR_CE(xstring)->create_object = &cbor_xstring_create;
@@ -986,9 +976,9 @@ void php_cbor_minit_types()
 	xstring_handlers.clone_obj = &xstring_clone;
 	xstring_handlers.read_property = &xstring_read_property;
 	xstring_handlers.write_property = &xstring_write_property;
-	xstring_handlers.get_property_ptr_ptr = &xstring_get_property_ptr_ptr;
+	xstring_handlers.get_property_ptr_ptr = &no_get_property_ptr_ptr;
 	xstring_handlers.has_property = &xstring_has_property;
-	xstring_handlers.unset_property = &xstring_unset_property;
+	xstring_handlers.unset_property = &no_unset_property;
 	xstring_handlers.cast_object = &xstring_cast;
 	xstring_handlers.compare = &xstring_compare;
 	xstring_handlers.get_properties = &xstring_get_properties;
