@@ -1,21 +1,25 @@
 # Changelog
 
-[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.7...HEAD
+[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.8...HEAD
 ## [Unreleased]
+### Added
+### Changed
+### Removed
+### Fixed
+### Security
+### Deprecated
+
+[0.4.8]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.7..v0.4.8
+## [0.4.8] - 2023-10-28
 ### Added
 - Add `CBOR_CDE` encode flag.
 - Add `FloatX->toBinary()` method.
 - Add `Float16->toFloat32()` and `Float32->toFloat16()`.
-### Changed
-### Removed
 ### Fixed
 - Fix a few memory leaks on encoding.
-### Security
-### Deprecated
 
 [0.4.7]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.6..v0.4.7
 ## [0.4.7] - 2023-10-22
-## [Unreleased]
 ### Fixed
 - Fix the options parameter does not allow specifying `null`.
 - Fix crash on encoding `Traversable` without rewind handler.
