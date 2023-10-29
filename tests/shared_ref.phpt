@@ -100,6 +100,10 @@ run(function () {
 
     cencThrows(CBOR_ERROR_INVALID_FLAGS, 1, CBOR_CDE, ['shared_ref' => true]);
     cencThrows(CBOR_ERROR_INTERNAL, $sh, CBOR_CDE);
+
+    // direct self referencing
+    ok(cdec('81[d81c(d81d(00))]', options: ['shared_ref' => 'shareable']));
+    cdecThrows(CBOR_ERROR_TAG_VALUE, '81[d81c(d81d(00))]', options: ['shared_ref' => 'unsafe_ref']);
 });
 
 ?>

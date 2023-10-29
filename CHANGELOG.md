@@ -7,6 +7,7 @@
 ### Removed
 ### Fixed
 ### Security
+- Prohibit decoding of a shareable whose content is a sharedref referencing that shareable itself under `'shared_ref'' => `'unsafe_ref'`. Such variables hang PHP when evaluated.
 ### Deprecated
 
 [0.4.8]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.7..v0.4.8

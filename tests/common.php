@@ -48,7 +48,7 @@ class BoolTester implements TesterInterface
         if ($this->value) {
             return true;
         }
-        $value = var_export($this->value, true);
+        $value = toDump($this->value);
         return "Value   : " . $value . "\n";
     }
 }
@@ -67,15 +67,15 @@ class EqTester implements TesterInterface
         $act = $this->act;
         $exported = !is_string($exp) || !is_string($act);
         if ($exported) {
-            $exp = var_export($exp, true);
-            $act = var_export($act, true);
+            $exp = toDump($exp);
+            $act = toDump($act);
         }
         if ($exp === $act) {
             return true;
         }
         if (!$exported) {
-            $exp = var_export($exp, true);
-            $act = var_export($act, true);
+            $exp = toDump($exp);
+            $act = toDump($act);
         }
         return "Expected: " . $exp . "\n"
             . "Actual  : " . $act . "\n";
@@ -104,14 +104,16 @@ function run($func): void
     TestStats::reset();
     try {
         $func();
-    } catch (Cbor\Exception $e) {
+    } catch (Throwable $e) {
         printf("Exception thrown: %s(%d):%s %s\n",
             get_class($e),
             $e->getCode(),
-            getErrorName($e->getCode()),
+            getErrorName($e),
             $e->getMessage(),
         );
-        throw $e;
+        echo "  " . str_replace("\n", "\n  ", $e->getTraceAsString()), "\n";
+        echo "Stopped.\n";
+        return;
     }
     //TestStats::show();
     echo "Done.\n";
@@ -204,13 +206,17 @@ function cdecHex($value, ...$args): mixed
 
 function decodeHex(string $value): string
 {
-    return hex2bin($value);
+    return hex2bin(preg_replace('/[][,{}: ()h"]/', '', $value));
 }
 
-function toDump($value): string
+function toDump(mixed $value): string
 {
-    if (!is_string($value)) {
-        return var_export($value, true);
+    if (!is_string($value) || preg_match('/\A[\n\x20-\x7e]*\z/', $value)) {
+        $str = var_export($value, true);
+        // var_dump() is not used because of having object ID etc.
+        $str = preg_replace_callback('/[^\n\x20-\x7e]/', fn ($m) => '\' . "\\x' . bin2hex($m[0]) . '" . \'', $str);
+        $str = str_replace('" . \'\' . "', '', $str);
+        return $str;
     }
     return '0x' . bin2hex($value);
 }
@@ -220,7 +226,7 @@ function xThrows(int|string $code, callable $fn): void
     try {
         $actual = toDump($fn());
     } catch (Cbor\Exception $e) {
-        $actual = getErrorName($e->getCode());
+        $actual = getErrorName($e);
     } catch (Throwable $e) {
         $actual = get_class($e);
         if (is_int($code) && $e instanceof Error) {
@@ -250,8 +256,15 @@ function throws(string $exception, callable $fn): void
     xThrows($exception, $fn);
 }
 
-function getErrorName(int $code): string
+function getErrorName(int|Throwable $code): string
 {
+    if (is_object($code)) {
+        $e = $code;
+        $code = $code->getCode();
+        if (!$e instanceof Cbor\Exception) {
+            return "#$code";
+        }
+    }
     $errors = [
         /* error names start */
           1 => 'CBOR_ERROR_INVALID_FLAGS',

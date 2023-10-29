@@ -774,7 +774,12 @@ static xzval *tag_handler_shareable_exit(dec_context *ctx, xzval *value, stack_i
 			assert(Z_TYPE_P(real_v) == IS_OBJECT);
 			zend_update_property_ex(CBOR_CE(shareable), Z_OBJ_P(real_v), ZSTR_KNOWN(ZEND_STR_VALUE), value);
 		} else if (ctx->args.shared_ref == OPT_UNSAFE_REF) {
-			assert(Z_TYPE_P(real_v) == IS_REFERENCE);
+			assert(Z_ISREF_P(real_v));
+			if (Z_ISREF_P(value) && Z_REF_P(real_v) == Z_REF_P(value)) {
+				// A reference pointing to itself; evaluation of such zval causes infinite dereference.
+				Z_DELREF_P(real_v);
+				RETURN_CB_ERROR_V(value, E_DESC(CBOR_ERROR_TAG_VALUE, SHARE_SELF));
+			}
 			zval *shareable_ref = real_v;
 			ZVAL_DEREF(shareable_ref);
 			ZVAL_COPY(shareable_ref, value);  /* move into ref content */
@@ -790,7 +795,7 @@ static bool tag_handler_shareable_enter(dec_context *ctx, stack_item_zv *item)
 		RETURN_CB_ERROR_B(E_DESC(CBOR_ERROR_TAG_SYNTAX, SHARE_NESTED));
 	}
 	SI_SET_CHILD_HANDLER(item, THI_SHAREABLE);
-	ZVAL_NULL(&item->v.tag_h.v.shareable.value); /* cannot be undef if adding to HashTable */
+	ZVAL_NULL(&item->v.tag_h.v.shareable.value);  // marker for nested content; undef cannot be added to HashTable
 	item->v.tag_h.v.shareable.index = zend_hash_num_elements(ctx->u.zv.refs);
 	if (zend_hash_next_index_insert(ctx->u.zv.refs, &item->v.tag_h.v.shareable.value) == NULL) {
 		RETURN_CB_ERROR_B(CBOR_ERROR_INTERNAL);

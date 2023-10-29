@@ -219,6 +219,8 @@ void cbor_throw_error(cbor_error error, bool decoding, const cbor_error_args *ar
 		switch (error_desc) {
 		case CBOR_ERROR_TAG_VALUE__STR_REF_RANGE:
 			DESC_MSG("Stringref is out of range");
+		case CBOR_ERROR_TAG_VALUE__SHARE_SELF:
+			DESC_MSG("Shareable cannot have sharedref pointing to itself to create recursion under ['shared_ref' => 'unsafe_ref']. Specify option ['shared_ref' => 'shareable'] to circumvent this");
 		case CBOR_ERROR_TAG_VALUE__SHARE_RANGE:
 			DESC_MSG("Sharedref is out of range");
 		}

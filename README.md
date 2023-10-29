@@ -270,7 +270,7 @@ PHP `string` type does not have this distinction.
 
 If you specify the `CBOR_BYTE` flag (default) and/or the `CBOR_TEXT` flag on decoding, those strings are decoded to PHP `string`. If the flags are not specified, strings are decoded to `Cbor\Byte` and `Cbor\Text` objects respectively.
 
-On encoding PHP `string`, you must specify either of the flags so that the extension knows to which you want your strings to be encoded. The default is `CBOR_BYTE`.
+On encoding PHP `string`, you must specify either of the flags so that the extension can encode strings to CBOR strings. The default is `CBOR_BYTE`.
 
 The flags `CBOR_KEY_BYTE` and `CBOR_KEY_TEXT` are for strings of CBOR `map` keys.
 
