@@ -16,16 +16,16 @@
 #include <ext/standard/info.h>
 #include <Zend/zend_exceptions.h>
 
-#define PHP_CBOR_VERSION "0.4.8"
+#define PHP_CBOR_VERSION "0.4.9-dev"
 
 ZEND_DECLARE_MODULE_GLOBALS(cbor)
 
 /* True global resources - no need for thread safety here */
 zend_class_entry
+	/* ce start */
 	*CBOR_CE(exception),
 	*CBOR_CE(serializable),
 	*CBOR_CE(encodeparams),
-	*CBOR_CE(decoder),
 	*CBOR_CE(undefined),
 	*CBOR_CE(xstring),
 	*CBOR_CE(byte),
@@ -34,7 +34,9 @@ zend_class_entry
 	*CBOR_CE(float16),
 	*CBOR_CE(float32),
 	*CBOR_CE(tag),
-	*CBOR_CE(shareable)
+	*CBOR_CE(shareable),
+	*CBOR_CE(decoder)
+	/* ce end */
 ;
 
 /* {{{ PHP_INI
@@ -96,10 +98,10 @@ PHP_MINIT_FUNCTION(cbor)
 	/* errors end */
 
 #define REG_CLASS(name, name_cc)  CBOR_CE(name) = register_class_Cbor_##name_cc
+	/* reg_class start */
 	REG_CLASS(exception, Exception)(zend_ce_exception);
 	REG_CLASS(serializable, Serializable)();
 	REG_CLASS(encodeparams, EncodeParams)();
-	REG_CLASS(decoder, Decoder)();
 	REG_CLASS(undefined, Undefined)(php_json_serializable_ce);
 	REG_CLASS(xstring, XString)(php_json_serializable_ce);
 	REG_CLASS(byte, Byte)(CBOR_CE(xstring));
@@ -109,6 +111,8 @@ PHP_MINIT_FUNCTION(cbor)
 	REG_CLASS(float32, Float32)(CBOR_CE(floatx));
 	REG_CLASS(tag, Tag)();
 	REG_CLASS(shareable, Shareable)(php_json_serializable_ce);
+	REG_CLASS(decoder, Decoder)();
+	/* reg_class end */
 
 #define REG_CLASS_CONST_LONG(cls, prefix, name)  zend_declare_class_constant_long(CBOR_CE(cls), ZEND_STRL(#name), prefix##name);
 	/* tag constants start */

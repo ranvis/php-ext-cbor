@@ -101,7 +101,7 @@ abstract class FloatX implements \JsonSerializable
 
     /**
      * Convert value to binary data.
-     * @return string $value A binary value of binary16/binary32.
+     * @return string A binary value of binary16/binary32.
      */
     public function toBinary(): string {}
 }

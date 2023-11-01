@@ -20,10 +20,10 @@ extern zend_module_entry cbor_module_entry;
 #define CBOR_CE(name)  php_cbor_##name##_ce
 
 extern zend_class_entry
+	/* ce start */
 	*CBOR_CE(exception),
 	*CBOR_CE(serializable),
 	*CBOR_CE(encodeparams),
-	*CBOR_CE(decoder),
 	*CBOR_CE(undefined),
 	*CBOR_CE(xstring),
 	*CBOR_CE(byte),
@@ -32,7 +32,9 @@ extern zend_class_entry
 	*CBOR_CE(float16),
 	*CBOR_CE(float32),
 	*CBOR_CE(tag),
-	*CBOR_CE(shareable)
+	*CBOR_CE(shareable),
+	*CBOR_CE(decoder)
+	/* ce end */
 ;
 
 #endif	/* PHP_CBOR_H */
