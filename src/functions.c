@@ -22,12 +22,12 @@ PHP_FUNCTION(cbor_encode)
 		RETURN_THROWS();
 	}
 	args.u_flags = (uint32_t)flags;
-	if ((error = php_cbor_set_encode_options(&args, options)) == 0
-			&& (error = php_cbor_check_encode_params(&args)) == 0) {
-		error = php_cbor_encode(value, &str, &args);
+	if ((error = cbor_set_encode_options(&args, options)) == 0
+			&& (error = cbor_check_encode_params(&args)) == 0) {
+		error = cbor_encode(value, &str, &args);
 	}
 	if (error) {
-		php_cbor_throw_error(error, false, &args.error_args);
+		cbor_throw_error(error, false, &args.error_args);
 		RETURN_THROWS();
 	}
 	assert(str);
@@ -49,15 +49,15 @@ PHP_FUNCTION(cbor_decode)
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|lh!", &data, &flags, &options) != SUCCESS) {
 		RETURN_THROWS();
 	}
-	php_cbor_init_decode_options(&args);
+	cbor_init_decode_options(&args);
 	args.flags = (uint32_t)flags;
-	error = php_cbor_set_decode_options(&args, options);
+	error = cbor_set_decode_options(&args, options);
 	if (!error) {
-		error = php_cbor_decode(data, &value, &args);
+		error = cbor_decode(data, &value, &args);
 	}
-	php_cbor_free_decode_options(&args);
+	cbor_free_decode_options(&args);
 	if (error) {
-		php_cbor_throw_error(error, true, &args.error_args);
+		cbor_throw_error(error, true, &args.error_args);
 		RETURN_THROWS();
 	}
 	RETVAL_COPY_VALUE(&value);
@@ -69,7 +69,7 @@ PHP_FUNCTION(cbor_decode)
 		goto MSG_SET; \
 	} while (0)
 
-void php_cbor_throw_error(cbor_error error, bool decoding, const cbor_error_args *args)
+void cbor_throw_error(cbor_error error, bool decoding, const cbor_error_args *args)
 {
 	const char *message = "Unknown error code";
 	const char *desc_msg = "";

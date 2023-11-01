@@ -98,7 +98,7 @@ static zend_result call_fn(zval *object, zend_string *func_str, zval *retval_ptr
 static zend_string *decode_dec_str(const char *in_c, size_t in_len);
 static zend_string *bin_int_sub1(zend_string *str);
 
-void php_cbor_minit_encode()
+void cbor_minit_encode()
 {
 }
 
@@ -117,7 +117,7 @@ void php_cbor_minit_encode()
 		} \
 	} while (0)
 
-cbor_error php_cbor_encode(zval *value, zend_string **data, cbor_encode_args *args)
+cbor_error cbor_encode(zval *value, zend_string **data, cbor_encode_args *args)
 {
 	cbor_error error;
 	enc_context ctx;
@@ -843,8 +843,8 @@ static cbor_error enc_encodeparams(enc_context *ctx, zval *ins)
 		ctx->args.u_flags &= ~mutex_flags;
 		ctx->args.u_flags |= flags;
 	}
-	ENC_CHECK(php_cbor_override_encode_options(&ctx->args, ht));
-	ENC_CHECK(php_cbor_check_encode_params(&ctx->args));
+	ENC_CHECK(cbor_override_encode_options(&ctx->args, ht));
+	ENC_CHECK(cbor_check_encode_params(&ctx->args));
 	Z_PROTECT_RECURSION_P(ins);
 	error = enc_zval(ctx, value);
 	Z_UNPROTECT_RECURSION_P(ins);

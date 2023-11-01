@@ -141,27 +141,27 @@ typedef struct {
 
 typedef struct cbor_decode_context cbor_decode_context;
 
-void php_cbor_minit_encode();
-void php_cbor_minit_decode();
+void cbor_minit_encode();
+void cbor_minit_decode();
 
 /* options */
-cbor_error php_cbor_override_encode_options(cbor_encode_args *args, HashTable *options);
-cbor_error php_cbor_set_encode_options(cbor_encode_args *args, HashTable *options);
-cbor_error php_cbor_check_encode_params(cbor_encode_args *args);
-void php_cbor_init_decode_options(cbor_decode_args *args);
-void php_cbor_free_decode_options(cbor_decode_args *args);
-cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *options);
+cbor_error cbor_override_encode_options(cbor_encode_args *args, HashTable *options);
+cbor_error cbor_set_encode_options(cbor_encode_args *args, HashTable *options);
+cbor_error cbor_check_encode_params(cbor_encode_args *args);
+void cbor_init_decode_options(cbor_decode_args *args);
+void cbor_free_decode_options(cbor_decode_args *args);
+cbor_error cbor_set_decode_options(cbor_decode_args *args, HashTable *options);
 
-void php_cbor_throw_error(cbor_error error, bool decoding, const cbor_error_args *args);
+void cbor_throw_error(cbor_error error, bool decoding, const cbor_error_args *args);
 
 /* encode */
-cbor_error php_cbor_encode(zval *value, zend_string **data, cbor_encode_args *args);
+cbor_error cbor_encode(zval *value, zend_string **data, cbor_encode_args *args);
 
 /* decode */
-cbor_error php_cbor_decode(zend_string *data, zval *value, cbor_decode_args *args);
-cbor_decode_context *php_cbor_decode_new(const cbor_decode_args *args, cbor_fragment *mem);
-void php_cbor_decode_delete(cbor_decode_context *ctx);
-cbor_error php_cbor_decode_process(cbor_decode_context *ctx);
-cbor_error php_cbor_decode_finish(cbor_decode_context *ctx, cbor_decode_args *args, cbor_error error, zval *value);
+cbor_error cbor_decode(zend_string *data, zval *value, cbor_decode_args *args);
+cbor_decode_context *cbor_decode_new(const cbor_decode_args *args, cbor_fragment *mem);
+void cbor_decode_delete(cbor_decode_context *ctx);
+cbor_error cbor_decode_process(cbor_decode_context *ctx);
+cbor_error cbor_decode_finish(cbor_decode_context *ctx, cbor_decode_args *args, cbor_error error, zval *value);
 
 bool cbor_is_len_string_ref(size_t str_len, uint32_t next_index);

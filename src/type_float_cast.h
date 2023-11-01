@@ -71,7 +71,7 @@ int test_fp64_size(double value)
 	return 8;
 }
 
-void php_cbor_minit_types_float_cast()
+void cbor_minit_types_float_cast()
 {
 	int cpu_id[4];
 	const int flags = CPU_ID_1_2_SSE3 | CPU_ID_1_2_F16C;

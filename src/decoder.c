@@ -30,7 +30,7 @@ static zend_object *decoder_create(zend_class_entry *ce)
 	decoder_class *base = zend_object_alloc(sizeof(decoder_class), ce);
 	base->buffer = zend_empty_string;
 	base->mem.base = base->mem.offset = base->mem.length = base->mem.limit = 0;
-	php_cbor_init_decode_options(&base->args);
+	cbor_init_decode_options(&base->args);
 	base->ctx = NULL;
 	base->is_processing = false;
 	ZVAL_UNDEF(&base->data);
@@ -43,10 +43,10 @@ static void decoder_free(zend_object *obj)
 {
 	decoder_class *base = CUSTOM_OBJ(decoder_class, obj);
 	if (base->ctx) {
-		php_cbor_decode_delete(base->ctx);
+		cbor_decode_delete(base->ctx);
 	}
 	zend_string_release(base->buffer);
-	php_cbor_free_decode_options(&base->args);
+	cbor_free_decode_options(&base->args);
 	zend_object_std_dtor(obj);
 }
 
@@ -66,9 +66,9 @@ PHP_METHOD(Cbor_Decoder, __construct)
 		RETURN_THROWS();
 	}
 	base->args.flags = (uint32_t)flags;
-	cbor_error error = php_cbor_set_decode_options(&base->args, options);
+	cbor_error error = cbor_set_decode_options(&base->args, options);
 	if (error) {
-		php_cbor_throw_error(error, true, NULL);
+		cbor_throw_error(error, true, NULL);
 		RETURN_THROWS();
 	}
 }
@@ -82,9 +82,9 @@ PHP_METHOD(Cbor_Decoder, decode)
 	}
 	zval value;
 	cbor_decode_args args = base->args;  /* Make a copy of decoding args. */
-	cbor_error error = php_cbor_decode(data, &value, &args);
+	cbor_error error = cbor_decode(data, &value, &args);
 	if (error) {
-		php_cbor_throw_error(error, true, &args.error_args);
+		cbor_throw_error(error, true, &args.error_args);
 		RETURN_THROWS();
 	}
 	RETVAL_COPY_VALUE(&value);
@@ -110,18 +110,18 @@ static cbor_error decode_buffer(decoder_class *base)
 		return 0;
 	}
 	if (!base->ctx) {
-		base->ctx = php_cbor_decode_new(&base->args, &base->mem);
+		base->ctx = cbor_decode_new(&base->args, &base->mem);
 	}
 	assert(!base->is_processing);
 	base->is_processing = true;
 	base->mem.ptr = (const uint8_t *)ZSTR_VAL(base->buffer);
-	cbor_error error = php_cbor_decode_process(base->ctx);
+	cbor_error error = cbor_decode_process(base->ctx);
 	base->is_processing = false;
 	if (error == CBOR_ERROR_TRUNCATED_DATA) {  /* no enough data */
 		return 0;
 	}
-	php_cbor_decode_finish(base->ctx, &base->args, error, &base->data);
-	php_cbor_decode_delete(base->ctx);
+	cbor_decode_finish(base->ctx, &base->args, error, &base->data);
+	cbor_decode_delete(base->ctx);
 	base->ctx = NULL;
 	return error;
 }
@@ -174,7 +174,7 @@ PHP_METHOD(Cbor_Decoder, add)
 			append_len = min((zend_ulong)data_len, append_len);
 		}
 		if (append_len > SIZE_MAX - base->mem.length) {
-			php_cbor_throw_error(CBOR_ERROR_UNSUPPORTED_SIZE, true, NULL);
+			cbor_throw_error(CBOR_ERROR_UNSUPPORTED_SIZE, true, NULL);
 			RETURN_THROWS();
 		}
 		if (!IS_STR_OWNED(base->buffer)) {
@@ -214,7 +214,7 @@ PHP_METHOD(Cbor_Decoder, process)
 		base->buffer = zend_string_realloc(base->buffer, base->mem.length, false);
 	}
 	if (error) {
-		php_cbor_throw_error(error, true, &base->args.error_args);
+		cbor_throw_error(error, true, &base->args.error_args);
 		RETURN_THROWS();
 	}
 	RETVAL_BOOL(Z_TYPE(base->data) != IS_UNDEF);
@@ -226,7 +226,7 @@ PHP_METHOD(Cbor_Decoder, reset)
 	NO_REENTRANT(base);
 	zend_parse_parameters_none();
 	if (base->ctx) {
-		php_cbor_decode_delete(base->ctx);
+		cbor_decode_delete(base->ctx);
 		base->ctx = NULL;
 	}
 	zend_string_release(base->buffer);
@@ -283,7 +283,7 @@ PHP_METHOD(Cbor_Decoder, getBuffer)
 	RETVAL_STR(copy);
 }
 
-void php_cbor_minit_decoder()
+void cbor_minit_decoder()
 {
 	CBOR_CE(decoder)->create_object = &decoder_create;
 #if TARGET_PHP_API_LT_81

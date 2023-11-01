@@ -195,7 +195,7 @@ static cbor_error decode_nested(dec_context *ctx);
 
 static void free_srns_item(srns_item *srns);
 
-void php_cbor_minit_decode()
+void cbor_minit_decode()
 {
 }
 
@@ -325,20 +325,20 @@ static void cbor_decode_init(dec_context *ctx, const cbor_decode_args *args, cbo
 	ctx->vt->ctx_init(ctx);
 }
 
-dec_context *php_cbor_decode_new(const cbor_decode_args *args, cbor_fragment *mem)
+dec_context *cbor_decode_new(const cbor_decode_args *args, cbor_fragment *mem)
 {
 	dec_context *ctx = emalloc(sizeof(dec_context));
 	cbor_decode_init(ctx, args, mem);
 	return ctx;
 }
 
-void php_cbor_decode_delete(dec_context *ctx)
+void cbor_decode_delete(dec_context *ctx)
 {
 	cbor_decode_free(ctx);
 	efree(ctx);
 }
 
-cbor_error php_cbor_decode_process(dec_context *ctx)
+cbor_error cbor_decode_process(dec_context *ctx)
 {
 	cbor_error error;
 	if (ctx->skip_self_desc) {
@@ -369,12 +369,12 @@ FINALLY:
 	return error;
 }
 
-cbor_error php_cbor_decode_finish(dec_context *ctx, cbor_decode_args *args, cbor_error error, zval *value)
+cbor_error cbor_decode_finish(dec_context *ctx, cbor_decode_args *args, cbor_error error, zval *value)
 {
 	return ctx->vt->dec_finish(ctx, args, error, value);
 }
 
-cbor_error php_cbor_decode(zend_string *data, zval *value, cbor_decode_args *args)
+cbor_error cbor_decode(zend_string *data, zval *value, cbor_decode_args *args)
 {
 	cbor_error error = 0;
 	dec_context ctx;
@@ -396,12 +396,12 @@ cbor_error php_cbor_decode(zend_string *data, zval *value, cbor_decode_args *arg
 	mem.ptr = (const uint8_t *)ZSTR_VAL(data);
 	if (!error) {
 		cbor_decode_init(&ctx, args, &mem);
-		error = php_cbor_decode_process(&ctx);
+		error = cbor_decode_process(&ctx);
 		if (!error && mem.offset != mem.length) {
 			error = CBOR_ERROR_EXTRANEOUS_DATA;
 			ctx.args.error_args.offset = mem.base + mem.offset;
 		}
-		error = php_cbor_decode_finish(&ctx, args, error, value);
+		error = cbor_decode_finish(&ctx, args, error, value);
 		cbor_decode_free(&ctx);
 	}
 	return error;

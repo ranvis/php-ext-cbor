@@ -28,7 +28,7 @@ typedef union binary64_alias {
 
 typedef uint16_t cbor_fp16i;
 
-void php_cbor_minit_types();
+void cbor_minit_types();
 
 /* undefined */
 zend_object *cbor_get_undef();
@@ -48,11 +48,11 @@ double cbor_from_fp32(float value);
 float cbor_to_fp32(double value);
 int test_fp32_size(float value);
 int test_fp64_size(double value);
-void php_cbor_minit_types_float_cast();
+void cbor_minit_types_float_cast();
 cbor_fp16i cbor_float_32_to_16(float value);
 cbor_fp16i cbor_float_32_to_16_cast(float value);
 cbor_fp16i cbor_float_64_to_16(double value);
 cbor_fp16i cbor_float_64_to_16_cast(double value);
 
 /* decoder */
-void php_cbor_minit_decoder();
+void cbor_minit_decoder();

@@ -138,9 +138,9 @@ PHP_MINIT_FUNCTION(cbor)
 	REG_CLASS_CONST_LONG(tag, CBOR_TAG_, MIME_MSG);
 	/* tag constants end */
 
-	php_cbor_minit_types();
-	php_cbor_minit_encode();
-	php_cbor_minit_decode();
+	cbor_minit_types();
+	cbor_minit_encode();
+	cbor_minit_decode();
 
 	return SUCCESS;
 }

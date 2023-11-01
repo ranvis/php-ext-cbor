@@ -100,7 +100,7 @@ static cbor_error uint32_option(uint32_t *opt_value, const char *name, size_t na
 	return 0;
 }
 
-cbor_error php_cbor_override_encode_options(cbor_encode_args *args, HashTable *options)
+cbor_error cbor_override_encode_options(cbor_encode_args *args, HashTable *options)
 {
 	cbor_error error = 0;
 	CHECK_ERROR(bool_option(&args->datetime, ZEND_STRL("datetime"), options));
@@ -111,7 +111,7 @@ FINALLY:
 	return error;
 }
 
-cbor_error php_cbor_set_encode_options(cbor_encode_args *args, HashTable *options)
+cbor_error cbor_set_encode_options(cbor_encode_args *args, HashTable *options)
 {
 	cbor_error error = 0;
 	args->max_depth = 64;
@@ -127,12 +127,12 @@ cbor_error php_cbor_set_encode_options(cbor_encode_args *args, HashTable *option
 	CHECK_ERROR(uint32_option(&args->max_depth, ZEND_STRL("max_depth"), 0, 10000, options));
 	CHECK_ERROR(bool_n_option(&args->string_ref, ZEND_STRL("string_ref"), "explicit\0", options));
 	CHECK_ERROR(bool_n_option(&args->shared_ref, ZEND_STRL("shared_ref"), "-\0-\0unsafe_ref\0", options));
-	CHECK_ERROR(php_cbor_override_encode_options(args, options));
+	CHECK_ERROR(cbor_override_encode_options(args, options));
 FINALLY:
 	return error;
 }
 
-cbor_error php_cbor_check_encode_params(cbor_encode_args *args)
+cbor_error cbor_check_encode_params(cbor_encode_args *args)
 {
 	uint32_t flags = args->u_flags;
 	if (flags & CBOR_BYTE && flags & CBOR_TEXT) {
@@ -152,7 +152,7 @@ cbor_error php_cbor_check_encode_params(cbor_encode_args *args)
 	return 0;
 }
 
-void php_cbor_init_decode_options(cbor_decode_args *args)
+void cbor_init_decode_options(cbor_decode_args *args)
 {
 	args->flags = CBOR_BYTE | CBOR_KEY_BYTE;
 	args->max_depth = 64;
@@ -168,11 +168,11 @@ void php_cbor_init_decode_options(cbor_decode_args *args)
 	args->edn.byte_wrap = 0;
 }
 
-void php_cbor_free_decode_options(cbor_decode_args *args)
+void cbor_free_decode_options(cbor_decode_args *args)
 {
 }
 
-cbor_error php_cbor_set_decode_options(cbor_decode_args *args, HashTable *options)
+cbor_error cbor_set_decode_options(cbor_decode_args *args, HashTable *options)
 {
 	cbor_error error = 0;
 	if (options == NULL) {

@@ -953,7 +953,7 @@ PHP_METHOD(Cbor_Shareable, jsonSerialize)
 
 #undef THIS
 
-void php_cbor_minit_types()
+void cbor_minit_types()
 {
 	CBOR_CE(undefined)->serialize = undef_serialize;
 	CBOR_CE(undefined)->unserialize = undef_unserialize;
@@ -999,6 +999,6 @@ void php_cbor_minit_types()
 	floatx_handlers.get_properties = &floatx_get_properties;
 	floatx_handlers.get_properties_for = &floatx_get_properties_for;
 
-	php_cbor_minit_types_float_cast();
-	php_cbor_minit_decoder();
+	cbor_minit_types_float_cast();
+	cbor_minit_decoder();
 }
