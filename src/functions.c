@@ -127,7 +127,7 @@ void cbor_throw_error(cbor_error error, bool decoding, const cbor_error_args *ar
 		message = "Invalid UTF-8 sequences";
 		break;
 	case CBOR_ERROR_UNSUPPORTED_TYPE:
-		message = "Unsupported type of data";
+		message = "Unsupported data type";
 		if (!decoding) {
 			if (args->u.ce_name) {
 				is_formatted = true;
@@ -148,31 +148,31 @@ void cbor_throw_error(cbor_error error, bool decoding, const cbor_error_args *ar
 		}
 		break;
 	case CBOR_ERROR_UNSUPPORTED_SIZE:
-		message = "Unsupported size of data";
+		message = "Unsupported data size";
 		break;
 	case CBOR_ERROR_UNSUPPORTED_KEY_TYPE:
-		message = "Unsupported type of data for key";
+		message = "Unsupported data type for array key or object key";
 		switch (error_desc) {
 		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__INT_KEY:
-			DESC_MSG("Integer key while flag CBOR_INT_KEY is not specified");
+			DESC_MSG("Integer requires CBOR_INT_KEY flag");
 		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__NULL:
-			DESC_MSG("Null cannot be a map key");
+			DESC_MSG("Null is not accepted");
 		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__BOOL:
-			DESC_MSG("Bool cannot be a map key");
+			DESC_MSG("Bool is not accepted");
 		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__FLOAT:
-			DESC_MSG("Float cannot be a map key");
+			DESC_MSG("Float is not accepted");
 		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__BYTE:
-			DESC_MSG("Uncoerced string cannot be a map key. Specify flag CBOR_KEY_BYTE to circumvent this");
+			DESC_MSG("Uncoerced string is not accepted. Specify flag CBOR_KEY_BYTE to circumvent this");
 		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__TEXT:
-			DESC_MSG("Uncoerced string cannot be a map key. Specify flag CBOR_KEY_TEXT to circumvent this");
+			DESC_MSG("Uncoerced string is not accepted. Specify flag CBOR_KEY_TEXT to circumvent this");
 		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__ARRAY:
-			DESC_MSG("Array cannot be a map key");
+			DESC_MSG("Array is not accepted");
 		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__OBJECT:
-			DESC_MSG("Object cannot be a map key");
+			DESC_MSG("Object is not accepted");
 		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__UNDEF:
-			DESC_MSG("Undefined cannot be a map key");
+			DESC_MSG("Undefined is not accepted");
 		case CBOR_ERROR_UNSUPPORTED_KEY_TYPE__TAG:
-			DESC_MSG("Tag cannot be a map key");
+			DESC_MSG("Tag is not accepted");
 		}
 		break;
 	case CBOR_ERROR_UNSUPPORTED_KEY_VALUE:
@@ -183,7 +183,7 @@ void cbor_throw_error(cbor_error error, bool decoding, const cbor_error_args *ar
 		}
 		break;
 	case CBOR_ERROR_UNSUPPORTED_KEY_SIZE:  /* bogus error? */
-		message = "Unsupported size of data for key";
+		message = "Unsupported data size for key";
 		break;
 	case CBOR_ERROR_TRUNCATED_DATA:
 		message = "Data is truncated";
@@ -215,7 +215,7 @@ void cbor_throw_error(cbor_error error, bool decoding, const cbor_error_args *ar
 		}
 		break;
 	case CBOR_ERROR_TAG_VALUE:
-		message = "Invalid data value for the tag content";
+		message = "Invalid value for the tag content";
 		switch (error_desc) {
 		case CBOR_ERROR_TAG_VALUE__STR_REF_RANGE:
 			DESC_MSG("Stringref is out of range");
