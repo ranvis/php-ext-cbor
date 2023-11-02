@@ -111,12 +111,13 @@ run(function () {
     cdecThrows(CBOR_ERROR_SYNTAX, 'ff');
 
     // Break occurring in a definite-length array or map or a tag
+    // (some tests have data appended to avoid throwing prematurely)
     cdecThrows(CBOR_ERROR_SYNTAX, '81ff');
     cdecThrows(CBOR_ERROR_SYNTAX, '8200ff');
-    cdecThrows(CBOR_ERROR_SYNTAX, 'a1ff');
+    cdecThrows(CBOR_ERROR_SYNTAX, 'a1ff' . 'ff');
     cdecThrows(CBOR_ERROR_SYNTAX, 'a1ff00');
     cdecThrows(CBOR_ERROR_SYNTAX, 'a100ff', CBOR_INT_KEY);
-    cdecThrows(CBOR_ERROR_SYNTAX, 'a20000ff', CBOR_INT_KEY);
+    cdecThrows(CBOR_ERROR_SYNTAX, 'a20000ff' . 'ff', CBOR_INT_KEY);
     cdecThrows(CBOR_ERROR_SYNTAX, '9f81ff');
     cdecThrows(CBOR_ERROR_SYNTAX, '9f829f819f9fffffffff');
 

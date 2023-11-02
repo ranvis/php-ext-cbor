@@ -458,7 +458,7 @@ static void zv_proc_array_start(dec_context *ctx, uint32_t count)
 	if (count > ctx->args.max_size) {
 		RETURN_CB_ERROR(CBOR_ERROR_UNSUPPORTED_SIZE);
 	}
-	if (ctx->mem->limit && ctx->mem->offset + count > ctx->mem->limit) {
+	if (ctx->mem->limit && ctx->mem->offset + 1 + count > ctx->mem->limit) {
 		RETURN_CB_ERROR(CBOR_ERROR_TRUNCATED_DATA);
 	}
 	if (count) {
@@ -484,7 +484,7 @@ static void zv_proc_map_start(dec_context *ctx, uint32_t count)
 	if (count > ctx->args.max_size) {
 		RETURN_CB_ERROR(CBOR_ERROR_UNSUPPORTED_SIZE);
 	}
-	if (ctx->mem->limit && ctx->mem->offset + count > ctx->mem->limit) {
+	if (ctx->mem->limit && ctx->mem->offset + 1 + count * 2 > ctx->mem->limit) {
 		RETURN_CB_ERROR(CBOR_ERROR_TRUNCATED_DATA);
 	}
 	if (ctx->args.flags & CBOR_MAP_AS_ARRAY) {
