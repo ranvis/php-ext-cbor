@@ -46,6 +46,7 @@ static void decoder_free(zend_object *obj)
 		cbor_decode_delete(base->ctx);
 	}
 	zend_string_release(base->buffer);
+	zval_ptr_dtor(&base->data);
 	cbor_free_decode_options(&base->args);
 	zend_object_std_dtor(obj);
 }
