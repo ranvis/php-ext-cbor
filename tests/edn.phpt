@@ -109,6 +109,15 @@ h\'2222222222222222 33333333\'', cdec($data, CBOR_EDN, ['byte_space' => 8, 'byte
     eq(' /ERROR:' . CBOR_ERROR_SYNTAX . '/', cdec('5f60ff', CBOR_EDN));
     // break in definite length
     eq('[ /ERROR:' . CBOR_ERROR_SYNTAX . '/', cdec('81ff', CBOR_EDN));
+
+    // simple values
+    eq('simple(0)', cdec('e0', CBOR_EDN));
+    eq('simple(19)', cdec('f3', CBOR_EDN));
+    eq(' /ERROR:34/', cdec('f817', CBOR_EDN)); // not well-formed
+    eq(' /ERROR:34/', cdec('f818', CBOR_EDN)); // reserved
+    eq(' /ERROR:34/', cdec('f81f', CBOR_EDN)); // reserved
+    eq('simple(32)', cdec('f820', CBOR_EDN));
+    eq('simple(255)', cdec('f8ff', CBOR_EDN));
 });
 
 ?>

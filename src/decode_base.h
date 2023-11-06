@@ -84,10 +84,16 @@ static cbor_error METHOD(dec_item)(const uint8_t *data, size_t len, cbor_di_deco
 	case DI_UNDEF:
 		METHOD(proc_undefined)(ctx);
 		break;
-	case DI_SIMPLE:
+	case DI_SIMPLE0:
 		SET_READ_ERROR(cbor_di_read_int(data, len, out));
-		if (out->v.i32 <= DI_INFO_MAX) {
-			/* not-well-formed range is not used (RFC 8949 3.3) */
+		assert(out->v.i32 <= 31);
+		METHOD(proc_simple)(ctx, out->v.i32);
+		break;
+	case DI_SIMPLE8:
+		SET_READ_ERROR(cbor_di_read_int(data, len, out));
+		if (out->v.i32 <= 31) {
+			// 0..23: not-well-formed range is not used (RFC 8949 3.3)
+			// 24..31 reserved to minimize confusion (RFC 8949 3.3)
 			return CBOR_ERROR_MALFORMED_DATA;
 		}
 		METHOD(proc_simple)(ctx, out->v.i32);

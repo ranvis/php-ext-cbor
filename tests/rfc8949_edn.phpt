@@ -56,7 +56,7 @@ run(function () {
     eq('true', cdec('f5', CBOR_EDN));
     eq('null', cdec('f6', CBOR_EDN));
     eq('undefined', cdec('f7', CBOR_EDN));
-    eq(' /ERROR:34/', cdec('f0', CBOR_EDN)); // simple(16)
+    eq('simple(16)', cdec('f0', CBOR_EDN));
     eq('simple(255)', cdec('f8ff', CBOR_EDN));
     eq('0("2013-03-21T20:04:00Z")', cdec('c074323031332d30332d32315432303a30343a30305a', CBOR_EDN));
     eq('1(1363896240)', cdec('c11a514b67b0', CBOR_EDN));

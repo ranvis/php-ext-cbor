@@ -99,7 +99,7 @@ run(function () {
     cdecThrows(CBOR_ERROR_SYNTAX, '5f80ff');
     cdecThrows(CBOR_ERROR_SYNTAX, '5fa0ff');
     cdecThrows(CBOR_ERROR_SYNTAX, '5fc000ff');
-    cdecThrows(CBOR_ERROR_MALFORMED_DATA, '5fe0ff');  // e0:reserved
+    cdecThrows(CBOR_ERROR_UNSUPPORTED_TYPE, '5fe0ff');  // e0:simple(0)
     cdecThrows(CBOR_ERROR_SYNTAX, '7f4100ff');
 
     // Indefinite-length string chunks not definite length

@@ -89,8 +89,8 @@ uint8_t cbor_di_get_type(const uint8_t *data, size_t len)
 		return DI_NULL;
 	case DI_INFO_UNDEF:
 		return DI_UNDEF;
-	case DI_INFO_SIMPLE:  /* simple values (DI_INFO_MAX + 1)..255 */
-		return DI_SIMPLE;
+	case DI_INFO_SIMPLE:
+		return DI_SIMPLE8;
 	case DI_INFO_FLOAT16:
 		return DI_FLOAT16;
 	case DI_INFO_FLOAT32:
@@ -100,7 +100,10 @@ uint8_t cbor_di_get_type(const uint8_t *data, size_t len)
 	case DI_INFO_BREAK:
 		return DI_BREAK;
 	}
-	/* 0..19: unassigned, 28..30: reserved */
+	if (info < DI_INFO_FALSE) {
+		return DI_SIMPLE0;  // 0..19: unassigned
+	}
+	// 28..30: reserved additional information values
 	return 0;
 }
 

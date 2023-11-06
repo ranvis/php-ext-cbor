@@ -6,6 +6,7 @@
 ### Changed
 ### Removed
 ### Fixed
+- Fix an error when CBOR_EDN decode encounters simple(0..19).
 - Fix `Decoder` not freeing the last value on destruction.
 ### Security
 - Prohibit decoding of a shareable whose content is a sharedref referencing that shareable itself under `'shared_ref'' => `'unsafe_ref'`. Such variables hang PHP when evaluated.
