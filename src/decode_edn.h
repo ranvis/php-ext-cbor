@@ -111,11 +111,42 @@ static void edn_si_pop(dec_context *ctx, stack_item *item_)
 	}
 }
 
+typedef struct {
+	uint8_t code;
+	const char *name;
+} error_desc;
+
+const static error_desc error_descs[] = {
+	{CBOR_ERROR_DEPTH, "depth"},
+	{CBOR_ERROR_RECURSION, "recursion"},
+	{CBOR_ERROR_SYNTAX, "syntax"},
+	{CBOR_ERROR_UTF8, "utf8"},
+	{CBOR_ERROR_TRUNCATED_DATA, "truncated data"},
+	{CBOR_ERROR_MALFORMED_DATA, "malformed data"},
+	{CBOR_ERROR_EXTRANEOUS_DATA, "extraneous data"},
+	{CBOR_ERROR_INTERNAL, "internal"},
+};
+
+static int error_desc_cmp(const void *l, const void *r)
+{
+	return ((const error_desc *)l)->code - ((const error_desc *)r)->code;
+}
+
 static cbor_error edn_dec_finish(dec_context *ctx, cbor_decode_args *args, cbor_error error, zval *value)
 {
 	if (error) {
-		cbor_error error_code = error & CBOR_ERROR_CODE_MASK;
-		smart_str_append_printf(&ctx->u.edn.str, " /ERROR:%" PRIu32 "/", error_code);
+		uint8_t error_code = error & CBOR_ERROR_CODE_MASK;
+		error_desc key_desc;
+		key_desc.code = error_code;
+		for (size_t i = 1; i < sizeof error_descs / sizeof error_descs[0]; i++) {
+			assert(error_descs[i - 1].code < error_descs[i].code);
+		}
+		const error_desc *result_desc = bsearch(&key_desc, error_descs, sizeof error_descs / sizeof error_descs[0], sizeof error_descs[0], &error_desc_cmp);
+		if (result_desc) {
+			smart_str_append_printf(&ctx->u.edn.str, " /ERROR:%" PRIu32 " (%s)/", error_code, result_desc->name);
+		} else {
+			smart_str_append_printf(&ctx->u.edn.str, " /ERROR:%" PRIu32 "/", error_code);
+		}
 	}
 	ZVAL_STR(value, smart_str_extract(&ctx->u.edn.str));
 	return 0;

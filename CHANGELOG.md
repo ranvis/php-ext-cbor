@@ -4,6 +4,7 @@
 ## [Unreleased]
 ### Added
 ### Changed
+- Show error name in EDN error output.
 ### Removed
 ### Fixed
 - Fix an error when CBOR_EDN decode encounters simple(0..19).
