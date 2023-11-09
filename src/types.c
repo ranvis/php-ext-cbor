@@ -32,7 +32,7 @@ static zend_object_handlers floatx_handlers;
 
 static void cbor_floatx_set_fp64(zend_object *obj, double value);
 
-#define THIS()  DEF_THIS(tag, prop_literal)
+#define THIS()  DEF_THIS(encodeparams, prop_literal)
 
 PHP_METHOD(Cbor_EncodeParams, __construct)
 {
