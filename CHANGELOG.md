@@ -7,6 +7,7 @@
 - Show error name in EDN error output.
 ### Removed
 ### Fixed
+- Fix crash when encoding unknown class instance contained in `EncodeParams`.
 - Fix an error when CBOR_EDN decode encounters simple(0..19).
 - Fix `Decoder` not freeing the last value on destruction.
 ### Security

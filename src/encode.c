@@ -271,6 +271,7 @@ RETRY:
 		goto RETRY;
 	default:
 		error = CBOR_ERROR_UNSUPPORTED_TYPE;
+		ctx->args.error_args.u.ce_name = NULL;
 	}
 ENCODED:
 	ctx->cur_depth--;
@@ -852,7 +853,9 @@ ENCODED:
 	if (may_be_shared) {
 		ctx->in_enc_params--;
 	}
+	cbor_error_args error_args = ctx->args.error_args;
 	ctx->args = saved_args;
+	ctx->args.error_args = error_args;
 	return error;
 }
 
