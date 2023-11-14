@@ -1,11 +1,18 @@
 # Changelog
 
-[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.8...HEAD
+[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.9...HEAD
 ## [Unreleased]
 ### Added
 ### Changed
-- Show error name in EDN error output.
 ### Removed
+### Fixed
+### Security
+### Deprecated
+
+[0.4.9]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.8..v0.4.9
+## [0.4.9] - 2023-XX-XX
+### Changed
+- Show error name in EDN error output.
 ### Fixed
 - Fix crash when encoding unknown class instance contained in `EncodeParams`.
 - Fix an error when CBOR_EDN decode encounters simple(0..19).
@@ -13,7 +20,6 @@
 - Fix memory leaks on certain conditions. When undefined or string-ref is used; when `FloatX` creation failed.
 ### Security
 - Prohibit decoding of a shareable whose content is a sharedref referencing that shareable itself under `'shared_ref'' => `'unsafe_ref'`. Such variables hang PHP when evaluated.
-### Deprecated
 
 [0.4.8]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.7..v0.4.8
 ## [0.4.8] - 2023-10-28
