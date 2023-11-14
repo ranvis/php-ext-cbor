@@ -10,6 +10,7 @@
 - Fix crash when encoding unknown class instance contained in `EncodeParams`.
 - Fix an error when CBOR_EDN decode encounters simple(0..19).
 - Fix `Decoder` not freeing the last value on destruction.
+- Fix memory leaks on certain conditions. When undefined or string-ref is used; when `FloatX` creation failed.
 ### Security
 - Prohibit decoding of a shareable whose content is a sharedref referencing that shareable itself under `'shared_ref'' => `'unsafe_ref'`. Such variables hang PHP when evaluated.
 ### Deprecated

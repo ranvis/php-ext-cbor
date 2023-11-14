@@ -580,7 +580,7 @@ static void zv_proc_undefined(dec_context *ctx)
 	zval value;
 	ZVAL_OBJ(&value, cbor_get_undef());
 	zv_append(ctx, &value);
-	Z_DELREF(value);
+	zend_object_release(Z_OBJ(value));
 }
 
 static void zv_proc_simple(dec_context *ctx, uint32_t val)
@@ -623,7 +623,9 @@ static void tag_handler_str_ref_ns_data(dec_context *ctx, stack_item_zv *item, d
 		if (Z_TYPE_P(value) == IS_STRING) {
 			str_len = Z_STRLEN_P(value);
 		} else if (EXPECTED(Z_TYPE_P(value) == IS_OBJECT)) {
-			str_len = ZSTR_LEN(cbor_get_xstring_value(value));
+			zend_string *content = cbor_get_xstring_value(value);
+			str_len = ZSTR_LEN(content);
+			zend_string_release(content);
 		} else {
 			RETURN_CB_ERROR(CBOR_ERROR_INTERNAL);
 		}

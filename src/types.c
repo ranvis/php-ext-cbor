@@ -452,7 +452,7 @@ PHP_METHOD(Cbor_FloatX, fromBinary)
 	obj = cbor_floatx_create(ctx_ce);
 	ZVAL_STR(&value, str);
 	if (!cbor_floatx_set_value(obj, &value, 0)) {
-		zend_objects_destroy_object(obj);
+		zend_object_release(obj);
 		RETURN_THROWS();
 	}
 	RETURN_OBJ(obj);
@@ -481,7 +481,7 @@ PHP_METHOD(Cbor_FloatX, __set_state)
 	TEST_FLOATX_CLASS(ctx_ce);
 	obj = cbor_floatx_create(ctx_ce);
 	if (!floatx_restore(obj, ht)) {
-		zend_objects_destroy_object(obj);
+		zend_object_release(obj);
 		RETURN_THROWS();
 	}
 	RETURN_OBJ(obj);
