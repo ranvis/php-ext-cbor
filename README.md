@@ -254,7 +254,7 @@ If decoding data contains out-of-range value, an exception is thrown.
 
 CBOR `float` has three sizes. 64-bit values are translated to PHP `float`.
 
-32-bit values and 16-bit values are decoded to PHP `Cbor\Float32` and `Cbor\Float16` respectively.
+32-bit values and 16-bit values are decoded to PHP `Cbor\Float32` and `Cbor\Float16` respectively (derived from `Cbor\FloatX`).
 But if the flags `CBOR_FLOAT32` and/or `CBOR_FLOAT16` are passed, they are decoded to PHP `float`.
 
 When encoding PHP `float`, values are stored with 64-bit value.
@@ -268,7 +268,7 @@ For `Cbor\Float32` type, the size of the value is retained even if it can be exp
 CBOR has two types of strings: `byte string` (binary octets) and `text string` (UTF-8 encoded octets).
 PHP `string` type does not have this distinction.
 
-If you specify the `CBOR_BYTE` flag (default) and/or the `CBOR_TEXT` flag on decoding, those strings are decoded to PHP `string`. If the flags are not specified, strings are decoded to `Cbor\Byte` and `Cbor\Text` objects respectively.
+If you specify the `CBOR_BYTE` flag (default) and/or the `CBOR_TEXT` flag on decoding, those strings are decoded to PHP `string`. If the flags are not specified, strings are decoded to `Cbor\Byte` and `Cbor\Text` objects respectively (derived from `Cbor\XString`).
 
 On encoding PHP `string`, you must specify either of the flags so that the extension can encode strings to CBOR strings. The default is `CBOR_BYTE`.
 

@@ -6,6 +6,7 @@
 ### Changed
 ### Removed
 ### Fixed
+- Fix decoding with `'string_ref'` shares an instance of `XString` for the same string.
 ### Security
 ### Deprecated
 

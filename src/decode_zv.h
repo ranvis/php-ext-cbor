@@ -681,6 +681,8 @@ static bool tag_handler_str_ref_ns_enter(dec_context *ctx, stack_item_zv *item)
 	return true;
 }
 
+zend_object *xstring_clone(zend_object *obj);
+
 static xzval *tag_handler_str_ref_exit(dec_context *ctx, xzval *value, stack_item_zv *item, zval *tmp_v)
 {
 	zend_long index;
@@ -696,7 +698,12 @@ static xzval *tag_handler_str_ref_exit(dec_context *ctx, xzval *value, stack_ite
 		RETURN_CB_ERROR_V(value, E_DESC(CBOR_ERROR_TAG_VALUE, STR_REF_RANGE));
 	}
 	assert(Z_TYPE_P(value) == IS_LONG);
-	ZVAL_COPY(tmp_v, str);
+	if (Z_TYPE_P(str) != IS_OBJECT || GC_REFCOUNT(Z_OBJ_P(str)) == 1) {
+		ZVAL_COPY(tmp_v, str);
+	} else {
+		assert(Z_OBJ_P(str)->ce == CBOR_CE(byte) || Z_OBJ_P(str)->ce == CBOR_CE(text));
+		ZVAL_OBJ(tmp_v, xstring_clone(Z_OBJ_P(str)));
+	}
 	return tmp_v;
 }
 

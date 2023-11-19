@@ -178,7 +178,7 @@ static void xstring_free(zend_object *obj)
 	zend_object_std_dtor(obj);
 }
 
-static zend_object *xstring_clone(zend_object *obj)
+zend_object *xstring_clone(zend_object *obj)
 {
 	xstring_class *base = CUSTOM_OBJ(xstring_class, obj);
 	zend_object *new_obj = cbor_xstring_create(obj->ce);
