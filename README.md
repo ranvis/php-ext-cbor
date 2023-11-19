@@ -342,6 +342,8 @@ Constant:
 
 If the option is enabled, an instance of `DateTimeInterface` is encoded as a `text string` with a {date/time} tag.
 
+Since the tag only stores datetime with timezone offset, regional information will be lost.
+
 ### tag(2) tag(3): bignum
 
 Option:
@@ -365,7 +367,7 @@ Option:
 Constant:
 - `Cbor\Tag::DECIMAL`
 
-If the option is enabled, an instance of `Decimal` is encoded as an `array` of integer mantissa and exponent with {decimal} tag.
+If the option is enabled, an instance of `Decimal\Decimal` is encoded as an `array` of integer mantissa and exponent with {decimal} tag.
 
 Although the precision is retained, the maximum precision specified on instance creation is lost.
 
