@@ -7,6 +7,8 @@
 
 #define SIZE_INIT_LIMIT  4096
 
+#define CBOR_ZEND_LONG_STR_SIZE  (302 * SIZEOF_ZEND_LONG * 8 / 1000 + 3)  // ceil(log10(2**bits)), '-', NUL
+
 /* error codes */
 typedef enum {
 	/* E D   */ CBOR_ERROR_INVALID_FLAGS = 1,

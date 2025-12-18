@@ -511,12 +511,16 @@ static cbor_error enc_hash(enc_context *ctx, zval *value, hash_type type)
 						error = enc_string(ctx, key, to_text);
 					}
 				} else if (!use_int_key) {
-					char num_str[ZEND_LTOA_BUF_LEN];
-					ZEND_LTOA((zend_long)index, num_str, sizeof num_str);
 					if (UNEXPECTED(key_flag_error)) {
 						error = E_DESC(CBOR_ERROR_INVALID_FLAGS, NO_KEY_STRING_FLAG);
 					} else {
-						error = enc_string_len(ctx, num_str, strlen(num_str), NULL, to_text);
+						char num_str[CBOR_ZEND_LONG_STR_SIZE];
+						int num_len = snprintf(num_str, sizeof num_str, ZEND_LONG_FMT, (zend_long)index);
+						if (num_len < 0 || (size_t)num_len >= sizeof num_str) {
+							error = CBOR_ERROR_INTERNAL;
+						} else {
+							error = enc_string_len(ctx, num_str, strlen(num_str), NULL, to_text);
+						}
 					}
 				} else {
 					enc_long(ctx, (zend_long)index);
