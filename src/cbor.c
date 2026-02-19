@@ -178,6 +178,7 @@ static PHP_GSHUTDOWN_FUNCTION(cbor)
 {
 }
 /* }}} */
+#endif
 
 /* {{{ PHP_RINIT_FUNCTION
  */
@@ -190,6 +191,7 @@ PHP_RINIT_FUNCTION(cbor)
 }
 /* }}} */
 
+#if 0
 /* {{{ PHP_RSHUTDOWN_FUNCTION
  */
 PHP_RSHUTDOWN_FUNCTION(cbor)
@@ -222,7 +224,7 @@ zend_module_entry cbor_module_entry = {
 	ext_functions,
 	PHP_MINIT(cbor),
 	PHP_MSHUTDOWN(cbor),
-	NULL, /* PHP_RINIT(cbor), */
+	PHP_RINIT(cbor),
 	NULL, /* PHP_RSHUTDOWN(cbor), */
 	PHP_MINFO(cbor),
 	PHP_CBOR_VERSION,

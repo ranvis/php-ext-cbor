@@ -6,15 +6,16 @@
 ### Changed
 ### Removed
 ### Fixed
+- Fix random crash on thread safe build.
 ### Security
 ### Deprecated
 
-[0.4.10]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.9..v0.4.10
+[0.4.10]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.9...v0.4.10
 ## [0.4.10] - 2024-09-12
 ### Fixed
 - Fix decoding with `'string_ref'` shares an instance of `XString` for the same string.
 
-[0.4.9]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.8..v0.4.9
+[0.4.9]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.8...v0.4.9
 ## [0.4.9] - 2023-11-14
 ### Changed
 - Show error name in EDN error output.
@@ -26,7 +27,7 @@
 ### Security
 - Prohibit decoding of a shareable whose content is a sharedref referencing that shareable itself under `'shared_ref' => 'unsafe_ref'`. Such variables hang PHP when evaluated.
 
-[0.4.8]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.7..v0.4.8
+[0.4.8]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.7...v0.4.8
 ## [0.4.8] - 2023-10-28
 ### Added
 - Add `CBOR_CDE` encode flag.
@@ -35,13 +36,13 @@
 ### Fixed
 - Fix a few memory leaks on encoding.
 
-[0.4.7]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.6..v0.4.7
+[0.4.7]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.6...v0.4.7
 ## [0.4.7] - 2023-10-22
 ### Fixed
 - Fix the options parameter does not allow specifying `null`.
 - Fix crash on encoding `Traversable` without rewind handler.
 
-[0.4.6]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.5..v0.4.6
+[0.4.6]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.5...v0.4.6
 ## [0.4.6] - 2023-05-07
 ### Added
 - Add `CBOR_MAP_NO_DUP_KEY` encode flag.
