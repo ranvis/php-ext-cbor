@@ -18,6 +18,7 @@ on:
 
 env:
   basename: php_cbor
+  configure_args: --enable-cbor
 
 jobs:
   build-ext:
@@ -25,136 +26,90 @@ jobs:
     if: github.ref_type == 'tag' || !startsWith(github.event.head_commit.message, 'Version ')
 
     strategy:
+      max-parallel: 10
       matrix:
         isa: [x86, x64]
         ts: [nts, ts]
-        php_ver: ['8.0', '8.1', '8.2', '8.3', '8.4']
+        php_ver: ['8.0', '8.1', '8.2', '8.3', '8.4', '8.5']
 
     steps:
-      - name: Cache PHP SDK - Get base action
-        # Cache, but manually run post action arbitrarily, inspired from https://github.com/mxxk/gh-actions-cache-always
-        uses: actions/checkout@v3
+      - name: Resolve VC
+        id: res_vc
+        uses: ranvis/setup-php-sdk/vc-ver@mod2
         with:
-          repository: actions/cache
-          ref: v3
-          path: .tmp/actions/cache-orig
+          php_version: ${{ matrix.php_ver }}
 
-      - name: Cache PHP SDK - Prepare actions
-        shell: bash
+      - name: Prepare names
+        shell: pwsh
         run: |
-          # Copy to 'cache-main'
-          cp -ar .tmp/actions/cache-orig .tmp/actions/cache-main
-          # Remove 'post-if'
-          perl -pi -e 's/^ +post-if:.+//' .tmp/actions/cache-main/action.yml
-          # Comment out 'post'
-          perl -pi -e 's/^( +)(?=post:)/$1#/' .tmp/actions/cache-main/action.yml
-          # Copy to 'cache-post'
-          cp -ar .tmp/actions/cache-main .tmp/actions/cache-post
-          # Remove 'main'
-          perl -pi -e 's/^ +main:.+//' .tmp/actions/cache-post/action.yml
-          # Change 'post' to 'main'
-          perl -pi -e 's/^( +)#post:/${1}main:/' .tmp/actions/cache-post/action.yml
+          $typeId = "${{ matrix.php_ver }}-${{ matrix.ts }}-${{ steps.res_vc.outputs.vc }}-${{ matrix.isa }}"
+          "TYPE_ID=$typeId" >> $env:GITHUB_ENV
+          $key = "win-php-$typeId"
+          "PHPSDK_CACHE_KEY=$key" >> $env:GITHUB_ENV
+          $name = "${{ env.basename }}-${{ github.ref_name }}-$typeId"
+          "ARTIFACT_NAME=$name" >> $env:GITHUB_ENV
+          "GH_WORKSPACE=${{ github.workspace }}" >> $env:GITHUB_ENV
+          "TARGET_ISA=${{ matrix.isa }}" >> $env:GITHUB_ENV
 
-      - name: Cache PHP SDK - Get cache data
+      - name: Restore PHP SDK from cache
         id: cache-phpsdk
-        uses: ./.tmp/actions/cache-main
+        uses: actions/cache/restore@v4
         with:
-          path: phpsdk
-          key: phpsdk-${{runner.os}}-${{matrix.ts}}-${{matrix.isa}}-${{matrix.php_ver}}
+          # php-sdk may better be downloaded from GitHub directly
+          path: |
+            php-bin
+            php-dev
+          key: ${{ env.PHPSDK_CACHE_KEY }}
 
-      - name: Preparation
-        run: |
-          mkdir downloads
-
-      - name: Store PHP SDK
-        if: steps.cache-phpsdk.outputs.cache-hit != 'true'
-        uses: ranvis/setup-php-sdk@mod
+      - name: Set up PHP SDK # also set up PATH
+        id: get-sdk
+        uses: php/setup-php-sdk@e2ce1c294f272ed93e8083f14649f5adadf93788 # ~2026-01-09
         with:
-          php_version: ${{matrix.php_ver}}
-          ts: ${{matrix.ts}}
-          arch: ${{matrix.isa}}
-          install_dir: ${{github.workspace}}\phpsdk
-          cache_dir: ${{github.workspace}}\downloads
+          version: ${{ matrix.php_ver }}
+          ts: ${{ matrix.ts }}
+          arch: ${{ matrix.isa }}
 
-      - name: Cache PHP SDK - Cache data
-        if: steps.cache-phpsdk.outputs.cache-hit != 'true'
-        uses: ./.tmp/actions/cache-post
+      - name: Save PHP SDK cache
+        if: steps.cache-phpsdk.outputs.cache-hit != 'true' && steps.get-sdk.outcome == 'success'
+        uses: actions/cache/save@v4
         with:
-          path: phpsdk
-          key: phpsdk-${{runner.os}}-${{matrix.ts}}-${{matrix.isa}}-${{matrix.php_ver}}
-
-      - name: Cache repo
-        id: cache-repo
-        uses: actions/cache@v3
-        with:
-          path: src
-          key: src-${{github.sha}}
+          path: |
+            php-bin
+            php-dev
+          key: ${{ env.PHPSDK_CACHE_KEY }}
 
       - name: Checkout repo
-        if: steps.cache-repo.outputs.cache-hit != 'true'
         uses: actions/checkout@v3
         with:
-          path: src
+          path: repo
 
       - name: Build
         shell: cmd
         run: |
-          cd src
-
-          echo ::group::Prepare
-          set PHP_SDK_RUN_FROM_ROOT=1
-          set "VSCMD_START_DIR=%CD%"
-          set __VSCMD_ARG_NO_LOGO=yes
-          set PHP_SDK_ROOT_PATH=${{github.workspace}}\phpsdk\php-sdk
-          REM %PHP_SDK_ROOT_PATH%\bin\phpsdk_setshell.bat vs17 ${{matrix.isa}}
-          REM https://github.com/actions/virtual-environments/blob/main/images/win/Windows2022-Readme.md#visual-studio-enterprise-2022
-          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{matrix.isa}} -vcvars_ver=14.29
-          call %PHP_SDK_ROOT_PATH%\bin\phpsdk_setvars.bat 
-          echo ::endgroup::
-
-          echo ::group::Configure
-          call ..\phpsdk\php-devpack\phpize.bat
-          call configure.bat --with-prefix=..\build --enable-cbor
-          perl -pi .\msvc_mod_make.pl Makefile
-          echo ::endgroup::
-
-          echo ::group::Make
-          nmake /nologo
-          echo ::endgroup::
-
-          echo ::group::Install
-          nmake /nologo install
-          echo ::endgroup::
-
-          echo ::group::Miscellaneous
-          REM Remove placeholders in changelog
-          perl -pi -e "$_ = '' if (/^\[Unreleased\]/../^-?$/)" CHANGELOG.md
-          dos2unix CHANGELOG.md
-          echo ::endgroup::
-
-      - name: Upload
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{env.basename}}-${{github.ref_name}}-${{matrix.php_ver}}-${{matrix.ts}}-${{matrix.isa}}.dll
-          path: |
-            build/ext/php_cbor.dll
-            src/CHANGELOG.md
-            src/LICENSE
-            src/README.md
+          set "PHP_DIR=${{ steps.get-sdk.outputs.prefix }}"
+          echo PHP_DIR=%PHP_DIR%>> %GITHUB_ENV%
+          cd repo
+          call .github\scripts\setup-env.bat
+          call .github\scripts\build.bat
 
       - name: Archive
         id: archive
-        if: github.ref_type == 'tag'
         shell: cmd
         run: |
-          set arcName=${{env.basename}}-${{github.ref_name}}-${{matrix.php_ver}}-${{matrix.ts}}-${{matrix.isa}}.zip
-          REM set files=build\ext\php_cbor.dll src\README.md src\LICENSE
-          REM zip -j9 %arcName% %files%
-          cd ${{github.workspace}}\build\ext
-          7z a ${{github.workspace}}\%arcName% php_cbor.dll
-          cd ${{github.workspace}}\src
-          7z a ${{github.workspace}}\%arcName% CHANGELOG.md LICENSE README.md stubs
-          echo arc_name=%arcName%>> %GITHUB_OUTPUT%
+          cd repo
+          set "ARC_NAME=${{ env.ARTIFACT_NAME }}.zip"
+          call .github\scripts\archive.bat
+
+      - name: Upload preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}-preview
+          path: |
+            ${{ steps.archive.outputs.arc_name }}
+            ${{ env.PHP_DIR }}/ext/php_cbor.dll
+            repo/CHANGELOG.md
+            repo/LICENSE
+            repo/README.md
 
       - name: Release
         if: github.ref_type == 'tag'
@@ -162,4 +117,29 @@ jobs:
         with:
           #draft: true
           #prerelease: true
-          files: ${{steps.archive.outputs.arc_name}}
+          files: ${{ steps.archive.outputs.arc_name }}
+
+      - name: Run tests
+        id: test
+        continue-on-error: true
+        shell: cmd
+        run: |
+          cd repo
+          call .github\scripts\setup-env.bat
+          call .github\scripts\run-tests.bat
+
+      - name: Save tests result
+        if: always()
+        uses: ranvis/gh-actions-php/save-result@v1
+        with:
+          id: "${{ env.TYPE_ID }}"
+          outcome: "${{ steps.test.outcome }}"
+          test-log: test_output.log
+
+  summary:
+    needs: build-ext
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Summarize
+        uses: ranvis/gh-actions-php/summarize-results@v1
