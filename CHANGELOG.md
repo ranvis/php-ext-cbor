@@ -1,14 +1,18 @@
 # Changelog
 
-[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.10...HEAD
+[Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.11...HEAD
 ## [Unreleased]
 ### Added
 ### Changed
 ### Removed
 ### Fixed
-- Fix random crash on thread safe build.
 ### Security
 ### Deprecated
+
+[0.4.11]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.10...v0.4.11
+## [0.4.11] - 2026-02-20
+### Fixed
+- Fix random crash on thread safe build.
 
 [0.4.10]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.9...v0.4.10
 ## [0.4.10] - 2024-09-12
