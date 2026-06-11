@@ -10,6 +10,7 @@
 #include <Zend/zend_exceptions.h>
 #include <Zend/zend_interfaces.h>
 #include <assert.h>
+#include <stddef.h>
 
 #define IS_STR_OWNED(str)  (!ZSTR_IS_INTERNED(str) && GC_REFCOUNT(str) <= 1)  /* eval twice */
 
@@ -292,7 +293,7 @@ void cbor_minit_decoder()
 	CBOR_CE(decoder)->unserialize = zend_class_unserialize_deny;
 #endif
 	memcpy(&decoder_handlers, &std_object_handlers, sizeof(zend_object_handlers));
-	decoder_handlers.offset = XtOffsetOf(decoder_class, std);
+	decoder_handlers.offset = offsetof(decoder_class, std);
 	decoder_handlers.free_obj = &decoder_free;
 	decoder_handlers.clone_obj = NULL;
 	decoder_handlers.compare = zend_objects_not_comparable;

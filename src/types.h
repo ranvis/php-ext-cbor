@@ -3,7 +3,9 @@
  * @license BSD-2-Clause
  */
 
-#define CUSTOM_OBJ(obj_type_t, obj)  ((obj_type_t *)((char *)(obj) - XtOffsetOf(obj_type_t, std)))
+#include <stddef.h>
+
+#define CUSTOM_OBJ(obj_type_t, obj)  ((obj_type_t *)((char *)(obj) - offsetof(obj_type_t, std)))
 #define ZVAL_CUSTOM_OBJ(obj_type_t, zv)  CUSTOM_OBJ(obj_type_t, Z_OBJ_P(zv))
 
 #define CBOR_B32A_ISNAN(b32a)  ((binary32.i & 0x7f800000) == 0x7f800000 && (binary32.i & 0x007fffff) != 0) /* isnan(b32a.f) */

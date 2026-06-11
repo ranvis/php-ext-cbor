@@ -977,7 +977,7 @@ void cbor_minit_types()
 	CBOR_CE(byte)->create_object = &cbor_xstring_create;
 	CBOR_CE(text)->create_object = &cbor_xstring_create;
 	memcpy(&xstring_handlers, &std_object_handlers, sizeof(zend_object_handlers));
-	xstring_handlers.offset = XtOffsetOf(xstring_class, std);
+	xstring_handlers.offset = offsetof(xstring_class, std);
 	xstring_handlers.free_obj = &xstring_free;
 	xstring_handlers.clone_obj = &xstring_clone;
 	xstring_handlers.read_property = &xstring_read_property;
@@ -993,7 +993,7 @@ void cbor_minit_types()
 	CBOR_CE(float16)->create_object = &cbor_floatx_create;
 	CBOR_CE(float32)->create_object = &cbor_floatx_create;
 	memcpy(&floatx_handlers, &std_object_handlers, sizeof(zend_object_handlers));
-	floatx_handlers.offset = XtOffsetOf(floatx_class, std);
+	floatx_handlers.offset = offsetof(floatx_class, std);
 	floatx_handlers.clone_obj = &floatx_clone;
 	floatx_handlers.read_property = &floatx_read_property;
 	floatx_handlers.write_property = &floatx_write_property;
