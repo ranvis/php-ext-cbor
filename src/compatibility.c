@@ -5,6 +5,7 @@
 
 #include "cbor.h"
 #include "compatibility.h"
+#include <Zend/zend_interfaces.h>
 
 #if TARGET_PHP_API_LT_81
 /*
@@ -55,3 +56,15 @@ bool zend_array_is_list(zend_array *array)
 	return 1;
 }
 #endif
+
+bool is_countable(const zval *zv)
+{
+	assert(Z_TYPE_P(zv) != IS_REFERENCE);
+#if TARGET_PHP_API_LT_86
+	return zend_is_countable(zv);
+#else
+	return Z_TYPE_P(zv) == IS_ARRAY
+		|| Z_TYPE_P(zv) == IS_OBJECT
+			&& (Z_OBJ_HT_P(zv)->count_elements || zend_class_implements_interface(Z_OBJCE_P(zv), zend_ce_countable));
+#endif
+}

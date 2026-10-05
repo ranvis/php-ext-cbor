@@ -678,7 +678,7 @@ static cbor_error enc_traversable(enc_context *ctx, zval *value)
 	Z_PROTECT_RECURSION_P(value);
 	cbor_error error = 0;
 	zend_object_iterator *it = NULL;
-	bool is_indef_length = (ctx->args.e_flags & CBOR_CDE) || !zend_is_countable(value);
+	bool is_indef_length = (ctx->args.e_flags & CBOR_CDE) || !is_countable(value);
 	zend_long count;
 	smart_str key_buf = {0};
 	HashTable *keys_ht = NULL;
