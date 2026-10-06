@@ -3,6 +3,7 @@
 [Unreleased]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.11...HEAD
 ## [Unreleased]
 ### Added
+- Support PHP 8.6.
 ### Changed
 ### Removed
 ### Fixed
@@ -11,11 +12,15 @@
 
 [0.4.11]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.10...v0.4.11
 ## [0.4.11] - 2026-02-20
+### Added
+- Support PHP 8.5.
 ### Fixed
 - Fix random crash on thread safe build.
 
 [0.4.10]: https://github.com/ranvis/php-ext-cbor/compare/v0.4.9...v0.4.10
 ## [0.4.10] - 2024-09-12
+### Added
+- Support PHP 8.4.
 ### Fixed
 - Fix decoding with `'string_ref'` shares an instance of `XString` for the same string.
 
