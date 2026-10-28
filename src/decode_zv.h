@@ -187,11 +187,10 @@ static bool zv_append_to_map(dec_context *ctx, xzval *value, stack_item_zv *item
 	if (Z_TYPE(item->v.map.dest) == IS_OBJECT) {
 		if (Z_TYPE(item->v.map.key) == IS_LONG) {
 			char num_str[CBOR_ZEND_LONG_STR_SIZE];
-			int num_len = snprintf(num_str, sizeof num_str, ZEND_LONG_FMT, Z_LVAL(item->v.map.key));
-			if (num_len < 0 || (size_t)num_len >= sizeof num_str) {
-				RETURN_CB_ERROR_B(CBOR_ERROR_INTERNAL);
-			}
-			ZVAL_STRINGL(&item->v.map.key, num_str, strlen(num_str));
+			char *num_str_head = zend_print_long_to_buf(num_str + sizeof num_str - 1, Z_LVAL(item->v.map.key));
+			assert(num_str <= num_str_head);
+			size_t num_len = (size_t)(num_str + sizeof num_str - 1 - num_str_head);
+			ZVAL_STRINGL(&item->v.map.key, num_str_head, num_len);
 		}
 		assert(Z_TYPE_P(value) != IS_REFERENCE || Z_TYPE_P(Z_REFVAL_P(value)) != IS_OBJECT);
 		if (Z_STRLEN(item->v.map.key) >= 1 && Z_STRVAL(item->v.map.key)[0] == '\0') {
