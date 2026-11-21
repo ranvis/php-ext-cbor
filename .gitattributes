@@ -1,1 +1,10 @@
 /.github  export-ignore
+*.bat  text eol=crlf
+*.c  text eol=lf
+*.h  text eol=lf
+*.m4  text eol=lf
+*.md  text eol=lf
+*.php  text eol=lf
+*.phpt  text eol=lf
+*.pl  text eol=lf
+*.w32  text eol=lf
