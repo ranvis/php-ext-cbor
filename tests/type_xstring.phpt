@@ -63,7 +63,9 @@ run(function () {
     $instance = new Cbor\Text(substr(rand() . 'abc', -3));
     eq('abc', (string)$instance);
     // multiple calls to get_properties during iteration
-    array_walk($instance, fn ($v, $k) => true);
+    if (\PHP_VERSION_ID < 80600) {
+        array_walk($instance, fn ($v, $k) => true);
+    }
 });
 
 ?>

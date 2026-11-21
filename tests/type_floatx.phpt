@@ -102,7 +102,9 @@ run(function () {
     $instance = $instance->toFloat16();
     eq('3c00', bin2hex($instance->toBinary()));
     // multiple calls to get_properties during iteration
-    array_walk($instance, fn ($v, $k) => true);
+    if (\PHP_VERSION_ID < 80600) {
+        array_walk($instance, fn ($v, $k) => true);
+    }
 
     eq('0xfa3fc00000', cenc(new Cbor\Float32(1.5), CBOR_FLOAT16));
     eq('0xfa3fc00000', cenc(new Cbor\Float32(1.5), CBOR_FLOAT16 | CBOR_FLOAT32));

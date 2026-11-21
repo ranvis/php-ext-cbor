@@ -50,7 +50,7 @@ run(function () {
     eq('0xf90000', cenc(0.0, CBOR_FLOAT16 | CBOR_FLOAT32));
     eq('0xf94248', cenc(3.140625, CBOR_FLOAT16 | CBOR_FLOAT32));
     eq('0xfa40490fdb', cenc(3.1415927410125732, CBOR_FLOAT16 | CBOR_FLOAT32));
-    eq('0xf97e01', cenc((double)Cbor\Float32::fromBinary(hex2bin('7fc02000')), CBOR_FLOAT16 | CBOR_FLOAT32));
+    eq('0xf97e01', cenc((float)Cbor\Float32::fromBinary(hex2bin('7fc02000')), CBOR_FLOAT16 | CBOR_FLOAT32));
     eq('0xfb3ff0000010000000', cenc(hex2double('3ff0000010000000'), CBOR_FLOAT16 | CBOR_FLOAT32));
     eq('0xfa3f800001', cenc(hex2double('3ff0000020000000'), CBOR_FLOAT16 | CBOR_FLOAT32));
 
