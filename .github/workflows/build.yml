@@ -8,7 +8,7 @@ permissions:
 
 on:
   push:
-    branches: [master]
+    branches: [master, 'v[0-9]*']
     tags: ['v[0-9]*']
     paths-ignore:
       - .*
@@ -22,15 +22,15 @@ env:
 
 jobs:
   build-ext:
-    runs-on: windows-2022
+    runs-on: windows-2025
     if: github.ref_type == 'tag' || !startsWith(github.event.head_commit.message, 'Version ')
 
     strategy:
       max-parallel: 10
       matrix:
-        isa: [x86, x64]
+        php_ver: ['8.6', '8.5', '8.4', '8.3', '8.2', '8.1', '8.0']
+        isa: [x64, x86]
         ts: [nts, ts]
-        php_ver: ['8.0', '8.1', '8.2', '8.3', '8.4', '8.5']
 
     steps:
       - name: Resolve VC
@@ -63,7 +63,7 @@ jobs:
 
       - name: Set up PHP SDK # also set up PATH
         id: get-sdk
-        uses: php/setup-php-sdk@e2ce1c294f272ed93e8083f14649f5adadf93788 # ~2026-01-09
+        uses: ranvis/setup-php-sdk/php@mod2 # php/setup-php-sdk is deprecated
         with:
           version: ${{ matrix.php_ver }}
           ts: ${{ matrix.ts }}
@@ -118,6 +118,11 @@ jobs:
           #draft: true
           #prerelease: true
           files: ${{ steps.archive.outputs.arc_name }}
+
+      - name: Patch run-tests
+        uses: ranvis/gh-actions-php/patch-test-runner@v1
+        with:
+          path: repo/run-tests.php
 
       - name: Run tests
         id: test
