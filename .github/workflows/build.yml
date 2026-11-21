@@ -53,7 +53,7 @@ jobs:
 
       - name: Restore PHP SDK from cache
         id: cache-phpsdk
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           # php-sdk may better be downloaded from GitHub directly
           path: |
@@ -71,7 +71,7 @@ jobs:
 
       - name: Save PHP SDK cache
         if: steps.cache-phpsdk.outputs.cache-hit != 'true' && steps.get-sdk.outcome == 'success'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             php-bin
