@@ -88,6 +88,7 @@ jobs:
         run: |
           set "PHP_DIR=${{ steps.get-sdk.outputs.prefix }}"
           echo PHP_DIR=%PHP_DIR%>> %GITHUB_ENV%
+          set "VC_TOOLSET=${{ steps.get-sdk.outputs.toolset }}"
           cd repo
           call .github\scripts\setup-env.bat
           call .github\scripts\build.bat

@@ -8,11 +8,16 @@ if "%TARGET_ISA%" == "" (
 	exit /b 1
 )
 
+if "%VC_TOOLSET%"=="" (
+	echo VC_TOOLSET is not set
+	exit /b 1
+)
+
 set "VSCMD_START_DIR=%CD%"
 set __VSCMD_ARG_NO_LOGO=yes
 
 REM https://github.com/actions/runner-images/blob/main/images/windows/Windows2025-VS2026-Readme.md#visual-studio-enterprise-2026
-call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" %TARGET_ISA%
+call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" "%TARGET_ISA%" "-vcvars_ver=%VC_TOOLSET%"
 
 set PHP_SDK_RUN_FROM_ROOT=1
 set "PHP_SDK_ROOT_PATH=%GH_WORKSPACE%\php-sdk"
